@@ -1,71 +1,82 @@
 import flet as ft
-from app.ui.main_view import create_main_view
-from app.core.epub_parser import parse_epub
-from flet import FilePickerResultEvent
-import logging 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+def create_novel_project_view():
+    return ft.Column(
+        [ft.Text("Novel / Project View Content", size=20)],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        expand=True,
+    )
 
+def create_testing_lab_view():
+    return ft.Column(
+        [ft.Text("Advanced Testing Lab View Content", size=20)],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        expand=True
+    )
 
+def create_settings_view():
+    return ft.Column([ft.Text("Settings View Content", size=20)],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        expand=True
+    )
 
 def main(page: ft.Page):
-    parsed_chapters = []
     page.title = "NovelTranslate"
     page.vertical_alignment = ft.MainAxisAlignment.START
     page.horizontal_alignment = ft.CrossAxisAlignment.START
-    page.window_width = 700
-    page.window_height = 800
-
-    main_layout, view_controls = create_main_view()
 
 
-    def select_file_result(e: FilePickerResultEvent):
-        nonlocal parsed_chapters 
-        view_controls.selected_epub_path.value = "Processing..."
-        view_controls.output_log_field.value = ""
-        parsed_chapters = []
-        page.update() 
+    main_content_area = ft.Column([create_novel_project_view()], expand=True)
 
-        if e.files: 
-            selected_file_path = e.files[0].path
-            view_controls.selected_epub_path.value = f"Selected: {selected_file_path}"
-            logging.info(f"File selected: {selected_file_path}")
 
-            success, result = parse_epub(selected_file_path)
-
-            if success:
-                parsed_chapters = result 
-                log_message = f"Successfully parsed EPUB.\nFound {len(parsed_chapters)} chapters.\n"
-                if parsed_chapters:
-                    log_message += f"\nFirst chapter preview:\n---\n{parsed_chapters[0][:300]}..."
-                view_controls.output_log_field.value = log_message
-                logging.info(f"EPUB parsed successfully, {len(parsed_chapters)} chapters found.")
-            else:
-                view_controls.selected_epub_path.value = "Error parsing file (see log)"
-                view_controls.output_log_field.value = f"Error: {result}"
-                logging.error(f"EPUB parsing failed: {result}")
-        else:
-            view_controls.selected_epub_path.value = "File selection cancelled."
-            logging.info("File selection cancelled by user.")
-
+    def navigation_changed(e):
+        selected_index = e.control.selected_index
+        main_content_area.controls.clear()
+        if selected_index == 0:
+            main_content_area.controls.append(create_novel_project_view())
+        elif selected_index == 1:
+            main_content_area.controls.append(create_testing_lab_view())
+        elif selected_index == 2:
+            main_content_area.controls.append(create_settings_view())
         page.update()
+    
+    rail = ft.NavigationRail(
+        selected_index=0,
+        label_type=ft.NavigationRailLabelType.ALL,
+        min_width=100,
+        min_extended_width=200,
+        group_alignment=0.9,
+        destinations=[
+            ft.NavigationRailDestination(
+                icon=ft.Icons.BOOK_OUTLINED,
+                selected_icon=ft.Icons.BOOK,
+                label_content=ft.Text("Novel"),
+            ),
+            ft.NavigationRailDestination(
+                icon=ft.Icons.SCIENCE_OUTLINED,
+                selected_icon=ft.Icons.SCIENCE,
+                label_content=ft.Text("Testing"),
+            ),
+            ft.NavigationRailDestination(
+                icon=ft.Icons.SETTINGS_OUTLINED,
+                selected_icon=ft.Icons.SETTINGS,
+                label_content=ft.Text("Settings"),
+            )
+            
+        ],
+        on_change=navigation_changed,
+    )
 
-    file_picker = ft.FilePicker(on_result=select_file_result)
+    page_layout = ft.Row([
+        rail, ft.VerticalDivider(width=1),
+        main_content_area
+    ],
+    expand=True,)
 
-    page.overlay.append(file_picker)
-    page.update() 
-
-    def pick_file_dialog(e):
-        logging.info("Opening file picker dialog...")
-        file_picker.pick_files(
-            allow_multiple=False, 
-            allowed_extensions=["epub"] 
-        )
-
-    view_controls.select_epub_button.on_click = pick_file_dialog
-
-    page.add(main_layout)
+    page.add(page_layout)
 
 if __name__ == "__main__":
-    ft.app(target=main) 
-
+    ft.app(target=main)
