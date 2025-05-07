@@ -1,5 +1,6 @@
 import flet as ft
 
+
 class MainViewControls:
     def __init__(self):
         self.select_epub_button = None
@@ -24,17 +25,11 @@ def create_main_view():
         alignment=ft.MainAxisAlignment.START,
     )
 
-    controls.openai_key_field = ft.TextField( 
-        label="OpenAI API Key",
-        password=True,
-        can_reveal_password=True,
-        width=400
+    controls.openai_key_field = ft.TextField(
+        label="OpenAI API Key", password=True, can_reveal_password=True, width=400
     )
-    controls.gemini_key_field = ft.TextField( 
-        label="Gemini API Key",
-        password=True,
-        can_reveal_password=True,
-        width=400
+    controls.gemini_key_field = ft.TextField(
+        label="Gemini API Key", password=True, can_reveal_password=True, width=400
     )
     api_keys_column = ft.Column(
         controls=[
@@ -44,7 +39,7 @@ def create_main_view():
         ]
     )
 
-    controls.llm_dropdown = ft.Dropdown( 
+    controls.llm_dropdown = ft.Dropdown(
         label="Select LLM for Testing/Translation",
         width=400,
         options=[
@@ -55,7 +50,7 @@ def create_main_view():
         ],
     )
 
-    controls.prompt_input_field = ft.TextField( 
+    controls.prompt_input_field = ft.TextField(
         label="Translation Prompt",
         multiline=True,
         min_lines=3,
@@ -63,15 +58,15 @@ def create_main_view():
         hint_text="e.g., Translate the following chapter into fluent English...",
     )
 
-    controls.test_chapter_button = ft.ElevatedButton("Test Chapter") # Store ref
-    controls.translate_novel_button = ft.ElevatedButton("Translate Full Novel") # Store ref
+    controls.test_chapter_button = ft.ElevatedButton("Test Chapter")
+    controls.translate_novel_button = ft.ElevatedButton("Translate Full Novel")
 
     action_buttons_row = ft.Row(
         controls=[controls.test_chapter_button, controls.translate_novel_button],
-        spacing=20
+        spacing=20,
     )
 
-    controls.output_log_field = ft.TextField( 
+    controls.output_log_field = ft.TextField(
         label="Output / Log",
         multiline=True,
         read_only=True,
@@ -97,4 +92,3 @@ def create_main_view():
     )
 
     return main_column, controls
-

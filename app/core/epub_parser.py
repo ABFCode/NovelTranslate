@@ -1,24 +1,26 @@
+import logging
+
 import ebooklib
-from ebooklib import epub
 from bs4 import BeautifulSoup
-import logging 
+from ebooklib import epub
 
 
 def _clean_html_content(html_content):
     if not html_content:
         return ""
     try:
-        soup = BeautifulSoup(html_content, 'html.parser')
+        soup = BeautifulSoup(html_content, "html.parser")
 
-        body = soup.find('body')
+        body = soup.find("body")
         if not body:
-            return soup.get_text(separator=' ', strip=True)
+            return soup.get_text(separator=" ", strip=True)
 
-        text = body.get_text(separator=' ', strip=True)
+        text = body.get_text(separator=" ", strip=True)
         return text
     except Exception as e:
         logging.error(f"BeautifulSoup Error parsing HTML: {e}")
-        return "" 
+        return ""
+
 
 def parse_epub(file_path):
     try:
@@ -29,14 +31,17 @@ def parse_epub(file_path):
 
         if not items:
             logging.warning(f"No document items found in EPUB: {file_path}")
-            return False, "EPUB parsing error: No text documents found in the book's spine."
+            return (
+                False,
+                "EPUB parsing error: No text documents found in the book's spine.",
+            )
 
         logging.info(f"Found {len(items)} document items in EPUB spine.")
 
         for item in items:
             html_content = item.get_content()
             plain_text = _clean_html_content(html_content)
-            if plain_text: 
+            if plain_text:
                 chapters_text.append(plain_text)
             else:
                 logging.warning(f"Could not extract text from item: {item.get_name()}")
@@ -46,7 +51,7 @@ def parse_epub(file_path):
             return False, "EPUB parsing error: Could not extract text from any chapter."
 
         logging.info(f"Successfully extracted text from {len(chapters_text)} chapters.")
-        return True, chapters_text 
+        return True, chapters_text
 
     except FileNotFoundError:
         logging.error(f"EPUB file not found: {file_path}")
@@ -57,4 +62,3 @@ def parse_epub(file_path):
     except Exception as e:
         logging.error(f"Unexpected error parsing EPUB {file_path}: {e}")
         return False, f"An unexpected error occurred during parsing: {e}"
-
