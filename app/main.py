@@ -1,15 +1,18 @@
-import flet as ft
+import logging
 
+import flet as ft
+from flet import FilePickerResultEvent
+
+from app.core.epub_parser import parse_epub
+from app.ui.novel_project_view import create_novel_project_view_content
 from app.ui.settings_view import create_settings_view_content
 
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
-def create_novel_project_view():
-    return ft.Column(
-        [ft.Text("Novel / Project View Content", size=20)],
-        alignment=ft.MainAxisAlignment.CENTER,
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        expand=True,
-    )
+current_view_controls = None
+parsed_chapters_data = {"title": "N/A", "author": "N/A", "chapters": []}
 
 
 def create_testing_lab_view():
@@ -21,24 +24,138 @@ def create_testing_lab_view():
     )
 
 
-def main(page: ft.Page):
-    current_view_controls = None
+def handle_file_picker_result(e: FilePickerResultEvent, page: ft.Page):
+    global current_view_controls
+    global parsed_chapters_data
 
+    current_view_controls.selected_epub_path_text.value = "Processing..."
+    current_view_controls.output_log_field.value = ""
+    current_view_controls.epub_title_text.value = "N/A"
+    current_view_controls.epub_author_text.value = "N/A"
+    current_view_controls.chapter_count_text.value = "0"
+
+    parsed_chapters_data = {"title": "N/A", "author": "N/A", "chapters": []}
+    page.update()
+
+    if e.files:
+        selected_file_path = e.files[0].path
+        current_view_controls.selected_epub_path_text.value = (
+            f"Selected: {selected_file_path}"
+        )
+        logging.info(f"File Selected: {selected_file_path}")
+
+        success, result = parse_epub(selected_file_path)
+
+        if success:
+            parsed_chapters_data["chapters"] = result
+
+            try:
+                import ebooklib
+
+                book = ebooklib.read_epub(selected_file_path)
+                title_meta = book.get_metadata("DC", "title")
+                author_meta = book.get_metadata("DC", "creator")
+                if title_meta:
+                    parsed_chapters_data["title"] = title_meta[0][0]
+                if author_meta:
+                    parsed_chapters_data["author"] = author_meta[0][0]
+            except Exception as meta_ex:
+                logging.warning(f"Could not extract metadata: {meta_ex}")
+
+            current_view_controls.epub_title_text.value = parsed_chapters_data["title"]
+            current_view_controls.epub_author_text.value = parsed_chapters_data[
+                "author"
+            ]
+            current_view_controls.chapter_count_text.value = str(
+                len(parsed_chapters_data["chapters"])
+            )
+            log_message = f"Successfully parsed EPUB: {parsed_chapters_data['title']}.\nFound {len(parsed_chapters_data['chapters'])} chapters.\n"
+
+            if parsed_chapters_data["chapters"]:
+                log_message += f"\nFirst chapter preview:\n---\n{parsed_chapters_data['chapters'][0][:200]}..."
+                if current_view_controls.chapter_list_view:
+                    for i, chap_text in enumerate(
+                        parsed_chapters_data["chapters"][:10]
+                    ):
+                        current_view_controls.chapter_list_view.controls.append(
+                            ft.Text(f"Chapter {i + 1}: {chap_text[:50]}...")
+                        )
+
+                current_view_controls.output_log_field.value = log_message
+                logging.info(
+                    f"EPUB parsed successfully, {len(parsed_chapters_data['chapters'])} chapters found."
+                )
+            else:
+                error_message = (
+                    result if isinstance(result, str) else "Unknown parsing error."
+                )
+                current_view_controls.selected_epub_path_text.value = (
+                    "Error parsing file (see log)"
+                )
+                current_view_controls.output_log_field.value = f"Error: {error_message}"
+                logging.error(f"EPUB parsing failed: {error_message}")
+    else:
+        current_view_controls.selected_epub_path_text.value = (
+            "File selection cancelled."
+        )
+        logging.info("File selection cancelled by user.")
+    page.update()
+
+
+def main(page: ft.Page):
     page.title = "NovelTranslate"
     page.vertical_alignment = ft.MainAxisAlignment.START
     page.horizontal_alignment = ft.CrossAxisAlignment.START
 
-    main_content_area = ft.Column([create_novel_project_view()], expand=True)
+    file_picker = ft.FilePicker(on_result=lambda e: handle_file_picker_result(e, page))
+    page.overlay.append(file_picker)
+
+    main_content_area = ft.Column(expand=True)
 
     def navigation_changed(e):
-        nonlocal current_view_controls
+        global current_view_controls
+        global parsed_chapters_data
+
         selected_index = e.control.selected_index
         main_content_area.controls.clear()
         current_view_controls = None
 
         if selected_index == 0:
-            novel_content = create_novel_project_view()
-            main_content_area.controls.append(novel_content)
+            novel_view_content, novel_controls = create_novel_project_view_content()
+            main_content_area.controls.append(novel_view_content)
+            current_view_controls = novel_controls
+
+            if (
+                hasattr(novel_controls, "select_epub_button")
+                and novel_controls.select_epub_button
+            ):
+                current_view_controls.select_epub_button.on_click = (
+                    lambda _: file_picker.pick_files(
+                        allow_multiple=False, allowed_extensions=["epub"]
+                    )
+                )
+            if parsed_chapters_data["chapters"]:
+                novel_controls.selected_epub_path_text.value = (
+                    "Previously loaded EPUB (re-select if needed)"
+                )
+                novel_controls.epub_title_text.value = parsed_chapters_data["title"]
+                novel_controls.epub_author_text.value = parsed_chapters_data["author"]
+                novel_controls.chapter_count_text.value = str(
+                    len(parsed_chapters_data["chapters"])
+                )
+                if novel_controls.chapter_list_view:
+                    novel_controls.chapter_list_view.controls.clear()
+                    for i, chap_text in enumerate(
+                        parsed_chapters_data["chapters"][:10]
+                    ):
+                        novel_controls.chapter_list_view.controls.append(
+                            ft.Text(f"Chapter {i + 1}: {chap_text[:50]}...")
+                        )
+            else:
+                novel_controls.selected_epub_path_text.value = "No file selected."
+                novel_controls.epub_title_text.value = "N/A"
+                novel_controls.epub_author_text.value = "N/A"
+
         elif selected_index == 1:
             testing_content = create_testing_lab_view()
             main_content_area.controls.append(testing_content)
@@ -80,6 +197,16 @@ def main(page: ft.Page):
     )
 
     page.add(page_layout)
+    initial_event_data = str(rail.selected_index)
+    navigation_changed(
+        ft.ControlEvent(
+            target=rail.uid,
+            name="change",
+            data=initial_event_data,
+            control=rail,
+            page=page,
+        )
+    )
 
 
 if __name__ == "__main__":
