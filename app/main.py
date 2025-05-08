@@ -50,9 +50,9 @@ def handle_file_picker_result(e: FilePickerResultEvent, page: ft.Page):
             parsed_chapters_data["chapters"] = result
 
             try:
-                import ebooklib
+                from ebooklib import epub
 
-                book = ebooklib.read_epub(selected_file_path)
+                book = epub.read_epub(selected_file_path)
                 title_meta = book.get_metadata("DC", "title")
                 author_meta = book.get_metadata("DC", "creator")
                 if title_meta:
@@ -106,6 +106,9 @@ def main(page: ft.Page):
     page.title = "NovelTranslate"
     page.vertical_alignment = ft.MainAxisAlignment.START
     page.horizontal_alignment = ft.CrossAxisAlignment.START
+    page.window.width = 1000
+    page.window.height = 800
+    page.window_resizable = False
 
     file_picker = ft.FilePicker(on_result=lambda e: handle_file_picker_result(e, page))
     page.overlay.append(file_picker)
