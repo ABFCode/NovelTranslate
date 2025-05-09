@@ -1,3 +1,5 @@
+# app/ui/novel_project_view.py
+
 import flet as ft
 
 
@@ -8,149 +10,238 @@ class NovelProjectViewControls:
         self.epub_title_text = None
         self.epub_author_text = None
         self.chapter_count_text = None
+
+        self.translation_status_text = None
+        self.overall_progress_bar = None
+        self.selected_config_text = None
+        self.manage_configs_button = None
+
         self.chapter_list_view = None
-        self.primary_llm_dropdown = None
-        self.main_prompt_field = None
-        self.translate_novel_button = None
-        self.translation_progress_bar = None
+
+        self.start_translation_button = None
+        self.pause_translation_button = None
+        self.cancel_translation_button = None
+        self.export_novel_button = None
         self.output_log_field = None
+
+
+def create_chapter_item(
+    chapter_number: int, chapter_title: str, status: str = "pending"
+):
+    """Helper function to create a UI item for a single chapter."""
+    status_Icons = {
+        "pending": ft.Icons.HOURGLASS_EMPTY_ROUNDED,
+        "in_progress": ft.Icons.SYNC_ROUNDED,
+        "completed": ft.Icons.CHECK_CIRCLE_ROUNDED,
+        "error": ft.Icons.ERROR_ROUNDED,
+    }
+    status_colors = {
+        "pending": ft.colors.ON_SURFACE_VARIANT,
+        "in_progress": ft.colors.BLUE_ACCENT,
+        "completed": ft.colors.GREEN_ACCENT_700,
+        "error": ft.colors.RED_ACCENT_700,
+    }
+
+    icon = ft.Icon(
+        name=status_Icons.get(status, ft.Icons.HELP_OUTLINE),
+        color=status_colors.get(status, ft.colors.ON_SURFACE_VARIANT),
+        size=20,
+    )
+
+    display_title = (
+        (chapter_title[:40] + "...") if len(chapter_title) > 43 else chapter_title
+    )
+
+    return ft.Container(
+        content=ft.Row(
+            [
+                icon,
+                ft.Text(
+                    f"Ch {chapter_number}: {display_title}",
+                    overflow=ft.TextOverflow.ELLIPSIS,
+                    expand=True,
+                ),
+            ],
+            spacing=10,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        padding=ft.padding.symmetric(horizontal=10, vertical=8),
+        border_radius=ft.border_radius.all(4),
+    )
 
 
 def create_novel_project_view_content():
     controls = NovelProjectViewControls()
+    common_border_radius = ft.border_radius.all(8)
+    common_border = ft.border.all(1, ft.colors.OUTLINE_VARIANT)
+    common_padding = 15
 
     controls.select_epub_button = ft.ElevatedButton(text="Select EPUB File")
-    controls.selected_epub_path_text = ft.Text("No file selected.", italic=True)
-
+    controls.selected_epub_path_text = ft.Text(
+        "No file selected.", italic=True, size=12
+    )
     controls.epub_title_text = ft.Text("N/A")
     controls.epub_author_text = ft.Text("N/A")
     controls.chapter_count_text = ft.Text("0")
 
-    controls.output_log_field = ft.TextField(
-        label="Novel Processing Log / Output",
-        multiline=True,
-        read_only=True,
-        min_lines=8,
-    )
-
-    epub_info_card = ft.Card(
-        content=ft.Container(
-            content=ft.Column(
-                [
-                    ft.Text("Novel Information", weight=ft.FontWeight.BOLD, size=16),
-                    ft.Row(
-                        [
-                            ft.Text("Title:", weight=ft.FontWeight.BOLD),
-                            controls.epub_title_text,
-                        ]
-                    ),
-                    ft.Row(
-                        [
-                            ft.Text("Author:", weight=ft.FontWeight.BOLD),
-                            controls.epub_author_text,
-                        ]
-                    ),
-                    ft.Row(
-                        [
-                            ft.Text("Chapters:", weight=ft.FontWeight.BOLD),
-                            controls.chapter_count_text,
-                        ]
-                    ),
-                ],
-                spacing=5,
-            ),
-            padding=10,
-            width=400,
-        )
-    )
-
-    file_select_column = ft.Column(
+    epub_info_content = ft.Column(
         [
+            ft.Text("Novel Information", weight=ft.FontWeight.BOLD, size=16),
             controls.select_epub_button,
             controls.selected_epub_path_text,
-            ft.Divider(height=10),
-            epub_info_card,
+            ft.Row(
+                [ft.Text("Title:", weight=ft.FontWeight.BOLD), controls.epub_title_text]
+            ),
+            ft.Row(
+                [
+                    ft.Text("Author:", weight=ft.FontWeight.BOLD),
+                    controls.epub_author_text,
+                ]
+            ),
+            ft.Row(
+                [
+                    ft.Text("Chapters:", weight=ft.FontWeight.BOLD),
+                    controls.chapter_count_text,
+                ]
+            ),
         ],
-        spacing=10,
+        spacing=8,
+        alignment=ft.MainAxisAlignment.START,
+    )
+    epub_info_container = ft.Container(
+        content=epub_info_content,
+        padding=common_padding,
+        border_radius=common_border_radius,
+        border=common_border,
+        expand=1,
+    )
+
+    controls.translation_status_text = ft.Text(
+        "Status: Idle", weight=ft.FontWeight.BOLD
+    )
+    controls.overall_progress_bar = ft.ProgressBar(value=0, width=250, bar_height=10)
+    controls.selected_config_text = ft.Text("Config: Default (Placeholder)")
+    controls.manage_configs_button = ft.OutlinedButton(text="Manage Configurations")
+
+    translation_status_content = ft.Column(
+        [
+            ft.Text("Translation Overview", weight=ft.FontWeight.BOLD, size=16),
+            controls.translation_status_text,
+            ft.Text("Overall Progress:"),
+            controls.overall_progress_bar,
+            ft.Row([ft.Text("Using:"), controls.selected_config_text]),
+            controls.manage_configs_button,
+        ],
+        spacing=8,
+        alignment=ft.MainAxisAlignment.START,
+    )
+    translation_status_container = ft.Container(
+        content=translation_status_content,
+        padding=common_padding,
+        border_radius=common_border_radius,
+        border=common_border,
+        expand=1,
+    )
+
+    top_row = ft.Row(
+        [epub_info_container, translation_status_container],
+        spacing=20,
+        vertical_alignment=ft.CrossAxisAlignment.START,
     )
 
     controls.chapter_list_view = ft.ListView(
-        height=200,
         spacing=5,
+        padding=ft.padding.symmetric(vertical=5),
+        expand=True,
     )
 
-    chapter_list_container = ft.Container(
-        content=ft.Column(
-            [
-                ft.Text("Chapters", weight=ft.FontWeight.BOLD, size=16),
-                controls.chapter_list_view,
-            ]
-        ),
-        padding=ft.padding.only(top=10, bottom=10),
-        border=ft.border.all(1, ft.Colors.OUTLINE),
-        border_radius=ft.border_radius.all(5),
-    )
-
-    controls.primary_llm_dropdown = ft.Dropdown(
-        label="Primary LLM for Full Translation",
-        width=400,
-        options=[
-            ft.dropdown.Option("gpt-4o (OpenAI)"),
-            ft.dropdown.Option("gemini-1.5-pro (Google)"),
-        ],
-        hint_text="Select main LLM",
-    )
-
-    controls.main_prompt_field = ft.TextField(
-        label="Main Translation Prompt",
-        multiline=True,
-        min_lines=3,
-        max_lines=5,
-        hint_text="Enter the primary prompt for translating the entire novel...",
-    )
-
-    llm_config_column = ft.Column(
+    chapter_progress_section = ft.Column(
         [
-            ft.Text(
-                "Full Novel Translation Settings", weight=ft.FontWeight.BOLD, size=16
+            ft.Text("Chapter Status", weight=ft.FontWeight.BOLD, size=16),
+            ft.Container(
+                content=controls.chapter_list_view,
+                border=ft.border.all(1, ft.colors.OUTLINE_VARIANT),
+                border_radius=ft.border_radius.all(5),
+                padding=ft.padding.all(5),
+                expand=True,
             ),
-            controls.primary_llm_dropdown,
-            controls.main_prompt_field,
+        ],
+        spacing=5,
+        expand=True,
+    )
+
+    controls.start_translation_button = ft.ElevatedButton(
+        text="Start Translation", icon=ft.Icons.PLAY_ARROW_ROUNDED
+    )
+    controls.pause_translation_button = ft.OutlinedButton(
+        text="Pause", icon=ft.Icons.PAUSE_ROUNDED, disabled=True
+    )
+    controls.cancel_translation_button = ft.OutlinedButton(
+        text="Cancel",
+        icon=ft.Icons.CANCEL_OUTLINED,
+        disabled=True,
+        icon_color=ft.colors.ERROR,
+    )
+    controls.export_novel_button = ft.ElevatedButton(
+        text="Assemble & Export Novel", icon=ft.Icons.ARCHIVE_OUTLINED, disabled=True
+    )
+
+    actions_content = ft.Column(
+        [
+            ft.Text("Actions", weight=ft.FontWeight.BOLD, size=16),
+            controls.start_translation_button,
+            ft.Row(
+                [controls.pause_translation_button, controls.cancel_translation_button],
+                spacing=10,
+            ),
+            controls.export_novel_button,
         ],
         spacing=10,
+        alignment=ft.MainAxisAlignment.START,
+    )
+    actions_container = ft.Container(
+        content=actions_content,
+        padding=common_padding,
+        border_radius=common_border_radius,
+        border=common_border,
+        width=280,
     )
 
-    controls.translate_novel_button = ft.ElevatedButton(text="Translate Full Novel")
-    controls.translation_progress_bar = ft.ProgressBar(
-        value=0, width=400, visible=False
+    controls.output_log_field = ft.TextField(
+        label="Processing Log",
+        multiline=True,
+        read_only=True,
+        min_lines=5,
+        border_radius=common_border_radius,
+        expand=True,
+    )
+    output_log_container = ft.Container(
+        content=controls.output_log_field,
+        padding=common_padding,
+        border_radius=common_border_radius,
+        border=common_border,
+        expand=True,
     )
 
-    action_progress_column = ft.Column(
-        [controls.translate_novel_button, controls.translation_progress_bar],
-        spacing=10,
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    bottom_row = ft.Row(
+        [actions_container, output_log_container],
+        spacing=20,
+        vertical_alignment=ft.CrossAxisAlignment.START,
     )
 
     novel_project_page_content = ft.Column(
         [
-            file_select_column,
-            ft.Divider(height=20),
-            chapter_list_container,
-            ft.Divider(height=20),
-            llm_config_column,
-            ft.Divider(height=20),
-            action_progress_column,
-            ft.Divider(height=10),
-            controls.output_log_field,
+            ft.Container(content=top_row, expand=0),
+            ft.Container(content=chapter_progress_section, expand=3),
+            ft.Container(content=bottom_row, expand=2),
         ],
         spacing=15,
-        scroll=ft.ScrollMode.ADAPTIVE,
         expand=True,
     )
 
     return ft.Container(
         content=novel_project_page_content,
-        padding=ft.padding.all(20),
+        padding=ft.padding.all(15),
         alignment=ft.alignment.top_left,
         expand=True,
     ), controls
