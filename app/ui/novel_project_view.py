@@ -1,5 +1,3 @@
-# app/ui/novel_project_view.py
-
 import flet as ft
 
 
