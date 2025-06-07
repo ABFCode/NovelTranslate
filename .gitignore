@@ -12,6 +12,7 @@ venv/
 .env
 .env.*
 !.env.example
+repomix-output.txt
 
 
 .vscode/

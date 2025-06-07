@@ -1,10 +1,15 @@
 import logging
+
 import flet as ft
 from flet import FilePickerResultEvent
+
+from app.core.config_manager import ConfigManager
 from app.core.epub_parser import parse_epub
+from app.ui.config_dialog import ConfigDialog
 from app.ui.novel_project_view import (
-    create_novel_project_view_content,
+    NovelProjectViewControls,
     create_chapter_item,
+    create_novel_project_view_content,
 )
 from app.ui.settings_view import create_settings_view_content
 
@@ -12,20 +17,13 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+config_manager = ConfigManager()
 current_view_controls = None
 parsed_chapters_data = {
     "title": "N/A",
     "author": "N/A",
     "chapters_meta": [],
 }
-# Each dictionary in chapters_meta will look like:
-# {
-# "number": int,
-# "title_source": str, # Raw material for the title, e.g., first 70 chars
-# "original_text": str,
-# "translated_text": str or None,
-# "status": str # e.g., "pending", "in_progress", "completed", "error"
-# }
 
 
 def create_testing_lab_view():
@@ -149,6 +147,27 @@ def main(page: ft.Page):
     page.overlay.append(file_picker)
     main_content_area = ft.Column(expand=True)
 
+    def on_config_saved():
+        """Callback function to refresh UI eleemnts that depend on config"""
+        logging.info("Configuration saved. Refreshing UI elements")
+        if isinstance(current_view_controls, NovelProjectViewControls):
+            all_configs = config_manager.get_all_configs()
+            if all_configs:
+                latest_config_name = list(all_configs.keys())[-1]
+                current_view_controls.selected_config_text.value = (
+                    f"Config: {latest_config_name}"
+                )
+                current_view_controls.selected_config_text.update()
+
+    def open_manage_configs_dialog(e):
+        logging.info("Main: open_manage_config_dialog() CALLED")
+        create_dialog = ConfigDialog(config_manager, on_save_callback=on_config_saved)
+        logging.info("--- Main: ConfigDialog instance created successfully. ---")
+        page.dialog = create_dialog
+        create_dialog.open = True
+        page.update()
+        logging.info("--- Main: Dialog opened and page updated. ---")
+
     def navigation_changed(e):
         global current_view_controls
         global parsed_chapters_data
@@ -169,6 +188,11 @@ def main(page: ft.Page):
                     lambda _: file_picker.pick_files(
                         allow_multiple=False, allowed_extensions=["epub"]
                     )
+                )
+
+            if hasattr(novel_controls, "manage_configs_button"):
+                novel_controls.manage_configs_button.on_click = (
+                    open_manage_configs_dialog
                 )
 
             if parsed_chapters_data["chapters_meta"]:

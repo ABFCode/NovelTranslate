@@ -2,7 +2,7 @@ import flet as ft
 
 
 class SettingsViewControls:
-    def __init(self):
+    def __init__(self):
         self.openai_key_field = None
         self.gemini_key_field = None
         self.grok_key_field = None
