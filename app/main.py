@@ -6,6 +6,7 @@ from flet import FilePickerResultEvent
 from app.core.config_manager import ConfigManager
 from app.core.epub_parser import parse_epub
 from app.ui.config_dialog import ConfigDialog
+from app.ui.manage_configs_dialog import ManageConfigsDialog
 from app.ui.novel_project_view import (
     NovelProjectViewControls,
     create_chapter_item,
@@ -147,21 +148,24 @@ def main(page: ft.Page):
     page.overlay.append(file_picker)
     main_content_area = ft.Column(expand=True)
 
-    def on_config_saved():
+    def on_config_saved_or_deleted():
         """Callback function to refresh UI eleemnts that depend on config"""
         logging.info("Configuration saved. Refreshing UI elements")
         if isinstance(current_view_controls, NovelProjectViewControls):
             all_configs = config_manager.get_all_configs()
             if all_configs:
-                latest_config_name = list(all_configs.keys())[-1]
                 current_view_controls.selected_config_text.value = (
-                    f"Config: {latest_config_name}"
+                    f"Config ({len(all_configs)} saved)"
                 )
-                current_view_controls.selected_config_text.update()
+            else:
+                current_view_controls.selected_config_text.value = "No Configs Saved"
+            current_view_controls.selected_config_text.update()
 
-    def open_manage_configs_dialog(e):
+    def open_create_configs_dialog(e):
         logging.info("Main: open_manage_config_dialog() CALLED")
-        create_dialog = ConfigDialog(config_manager, on_save_callback=on_config_saved)
+        create_dialog = ConfigDialog(
+            config_manager, on_save_callback=on_config_saved_or_deleted
+        )
         logging.info("--- Main: ConfigDialog instance created successfully. ---")
         page.dialog = create_dialog
         if create_dialog not in page.overlay:
@@ -169,6 +173,18 @@ def main(page: ft.Page):
         create_dialog.open = True
         page.update()
         logging.info("--- Main: Dialog opened and page updated. ---")
+
+    def open_manage_configs_dialog(e):
+        """Opens the main dialog for managing all config"""
+        manage_dialog = ManageConfigsDialog(
+            config_manager, on_close_callback=on_config_saved_or_deleted
+        )
+        page.dialog = manage_dialog
+        if manage_dialog not in page.overlay:
+            page.overlay.append(manage_dialog)
+        page.dialog = manage_dialog
+        manage_dialog.open = True
+        page.update()
 
     def navigation_changed(e):
         global current_view_controls
