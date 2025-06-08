@@ -161,7 +161,7 @@ def main(page: ft.Page):
                 current_view_controls.selected_config_text.value = "No Configs Saved"
             current_view_controls.selected_config_text.update()
 
-    def open_create_configs_dialog(e):
+    def open_create_config_dialog(e):
         logging.info("Main: open_manage_config_dialog() CALLED")
         create_dialog = ConfigDialog(
             config_manager, on_save_callback=on_config_saved_or_deleted
@@ -177,7 +177,9 @@ def main(page: ft.Page):
     def open_manage_configs_dialog(e):
         """Opens the main dialog for managing all config"""
         manage_dialog = ManageConfigsDialog(
-            config_manager, on_close_callback=on_config_saved_or_deleted
+            config_manager,
+            on_close_callback=on_config_saved_or_deleted,
+            on_add_new_callback=open_create_config_dialog,
         )
         page.dialog = manage_dialog
         if manage_dialog not in page.overlay:

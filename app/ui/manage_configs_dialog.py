@@ -2,12 +2,17 @@ import logging
 
 import flet as ft
 
+from app.core.config_manager import ConfigManager
+
 
 class ManageConfigsDialog(ft.AlertDialog):
-    def __init__(self, config_manager, on_close_callback):
+    def __init__(
+        self, config_manager: ConfigManager, on_close_callback, on_add_new_callback
+    ):
         super().__init__()
         self.config_manager = config_manager
         self.on_close_callback = on_close_callback
+        self.on_add_new_callback = on_add_new_callback
         self.modal = True
         self.title = ft.Text("Manage Configurations")
 
@@ -60,13 +65,19 @@ class ManageConfigsDialog(ft.AlertDialog):
         )
 
     def add_new_config(self, e):
-        logging.info("Add new config clicked")
+        self.open = False
+        self.page.update()
+
+        if self.on_add_new_callback:
+            self.on_add_new_callback(e)
 
     def edit_config(self, config_name: str):
-        logging.info("Edit config clicked for {}", config_name)
+        logging.info(f"Edit config clicked for {config_name}")
 
     def delete_config(self, config_name: str):
-        logging.info("Delete config clicked for {}", config_name)
+        logging.info(f"Delete config {config_name}")
+        self.config_manager.delete_config(config_name)
+        self.populate_configs()
 
     def close_dialog(self, e):
         self.open = False
