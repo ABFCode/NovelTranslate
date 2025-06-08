@@ -174,12 +174,30 @@ def main(page: ft.Page):
         page.update()
         logging.info("--- Main: Dialog opened and page updated. ---")
 
+    def open_edit_config_dialog(config_name: str):
+        config_to_edit = config_manager.get_config(config_name)
+        if not config_to_edit:
+            logging.error(f"Could not find config '{config_name} to edit")
+            return
+
+        edit_dialog = ConfigDialog(
+            config_manager,
+            on_save_callback=on_config_saved_or_deleted,
+            config_to_edit=config_to_edit,
+        )
+        page.dialog = edit_dialog
+        if edit_dialog not in page.overlay:
+            page.overlay.append(edit_dialog)
+        edit_dialog.open = True
+        page.update()
+
     def open_manage_configs_dialog(e):
         """Opens the main dialog for managing all config"""
         manage_dialog = ManageConfigsDialog(
             config_manager,
             on_close_callback=on_config_saved_or_deleted,
             on_add_new_callback=open_create_config_dialog,
+            on_edit_callback=open_edit_config_dialog,
         )
         page.dialog = manage_dialog
         if manage_dialog not in page.overlay:

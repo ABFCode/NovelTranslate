@@ -41,6 +41,19 @@ class ConfigManager:
         self._save_configs()
         return True
 
+    def update_config(self, original_name: str, new_config_data: dict):
+        """Updates an existing config, handling renames too"""
+        new_name = new_config_data.get("name")
+        if not new_name:
+            logging.error("Cannot update config without a name.")
+            return False
+
+        if original_name != new_name and original_name in self.configs:
+            del self.configs[original_name]
+        self.configs[new_name] = new_config_data
+        self._save_configs()
+        return True
+
     def get_config(self, name: str):
         return self.configs.get(name)
 

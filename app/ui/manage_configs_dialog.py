@@ -7,12 +7,17 @@ from app.core.config_manager import ConfigManager
 
 class ManageConfigsDialog(ft.AlertDialog):
     def __init__(
-        self, config_manager: ConfigManager, on_close_callback, on_add_new_callback
+        self,
+        config_manager: ConfigManager,
+        on_close_callback,
+        on_add_new_callback,
+        on_edit_callback,
     ):
         super().__init__()
         self.config_manager = config_manager
         self.on_close_callback = on_close_callback
         self.on_add_new_callback = on_add_new_callback
+        self.on_edit_callback = on_edit_callback
         self.modal = True
         self.title = ft.Text("Manage Configurations")
 
@@ -73,6 +78,10 @@ class ManageConfigsDialog(ft.AlertDialog):
 
     def edit_config(self, config_name: str):
         logging.info(f"Edit config clicked for {config_name}")
+        self.open = False
+        self.page.update()
+        if self.on_edit_callback:
+            self.on_edit_callback(config_name)
 
     def delete_config(self, config_name: str):
         logging.info(f"Delete config {config_name}")

@@ -4,19 +4,32 @@ import flet as ft
 
 
 class ConfigDialog(ft.AlertDialog):
-    def __init__(self, config_manager, on_save_callback):
+    def __init__(self, config_manager, on_save_callback, config_to_edit: dict = None):
         super().__init__()
         logging.info("--- Dialog: __init__() STARTED ---")
         self.config_manager = config_manager
         self.on_save_callback = on_save_callback
+        self.config_to_edit = config_to_edit
+        self.original_config_name = (
+            config_to_edit.get("name") if config_to_edit else None
+        )
         self.modal = True
-        self.title = ft.Text("Create new Config")
+
+        if self.config_to_edit:
+            self.title = ft.Text("Edit Configuration")
+        else:
+            self.title = ft.Text("Create new Configuration")
 
         self.config_name_field = ft.TextField(
-            label="Configuration Name", autofocus=True
+            label="Configuration Name",
+            autofocus=True,
+            value=self.config_to_edit.get("name") if self.config_to_edit else "",
         )
         self.prompt_field = ft.TextField(
-            label="System Prompt", multiline=True, min_lines=3
+            label="System Prompt",
+            multiline=True,
+            min_lines=3,
+            value=self.config_to_edit.get("prompt") if self.config_to_edit else "",
         )
         self.primary_llm_dropdown = ft.Dropdown(
             label="Primary LLM",
@@ -25,6 +38,7 @@ class ConfigDialog(ft.AlertDialog):
                 ft.dropdown.Option("gemini-2.5-pro"),
                 ft.dropdown.Option("claude-4-sonnet"),
             ],
+            value=self.config_to_edit.get("primary_llm") if self.config_to_edit else "",
         )
         self.fallback_chain_ui = ft.Text("Fallback chain UI will go here", italic=True)
         self.content = ft.Column(
@@ -61,7 +75,10 @@ class ConfigDialog(ft.AlertDialog):
             self.config_name_field.update()
             return
 
-        self.config_manager.add_config(config_data)
+        if self.original_config_name:
+            self.config_manager.update_config(self.original_config_name, config_data)
+        else:
+            self.config_manager.add_config(config_data)
 
         if self.on_save_callback:
             self.on_save_callback()
