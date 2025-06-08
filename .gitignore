@@ -13,7 +13,7 @@ venv/
 .env.*
 !.env.example
 repomix-output.txt
-
+translation_configs.json
 
 .vscode/
 .idea/

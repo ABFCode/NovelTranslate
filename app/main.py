@@ -118,7 +118,7 @@ def handle_file_picker_result(e: FilePickerResultEvent, page: ft.Page):
                 )
                 logging.warning("EPUB parsed but no chapter content extracted.")
 
-        else:  # Parsing failed
+        else:
             error_message = (
                 result if isinstance(result, str) else "Unknown parsing error."
             )
@@ -164,6 +164,8 @@ def main(page: ft.Page):
         create_dialog = ConfigDialog(config_manager, on_save_callback=on_config_saved)
         logging.info("--- Main: ConfigDialog instance created successfully. ---")
         page.dialog = create_dialog
+        if create_dialog not in page.overlay:
+            page.overlay.append(create_dialog)
         create_dialog.open = True
         page.update()
         logging.info("--- Main: Dialog opened and page updated. ---")
@@ -208,7 +210,7 @@ def main(page: ft.Page):
                     novel_controls.chapter_list_view.controls.clear()
                     for chap_meta in parsed_chapters_data["chapters_meta"]:
                         novel_controls.chapter_list_view.controls.append(
-                            create_chapter_item(  # <--- USE THE HELPER
+                            create_chapter_item(
                                 chapter_number=chap_meta["number"],
                                 chapter_title=chap_meta["title_source"],
                                 status=chap_meta["status"],
@@ -220,12 +222,12 @@ def main(page: ft.Page):
                 novel_controls.epub_author_text.value = "N/A"
                 novel_controls.chapter_count_text.value = "0"
                 if novel_controls.chapter_list_view:
-                    novel_controls.chapter_list_view.controls.clear()  # Also clear if no chapters
+                    novel_controls.chapter_list_view.controls.clear()
 
-        elif selected_index == 1:  # Testing View
+        elif selected_index == 1:
             testing_content = create_testing_lab_view()
             main_content_area.controls.append(testing_content)
-        elif selected_index == 2:  # Settings View
+        elif selected_index == 2:
             settings_content, settings_controls = create_settings_view_content()
             main_content_area.controls.append(settings_content)
             current_view_controls = settings_controls
