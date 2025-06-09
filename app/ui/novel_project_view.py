@@ -119,7 +119,7 @@ def create_novel_project_view_content():
     )
     controls.overall_progress_bar = ft.ProgressBar(value=0, width=250, bar_height=10)
     controls.active_config_dropdown = ft.Dropdown(
-        label="Active Configuration", options=[]
+        label="Active Configuration", options=[], width=220, dense=False
     )
     controls.manage_configs_button = ft.OutlinedButton(text="Manage Configurations")
 
@@ -130,15 +130,12 @@ def create_novel_project_view_content():
             ft.Text("Overall Progress:"),
             controls.overall_progress_bar,
             ft.Row(
-                [
-                    ft.Text("Using:", width=50),
-                    ft.Container(content=controls.active_config_dropdown, expand=True),
-                ],
+                [ft.Text("Using:", width=50), controls.active_config_dropdown],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             controls.manage_configs_button,
         ],
-        spacing=8,
+        spacing=12,
         alignment=ft.MainAxisAlignment.START,
     )
     translation_status_container = ft.Container(
