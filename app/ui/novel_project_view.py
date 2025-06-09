@@ -103,8 +103,9 @@ def create_novel_project_view_content():
                 ]
             ),
         ],
-        spacing=8,
+        spacing=12,
         alignment=ft.MainAxisAlignment.START,
+        expand=True,
     )
     epub_info_container = ft.Container(
         content=epub_info_content,
@@ -137,6 +138,7 @@ def create_novel_project_view_content():
         ],
         spacing=12,
         alignment=ft.MainAxisAlignment.START,
+        expand=True,
     )
     translation_status_container = ft.Container(
         content=translation_status_content,
@@ -149,8 +151,10 @@ def create_novel_project_view_content():
     top_row = ft.Row(
         [epub_info_container, translation_status_container],
         spacing=20,
-        vertical_alignment=ft.CrossAxisAlignment.START,
+        alignment=ft.CrossAxisAlignment.STRETCH,
     )
+
+    top_row_container = ft.Container(content=top_row, height=245)
 
     controls.chapter_list_view = ft.ListView(
         spacing=5,
@@ -234,7 +238,7 @@ def create_novel_project_view_content():
 
     novel_project_page_content = ft.Column(
         [
-            ft.Container(content=top_row, expand=0),
+            ft.Container(content=top_row_container, expand=0),
             ft.Container(content=chapter_progress_section, expand=3),
             ft.Container(content=bottom_row, expand=2),
         ],
