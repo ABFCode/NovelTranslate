@@ -11,7 +11,7 @@ class NovelProjectViewControls:
 
         self.translation_status_text = None
         self.overall_progress_bar = None
-        self.selected_config_text = None
+        self.active_config_dropdown = None
         self.manage_configs_button = None
 
         self.chapter_list_view = None
@@ -118,7 +118,9 @@ def create_novel_project_view_content():
         "Status: Idle", weight=ft.FontWeight.BOLD
     )
     controls.overall_progress_bar = ft.ProgressBar(value=0, width=250, bar_height=10)
-    controls.selected_config_text = ft.Text("Config: Default (Placeholder)")
+    controls.active_config_dropdown = ft.Dropdown(
+        label="Active Configuration", options=[]
+    )
     controls.manage_configs_button = ft.OutlinedButton(text="Manage Configurations")
 
     translation_status_content = ft.Column(
@@ -127,7 +129,13 @@ def create_novel_project_view_content():
             controls.translation_status_text,
             ft.Text("Overall Progress:"),
             controls.overall_progress_bar,
-            ft.Row([ft.Text("Using:"), controls.selected_config_text]),
+            ft.Row(
+                [
+                    ft.Text("Using:", width=50),
+                    ft.Container(content=controls.active_config_dropdown, expand=True),
+                ],
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
             controls.manage_configs_button,
         ],
         spacing=8,

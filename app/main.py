@@ -25,6 +25,7 @@ parsed_chapters_data = {
     "author": "N/A",
     "chapters_meta": [],
 }
+active_configuration_name = None
 
 
 def create_testing_lab_view():
@@ -151,15 +152,7 @@ def main(page: ft.Page):
     def on_config_saved_or_deleted():
         """Callback function to refresh UI eleemnts that depend on config"""
         logging.info("Configuration saved. Refreshing UI elements")
-        if isinstance(current_view_controls, NovelProjectViewControls):
-            all_configs = config_manager.get_all_configs()
-            if all_configs:
-                current_view_controls.selected_config_text.value = (
-                    f"Config ({len(all_configs)} saved)"
-                )
-            else:
-                current_view_controls.selected_config_text.value = "No Configs Saved"
-            current_view_controls.selected_config_text.update()
+        update_active_config_dropdown()
 
     def open_create_config_dialog(e):
         logging.info("Main: open_manage_config_dialog() CALLED")
@@ -206,6 +199,29 @@ def main(page: ft.Page):
         manage_dialog.open = True
         page.update()
 
+    def update_active_config_dropdown():
+        if (
+            isinstance(current_view_controls, NovelProjectViewControls)
+            and hasattr(current_view_controls, "active_config_dropdown")
+            and current_view_controls.active_config_dropdown
+        ):
+            dropdown = current_view_controls.active_config_dropdown
+            current_value = dropdown.value
+            all_configs = config_manager.get_all_configs()
+
+            for name in all_configs.keys():
+                dropdown.options.append(ft.dropdown.Option(name))
+            new_options = [opt.key for opt in dropdown.options]
+            if current_value in new_options:
+                dropdown.value = current_value
+            else:
+                dropdown.value = active_configuration_name
+
+    def on_active_config_change(e):
+        global active_configuration_name
+        active_configuration_name = e.control.value
+        logging.info(f"Active configuraiton cahnged to : {active_configuration_name}")
+
     def navigation_changed(e):
         global current_view_controls
         global parsed_chapters_data
@@ -217,6 +233,7 @@ def main(page: ft.Page):
             novel_view_content, novel_controls = create_novel_project_view_content()
             main_content_area.controls.append(novel_view_content)
             current_view_controls = novel_controls
+            update_active_config_dropdown()
 
             if (
                 hasattr(novel_controls, "select_epub_button")
@@ -231,6 +248,11 @@ def main(page: ft.Page):
             if hasattr(novel_controls, "manage_configs_button"):
                 novel_controls.manage_configs_button.on_click = (
                     open_manage_configs_dialog
+                )
+
+            if hasattr(novel_controls, "active_config_dropdown"):
+                novel_controls.active_config_dropdown.on_change = (
+                    on_active_config_change
                 )
 
             if parsed_chapters_data["chapters_meta"]:
