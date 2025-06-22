@@ -37,6 +37,10 @@ class ConfigManager:
         if not config_name:
             logging.error("Cannot add config without a name.")
             return False
+        if config_name in self.configs:
+            logging.error(f"Config '{config_name}' already exists. Use update instead.")
+            return False
+
         self.configs[config_name] = config_data
         self._save_configs()
         return True

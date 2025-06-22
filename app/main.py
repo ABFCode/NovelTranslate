@@ -3,6 +3,7 @@ import logging
 import flet as ft
 from flet import FilePickerResultEvent
 
+from app.core.app_state import AppState
 from app.core.config_manager import ConfigManager
 from app.core.epub_parser import parse_epub
 from app.ui.config_dialog import ConfigDialog
@@ -19,13 +20,11 @@ logging.basicConfig(
 )
 
 config_manager = ConfigManager()
+app_state = AppState()
+
+
 current_view_controls = None
-parsed_chapters_data = {
-    "title": "N/A",
-    "author": "N/A",
-    "chapters_meta": [],
-}
-active_configuration_name = None
+app_state.active_config_name = None
 
 
 def create_testing_lab_view():
@@ -39,17 +38,12 @@ def create_testing_lab_view():
 
 def handle_file_picker_result(e: FilePickerResultEvent, page: ft.Page):
     global current_view_controls
-    global parsed_chapters_data
     current_view_controls.selected_epub_path_text.value = "Processing..."
     current_view_controls.output_log_field.value = ""
     current_view_controls.epub_title_text.value = "N/A"
     current_view_controls.epub_author_text.value = "N/A"
     current_view_controls.chapter_count_text.value = "0"
-    parsed_chapters_data = {
-        "title": "N/A",
-        "author": "N/A",
-        "chapters_meta": [],
-    }
+    app_state.reset_epub_data()
     if current_view_controls.chapter_list_view:
         current_view_controls.chapter_list_view.controls.clear()
     page.update()
@@ -66,7 +60,7 @@ def handle_file_picker_result(e: FilePickerResultEvent, page: ft.Page):
             raw_chapter_texts = result
             for i, chap_text in enumerate(raw_chapter_texts):
                 snippet = chap_text[:70].replace("\n", " ").strip()
-                parsed_chapters_data["chapters_meta"].append(
+                app_state.epub_data["chapters_meta"].append(
                     {
                         "number": i + 1,
                         "title_source": snippet,
@@ -83,26 +77,24 @@ def handle_file_picker_result(e: FilePickerResultEvent, page: ft.Page):
                 title_meta = book.get_metadata("DC", "title")
                 author_meta = book.get_metadata("DC", "creator")
                 if title_meta:
-                    parsed_chapters_data["title"] = title_meta[0][0]
+                    app_state.epub_data["title"] = title_meta[0][0]
                 if author_meta:
-                    parsed_chapters_data["author"] = author_meta[0][0]
+                    app_state.epub_data["author"] = author_meta[0][0]
             except Exception as meta_ex:
                 logging.warning(f"Could not extract metadata: {meta_ex}")
 
-            current_view_controls.epub_title_text.value = parsed_chapters_data["title"]
-            current_view_controls.epub_author_text.value = parsed_chapters_data[
-                "author"
-            ]
+            current_view_controls.epub_title_text.value = app_state.epub_data["title"]
+            current_view_controls.epub_author_text.value = app_state.epub_data["author"]
             current_view_controls.chapter_count_text.value = str(
-                len(parsed_chapters_data["chapters_meta"])
+                len(app_state.epub_data["chapters_meta"])
             )
 
-            log_message = f"Successfully parsed EPUB: {parsed_chapters_data['title']}.\nFound {len(parsed_chapters_data['chapters_meta'])} chapters.\n"
-            if parsed_chapters_data["chapters_meta"]:
-                log_message += f"\nFirst chapter preview:\n---\n{parsed_chapters_data['chapters_meta'][0]['original_text'][:200]}..."
+            log_message = f"Successfully parsed EPUB: {app_state.epub_data['title']}.\nFound {len(app_state.epub_data['chapters_meta'])} chapters.\n"
+            if app_state.epub_data["chapters_meta"]:
+                log_message += f"\nFirst chapter preview:\n---\n{app_state.epub_data['chapters_meta'][0]['original_text'][:200]}..."
                 if current_view_controls.chapter_list_view:
                     current_view_controls.chapter_list_view.controls.clear()
-                    for chap_meta in parsed_chapters_data["chapters_meta"]:
+                    for chap_meta in app_state.epub_data["chapters_meta"]:
                         current_view_controls.chapter_list_view.controls.append(
                             create_chapter_item(
                                 chapter_number=chap_meta["number"],
@@ -112,7 +104,7 @@ def handle_file_picker_result(e: FilePickerResultEvent, page: ft.Page):
                         )
                 current_view_controls.output_log_field.value = log_message
                 logging.info(
-                    f"EPUB parsed successfully, {len(parsed_chapters_data['chapters_meta'])} chapters found."
+                    f"EPUB parsed successfully, {len(app_state.epub_data['chapters_meta'])} chapters found."
                 )
             else:
                 current_view_controls.output_log_field.value = (
@@ -215,16 +207,16 @@ def main(page: ft.Page):
             if current_value in new_options:
                 dropdown.value = current_value
             else:
-                dropdown.value = active_configuration_name
+                dropdown.value = app_state.active_config_name
 
     def on_active_config_change(e):
-        global active_configuration_name
-        active_configuration_name = e.control.value
-        logging.info(f"Active configuraiton cahnged to : {active_configuration_name}")
+        app_state.active_config_name = e.control.value
+        logging.info(
+            f"Active configuraiton cahnged to : {app_state.active_config_name}"
+        )
 
     def navigation_changed(e):
         global current_view_controls
-        global parsed_chapters_data
         selected_index = e.control.selected_index
         main_content_area.controls.clear()
         current_view_controls = None
@@ -255,18 +247,18 @@ def main(page: ft.Page):
                     on_active_config_change
                 )
 
-            if parsed_chapters_data["chapters_meta"]:
+            if app_state.epub_data["chapters_meta"]:
                 novel_controls.selected_epub_path_text.value = (
                     "Previously loaded EPUB (re-select if needed)"
                 )
-                novel_controls.epub_title_text.value = parsed_chapters_data["title"]
-                novel_controls.epub_author_text.value = parsed_chapters_data["author"]
+                novel_controls.epub_title_text.value = app_state.epub_data["title"]
+                novel_controls.epub_author_text.value = app_state.epub_data["author"]
                 novel_controls.chapter_count_text.value = str(
-                    len(parsed_chapters_data["chapters_meta"])
+                    len(app_state.epub_data["chapters_meta"])
                 )
                 if novel_controls.chapter_list_view:
                     novel_controls.chapter_list_view.controls.clear()
-                    for chap_meta in parsed_chapters_data["chapters_meta"]:
+                    for chap_meta in app_state.epub_data["chapters_meta"]:
                         novel_controls.chapter_list_view.controls.append(
                             create_chapter_item(
                                 chapter_number=chap_meta["number"],
