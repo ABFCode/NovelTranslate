@@ -209,8 +209,8 @@ def main(page: ft.Page):
             current_value = dropdown.value
             all_configs = config_manager.get_all_configs()
 
-            for name in all_configs.keys():
-                dropdown.options.append(ft.dropdown.Option(name))
+            dropdown.options = [ft.dropdown.Option(name) for name in all_configs.keys()]
+
             new_options = [opt.key for opt in dropdown.options]
             if current_value in new_options:
                 dropdown.value = current_value
