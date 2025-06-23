@@ -123,9 +123,7 @@ class AppController:
         create_dialog = ConfigDialog(
             self.config_manager, on_save_callback=self.on_config_saved_or_deleted
         )
-        self.page.dialog = create_dialog
-        create_dialog.open = True
-        self.page.update()
+        self.page.open(create_dialog)
 
     def open_edit_config_dialog(self, config_name: str):
         config_to_edit = self.config_manager.get_config(config_name)
@@ -137,20 +135,17 @@ class AppController:
             on_save_callback=self.on_config_saved_or_deleted,
             config_to_edit=config_to_edit,
         )
-        self.page.dialog = edit_dialog
-        edit_dialog.open = True
-        self.page.update()
+        self.page.open(edit_dialog)
 
     def open_manage_configs_dialog(self, e):
+        print("Manage button clicked")
         manage_dialog = ManageConfigsDialog(
             self.config_manager,
             on_close_callback=self.on_config_saved_or_deleted,
             on_add_new_callback=self.open_create_config_dialog,
             on_edit_callback=self.open_edit_config_dialog,
         )
-        self.page.dialog = manage_dialog
-        manage_dialog.open = True
-        self.page.update()
+        self.page.open(manage_dialog)
 
     def update_active_config_dropdown(self):
         if self.view_controls and hasattr(self.view_controls, "active_config_dropdown"):

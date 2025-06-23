@@ -89,7 +89,6 @@ class ManageConfigsDialog(ft.AlertDialog):
         self.populate_configs()
 
     def close_dialog(self, e):
-        self.open = False
+        self.page.close(self)
         if self.on_close_callback:
             self.on_close_callback()
-        self.page.update()
