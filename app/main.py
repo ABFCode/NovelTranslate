@@ -1,5 +1,3 @@
-# File: app/main.py (The New, Clean Version)
-
 import logging
 
 import flet as ft
@@ -12,9 +10,7 @@ from app.ui.novel_project_view import (
     create_novel_project_view_content,
 )
 from app.ui.settings_view import create_settings_view_content
-from app.ui.testing_lab_view import (
-    create_testing_lab_view,
-)
+from app.ui.testing_lab_view import create_testing_lab_view
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -34,14 +30,13 @@ def main(page: ft.Page):
     file_picker = ft.FilePicker(on_result=controller.handle_file_picker_result)
     page.overlay.append(file_picker)
 
-    main_content_area = ft.Column(expand=True)
-
-    def navigation_changed(e):
-        selected_index = e.control.selected_index
+    def route_change(e):
         main_content_area.controls.clear()
         controller.view_controls = None
 
-        if selected_index == 0:
+        if e.route == "/":
+            rail.selected_index = 0
+
             novel_view_content, novel_controls = create_novel_project_view_content()
             main_content_area.controls.append(novel_view_content)
             controller.view_controls = novel_controls
@@ -81,11 +76,13 @@ def main(page: ft.Page):
             else:
                 novel_controls.selected_epub_path_text.value = "No file selected."
 
-        elif selected_index == 1:
+        elif e.route == "/testing":
+            rail.selected_index = 1
             testing_content = create_testing_lab_view()
             main_content_area.controls.append(testing_content)
 
-        elif selected_index == 2:
+        elif e.route == "/settings":
+            rail.selected_index = 2
             settings_content, settings_controls = create_settings_view_content()
             main_content_area.controls.append(settings_content)
             controller.view_controls = settings_controls
@@ -115,19 +112,25 @@ def main(page: ft.Page):
                 label_content=ft.Text("Settings"),
             ),
         ],
-        on_change=navigation_changed,
+        on_change=lambda e: page.go(
+            ["/", "/testing", "/settings"][e.control.selected_index]
+        ),
     )
+
+    main_content_area = ft.Column(expand=True)
 
     page_layout = ft.Row(
-        [rail, ft.VerticalDivider(width=1), main_content_area], expand=True
+        controls=[
+            rail,
+            ft.VerticalDivider(width=1),
+            main_content_area,
+        ],
+        expand=True,
     )
-    page.add(page_layout)
 
-    navigation_changed(
-        ft.ControlEvent(
-            target=rail.uid, name="change", data="0", control=rail, page=page
-        )
-    )
+    page.add(page_layout)
+    page.on_route_change = route_change
+    page.go(page.route)
 
 
 if __name__ == "__main__":
