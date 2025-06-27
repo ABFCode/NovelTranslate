@@ -23,8 +23,6 @@ logging.basicConfig(
 
 def main(page: ft.Page):
     page.title = "NovelTranslate"
-    page.vertical_alignment = ft.MainAxisAlignment.START
-    page.horizontal_alignment = ft.CrossAxisAlignment.START
     page.window.width = 1000
     page.window.height = 800
     page.window_resizable = False
