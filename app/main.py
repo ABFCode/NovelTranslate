@@ -20,13 +20,12 @@ logging.basicConfig(
 def main(page: ft.Page):
     page.title = "NovelTranslate"
 
-    page.theme = ft.Theme(color_scheme_seed=ft.colors.BLUE_GREY)
-    page.dark_theme = ft.Theme(color_scheme_seed=ft.colors.BLUE_GREY)
+    page.theme = ft.Theme(color_scheme_seed=ft.Colors.BLUE_GREY)
+    page.dark_theme = ft.Theme(color_scheme_seed=ft.Colors.BLUE_GREY)
     page.theme_mode = ft.ThemeMode.SYSTEM
 
-    page.window.width = 1000
-    page.window.height = 800
-    page.window_resizable = False
+    page.window.width = 1200
+    page.window.height = 900
 
     config_manager = ConfigManager()
     app_state = AppState()

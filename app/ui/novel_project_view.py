@@ -107,11 +107,8 @@ def create_novel_project_view_content():
         alignment=ft.MainAxisAlignment.START,
         expand=True,
     )
-    epub_info_container = ft.Container(
-        content=epub_info_content,
-        padding=common_padding,
-        border_radius=common_border_radius,
-        border=common_border,
+    epub_info_container = ft.Card(
+        content=ft.Container(content=epub_info_content, padding=common_padding),
         expand=1,
     )
 
@@ -140,11 +137,10 @@ def create_novel_project_view_content():
         alignment=ft.MainAxisAlignment.START,
         expand=True,
     )
-    translation_status_container = ft.Container(
-        content=translation_status_content,
-        padding=common_padding,
-        border_radius=common_border_radius,
-        border=common_border,
+    translation_status_container = ft.Card(
+        content=ft.Container(
+            content=translation_status_content, padding=common_padding
+        ),
         expand=1,
     )
 
@@ -162,18 +158,24 @@ def create_novel_project_view_content():
         expand=True,
     )
 
-    chapter_progress_section = ft.Column(
-        [
-            ft.Text("Chapter Status", weight=ft.FontWeight.BOLD, size=16),
-            ft.Container(
-                content=controls.chapter_list_view,
-                border=ft.border.all(1, ft.colors.OUTLINE_VARIANT),
-                border_radius=ft.border_radius.all(5),
-                padding=ft.padding.all(5),
+    chapter_progress_section = ft.Card(
+        content=ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text("Chapter Status", weight=ft.FontWeight.BOLD, size=16),
+                    ft.Container(
+                        content=controls.chapter_list_view,
+                        border=ft.border.all(1, ft.colors.OUTLINE_VARIANT),
+                        border_radius=ft.border_radius.all(5),
+                        padding=ft.padding.all(5),
+                        expand=True,
+                    ),
+                ],
+                spacing=5,
                 expand=True,
             ),
-        ],
-        spacing=5,
+            padding=common_padding,
+        ),
         expand=True,
     )
 
@@ -206,11 +208,8 @@ def create_novel_project_view_content():
         spacing=10,
         alignment=ft.MainAxisAlignment.START,
     )
-    actions_container = ft.Container(
-        content=actions_content,
-        padding=common_padding,
-        border_radius=common_border_radius,
-        border=common_border,
+    actions_container = ft.Card(
+        content=ft.Container(content=actions_content, padding=common_padding),
         width=280,
     )
 
