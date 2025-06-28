@@ -2,6 +2,7 @@ import logging
 
 import flet as ft
 
+from app.core.constants import SUPPORTED_MODELS
 from app.ui.fallback_item_row import FallbackItemRow
 
 
@@ -28,11 +29,7 @@ class ConfigDialog(ft.AlertDialog):
 
         self.primary_llm_dropdown = ft.Dropdown(
             label="Primary LLM",
-            options=[
-                ft.dropdown.Option("gpt-4o"),
-                ft.dropdown.Option("gemini-2.5-pro"),
-                ft.dropdown.Option("claude-4-sonnet"),
-            ],
+            options=[ft.dropdown.Option(model) for model in SUPPORTED_MODELS],
         )
 
         self.prompt_field = ft.TextField(

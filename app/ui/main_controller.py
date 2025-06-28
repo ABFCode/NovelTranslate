@@ -1,10 +1,12 @@
 import logging
 
 import flet as ft
+import keyring
 from flet import FilePickerResultEvent
 
 from app.core.app_state import AppState
 from app.core.config_manager import ConfigManager
+from app.core.constants import APP_SERVICE_NAME
 from app.core.epub_parser import parse_epub
 from app.ui.config_dialog import ConfigDialog
 from app.ui.manage_configs_dialog import ManageConfigsDialog
@@ -22,6 +24,41 @@ class AppController:
         self.app_state = app_state
         self.config_manager = config_manager
         self.view_controls = None
+
+    def save_api_keys(self, e):
+        """
+        Retriees API keys from the settings views text fields and saves them to the
+        systems keyring.
+        """
+        try:
+            openai_key = self.view_controls.openai_key_field.value
+            gemini_key = self.view_controls.gemini_key_field.value
+
+            if openai_key:
+                keyring.set_password(
+                    f"{APP_SERVICE_NAME}/open_api_key", "openai_api_key", openai_key
+                )
+                logging.info("OpenAI Api key has been stored")
+
+            if gemini_key:
+                keyring.set_password(
+                    f"{APP_SERVICE_NAME}/gemini_api_key", "gemini_api_key", gemini_key
+                )
+                logging.info("Gemini API key has been stored")
+
+            feedback_snackbar = ft.SnackBar(
+                content=ft.Text("API keys saved"),
+                bgcolor=ft.colors.GREEN_700,
+            )
+            self.page.open(feedback_snackbar)
+        except Exception as e:
+            logging.error(f"Failed to save API keys: {e}")
+
+            error_snackbar = ft.SnackBar(
+                content=ft.Text(f"Error saving keys: {e}", color=ft.colors.WHITE),
+                bgcolor=ft.colors.RED_700,
+            )
+            self.page.open(error_snackbar)
 
     def handle_file_picker_result(self, e: FilePickerResultEvent):
         self.view_controls.selected_epub_path_text.value = "Processing..."

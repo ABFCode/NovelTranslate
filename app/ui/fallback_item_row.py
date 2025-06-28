@@ -2,6 +2,8 @@
 
 import flet as ft
 
+from app.core.constants import SUPPORTED_MODELS
+
 
 class FallbackItemRow(ft.Row):
     def __init__(self, on_delete):
@@ -13,11 +15,7 @@ class FallbackItemRow(ft.Row):
         self.on_delete = on_delete
         self.llm_dropdown = ft.Dropdown(
             label="Fallback LLM",
-            options=[
-                ft.dropdown.Option("gpt-4o"),
-                ft.dropdown.Option("gemini-2.5-pro"),
-                ft.dropdown.Option("claude-4-sonnet"),
-            ],
+            options=[ft.dropdown.Option(model) for model in SUPPORTED_MODELS],
             width=180,
             dense=True,
         )

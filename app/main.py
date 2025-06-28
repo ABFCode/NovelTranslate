@@ -87,6 +87,8 @@ def main(page: ft.Page):
             main_content_area.controls.append(settings_content)
             controller.view_controls = settings_controls
 
+            settings_controls.save_keys_button.on_click = controller.save_api_keys
+
         page.update()
 
     rail = ft.NavigationRail(
