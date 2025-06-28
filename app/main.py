@@ -89,6 +89,8 @@ def main(page: ft.Page):
 
             settings_controls.save_keys_button.on_click = controller.save_api_keys
 
+            controller.load_api_keys()
+
         page.update()
 
     rail = ft.NavigationRail(

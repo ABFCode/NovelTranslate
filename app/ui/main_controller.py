@@ -35,15 +35,11 @@ class AppController:
             gemini_key = self.view_controls.gemini_key_field.value
 
             if openai_key:
-                keyring.set_password(
-                    f"{APP_SERVICE_NAME}/open_api_key", "openai_api_key", openai_key
-                )
+                keyring.set_password(APP_SERVICE_NAME, "openai_api_key", openai_key)
                 logging.info("OpenAI Api key has been stored")
 
             if gemini_key:
-                keyring.set_password(
-                    f"{APP_SERVICE_NAME}/gemini_api_key", "gemini_api_key", gemini_key
-                )
+                keyring.set_password(APP_SERVICE_NAME, "gemini_api_key", gemini_key)
                 logging.info("Gemini API key has been stored")
 
             feedback_snackbar = ft.SnackBar(
@@ -59,6 +55,35 @@ class AppController:
                 bgcolor=ft.colors.RED_700,
             )
             self.page.open(error_snackbar)
+
+    def _obscure_key(self, key: str) -> str:
+        if not key or len(key) < 8:
+            return ""
+        return f"{key[:4]}...{key[-4:]}"
+
+    def load_api_keys(self, e=None):
+        """
+        Loads API keys from the keyring and populates the corresponding settings fields
+        """
+
+        logging.info("Loading API keys from keyring")
+
+        openai_key = keyring.get_password(APP_SERVICE_NAME, "openai_api_key")
+        gemini_key = keyring.get_password(APP_SERVICE_NAME, "gemini_api_key")
+
+        if self.view_controls:
+            self.view_controls.openai_key_field.value = self._obscure_key(openai_key)
+            self.view_controls.gemini_key_field.value = self._obscure_key(gemini_key)
+
+        if openai_key:
+            self.view_controls.openai_key_field.hint_text = (
+                "A key is already set. Enter a new one to overwrite"
+            )
+            self.view_controls.gemini_key_field.hint_text = (
+                "A key is already set. Enter a new one to overwrite"
+            )
+        self.page.update()
+        # openai_key = keyring.get_password()
 
     def handle_file_picker_result(self, e: FilePickerResultEvent):
         self.view_controls.selected_epub_path_text.value = "Processing..."
