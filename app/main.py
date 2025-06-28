@@ -83,11 +83,11 @@ def main(page: ft.Page):
 
         elif e.route == "/settings":
             rail.selected_index = 2
-            settings_content, settings_controls = create_settings_view_content()
+            settings_content, settings_controls = create_settings_view_content(
+                controller
+            )
             main_content_area.controls.append(settings_content)
             controller.view_controls = settings_controls
-
-            settings_controls.save_keys_button.on_click = controller.save_api_keys
 
             controller.load_api_keys()
 

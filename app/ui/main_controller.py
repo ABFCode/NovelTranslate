@@ -24,66 +24,114 @@ class AppController:
         self.app_state = app_state
         self.config_manager = config_manager
         self.view_controls = None
+        self.loaded_api_keys = {}
 
-    def save_api_keys(self, e):
-        """
-        Retriees API keys from the settings views text fields and saves them to the
-        systems keyring.
-        """
-        try:
-            openai_key = self.view_controls.openai_key_field.value
-            gemini_key = self.view_controls.gemini_key_field.value
+    def _get_key_controls(self, key_name: str) -> dict:
+        if not self.view_controls:
+            return {}
+        return self.view_controls.key_control_sets.get(key_name, {})
 
-            if openai_key:
-                keyring.set_password(APP_SERVICE_NAME, "openai_api_key", openai_key)
-                logging.info("OpenAI Api key has been stored")
-
-            if gemini_key:
-                keyring.set_password(APP_SERVICE_NAME, "gemini_api_key", gemini_key)
-                logging.info("Gemini API key has been stored")
-
-            feedback_snackbar = ft.SnackBar(
-                content=ft.Text("API keys saved"),
-                bgcolor=ft.colors.GREEN_700,
-            )
-            self.page.open(feedback_snackbar)
-        except Exception as e:
-            logging.error(f"Failed to save API keys: {e}")
-
-            error_snackbar = ft.SnackBar(
-                content=ft.Text(f"Error saving keys: {e}", color=ft.colors.WHITE),
-                bgcolor=ft.colors.RED_700,
-            )
-            self.page.open(error_snackbar)
-
-    def _obscure_key(self, key: str) -> str:
+    def _obscure_key(self, key: str | None) -> str:
         if not key or len(key) < 8:
             return ""
         return f"{key[:4]}...{key[-4:]}"
 
     def load_api_keys(self, e=None):
-        """
-        Loads API keys from the keyring and populates the corresponding settings fields
-        """
+        logging.info("Loading API keys from keyring...")
+        key_definitions = ["openai_api_key", "gemini_api_key"]
 
-        logging.info("Loading API keys from keyring")
+        for key_name in key_definitions:
+            key_value = keyring.get_password(APP_SERVICE_NAME, key_name)
+            self.loaded_api_keys[key_name] = key_value
 
-        openai_key = keyring.get_password(APP_SERVICE_NAME, "openai_api_key")
-        gemini_key = keyring.get_password(APP_SERVICE_NAME, "gemini_api_key")
+            key_controls = self._get_key_controls(key_name)
+            if not key_controls:
+                continue
 
-        if self.view_controls:
-            self.view_controls.openai_key_field.value = self._obscure_key(openai_key)
-            self.view_controls.gemini_key_field.value = self._obscure_key(gemini_key)
+            display_name = key_name.split("_")[0].capitalize()
+            if key_value:
+                key_controls[
+                    "display_text"
+                ].value = f"{display_name} Key: {self._obscure_key(key_value)}"
+                key_controls["display_text"].italic = False
+                key_controls["delete_button"].visible = True
+            else:
+                key_controls["display_text"].value = f"{display_name} Key: Not set"
+                key_controls["display_text"].italic = True
+                key_controls["delete_button"].visible = False
 
-        if openai_key:
-            self.view_controls.openai_key_field.hint_text = (
-                "A key is already set. Enter a new one to overwrite"
-            )
-            self.view_controls.gemini_key_field.hint_text = (
-                "A key is already set. Enter a new one to overwrite"
-            )
+        if self.page:
+            self.page.update()
+
+    def show_edit_mode(self, e, key_name: str):
+        key_controls = self._get_key_controls(key_name)
+        key_controls["display_row"].visible = False
+        key_controls["edit_row"].visible = True
+        key_controls["edit_field"].value = ""  # Clear the field
         self.page.update()
-        # openai_key = keyring.get_password()
+        key_controls["edit_field"].focus()
+
+    # NEW METHOD
+    def cancel_edit_mode(self, e, key_name: str):
+        key_controls = self._get_key_controls(key_name)
+        key_controls["edit_row"].visible = False
+        key_controls["display_row"].visible = True
+        self.page.update()
+
+    # REPLACES old save_api_keys
+    def save_key(self, e, key_name: str):
+        key_controls = self._get_key_controls(key_name)
+        new_key_value = key_controls["edit_field"].value
+
+        if new_key_value:
+            keyring.set_password(APP_SERVICE_NAME, key_name, new_key_value)
+            logging.info(f"{key_name} has been updated.")
+            self.page.open(
+                ft.SnackBar(
+                    content=ft.Text("Key saved successfully!"),
+                    bgcolor=ft.colors.GREEN_700,
+                )
+            )
+
+        # Revert to display mode and reload all keys to show the change
+        self.cancel_edit_mode(e, key_name)
+        self.load_api_keys()
+
+    # NEW METHOD for handling delete confirmation
+    def _confirm_delete_key(self, e, key_name: str):
+        keyring.delete_password(APP_SERVICE_NAME, key_name)
+        logging.info(f"{key_name} has been deleted.")
+        self.page.dialog.open = False
+        self.page.open(ft.SnackBar(content=ft.Text("Key deleted.")))
+        self.load_api_keys()  # Refresh the UI
+
+    # NEW METHOD to open delete dialog
+    def delete_key(self, e, key_name: str):
+        display_name = key_name.split("_")[0].capitalize()
+
+        def on_confirm_delete(ev):
+            self._confirm_delete_key(ev, key_name)
+
+        confirm_dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Confirm Deletion"),
+            content=ft.Text(
+                f"Are you sure you want to delete the {display_name} API key? This cannot be undone."
+            ),
+            actions=[
+                ft.ElevatedButton(
+                    "Yes, delete it",
+                    color=ft.colors.WHITE,
+                    bgcolor=ft.colors.RED_700,
+                    on_click=on_confirm_delete,
+                ),
+                ft.TextButton(
+                    "Cancel", on_click=lambda _: self.page.close(confirm_dialog)
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self.page.open(confirm_dialog)
 
     def handle_file_picker_result(self, e: FilePickerResultEvent):
         self.view_controls.selected_epub_path_text.value = "Processing..."
