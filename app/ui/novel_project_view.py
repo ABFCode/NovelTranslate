@@ -26,7 +26,6 @@ class NovelProjectViewControls:
 def create_chapter_item(
     chapter_number: int, chapter_title: str, status: str = "pending"
 ):
-    """Helper function to create a UI item for a single chapter."""
     status_Icons = {
         "pending": ft.Icons.HOURGLASS_EMPTY_ROUNDED,
         "in_progress": ft.Icons.SYNC_ROUNDED,
@@ -50,21 +49,10 @@ def create_chapter_item(
         (chapter_title[:40] + "...") if len(chapter_title) > 43 else chapter_title
     )
 
-    return ft.Container(
-        content=ft.Row(
-            [
-                icon,
-                ft.Text(
-                    f"Ch {chapter_number}: {display_title}",
-                    overflow=ft.TextOverflow.ELLIPSIS,
-                    expand=True,
-                ),
-            ],
-            spacing=10,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        ),
-        padding=ft.padding.symmetric(horizontal=10, vertical=8),
-        border_radius=ft.border_radius.all(4),
+    return ft.ListTile(
+        leading=icon,
+        title=ft.Text(f"Ch {chapter_number}: {display_title}"),
+        dense=True,
     )
 
 

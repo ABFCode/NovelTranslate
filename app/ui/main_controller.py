@@ -67,18 +67,16 @@ class AppController:
         key_controls = self._get_key_controls(key_name)
         key_controls["display_row"].visible = False
         key_controls["edit_row"].visible = True
-        key_controls["edit_field"].value = ""  # Clear the field
+        key_controls["edit_field"].value = ""
         self.page.update()
         key_controls["edit_field"].focus()
 
-    # NEW METHOD
     def cancel_edit_mode(self, e, key_name: str):
         key_controls = self._get_key_controls(key_name)
         key_controls["edit_row"].visible = False
         key_controls["display_row"].visible = True
         self.page.update()
 
-    # REPLACES old save_api_keys
     def save_key(self, e, key_name: str):
         key_controls = self._get_key_controls(key_name)
         new_key_value = key_controls["edit_field"].value
@@ -93,25 +91,18 @@ class AppController:
                 )
             )
 
-        # Revert to display mode and reload all keys to show the change
         self.cancel_edit_mode(e, key_name)
         self.load_api_keys()
 
-    # NEW METHOD for handling delete confirmation
-    def _confirm_delete_key(self, e, key_name: str):
+    def _confirm_delete_key(self, e, key_name: str, dialog_to_close: ft.AlertDialog):
         keyring.delete_password(APP_SERVICE_NAME, key_name)
         logging.info(f"{key_name} has been deleted.")
-        self.page.dialog.open = False
+        self.page.close(dialog_to_close)
         self.page.open(ft.SnackBar(content=ft.Text("Key deleted.")))
-        self.load_api_keys()  # Refresh the UI
+        self.load_api_keys()
 
-    # NEW METHOD to open delete dialog
     def delete_key(self, e, key_name: str):
         display_name = key_name.split("_")[0].capitalize()
-
-        def on_confirm_delete(ev):
-            self._confirm_delete_key(ev, key_name)
-
         confirm_dialog = ft.AlertDialog(
             modal=True,
             title=ft.Text("Confirm Deletion"),
@@ -123,7 +114,9 @@ class AppController:
                     "Yes, delete it",
                     color=ft.colors.WHITE,
                     bgcolor=ft.colors.RED_700,
-                    on_click=on_confirm_delete,
+                    on_click=lambda ev: self._confirm_delete_key(
+                        ev, key_name, confirm_dialog
+                    ),
                 ),
                 ft.TextButton(
                     "Cancel", on_click=lambda _: self.page.close(confirm_dialog)
