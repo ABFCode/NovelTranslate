@@ -68,7 +68,6 @@ class Translator:
                 success=False, error_message="No configuration provided"
             )
 
-        # Try primary model first
         primary_llm = config.get("primary_llm")
         primary_prompt = config.get("prompt", "")
 
@@ -81,13 +80,10 @@ class Translator:
                 return result
             print(f"DEBUG: Primary model {primary_llm} failed: {result.error_message}")
 
-        # Try fallback chain
         fallback_chain = config.get("fallback_chain", [])
         for i, fallback in enumerate(fallback_chain):
             fallback_llm = fallback.get("llm")
-            fallback_prompt = fallback.get(
-                "prompt", primary_prompt
-            )  # Fall back to primary prompt if none specified
+            fallback_prompt = fallback.get("prompt", primary_prompt)
 
             if not fallback_llm:
                 continue
@@ -132,7 +128,7 @@ class Translator:
 
                 traceback.print_exc()
                 if attempt < self.max_retries - 1:
-                    time.sleep(self.retry_delay * (attempt + 1))  # Exponential backoff
+                    time.sleep(self.retry_delay * (attempt + 1))
 
         return TranslationResult(
             success=False,
@@ -153,7 +149,6 @@ class Translator:
         try:
             client = openai.OpenAI(api_key=api_key)
 
-            # Map model names to actual OpenAI model names
             openai_model = "gpt-4o-mini" if model.startswith("GPT-4") else model
 
             response = client.chat.completions.create(
@@ -162,8 +157,8 @@ class Translator:
                     {"role": "system", "content": prompt},
                     {"role": "user", "content": text},
                 ],
-                temperature=0.3,  # Slightly creative but consistent
-                max_tokens=4000,  # Adjust based on model
+                temperature=0.3,
+                max_tokens=4000,
             )
 
             translated_text = response.choices[0].message.content
@@ -206,18 +201,14 @@ class Translator:
 
         try:
             print("DEBUG: About to create genai.Client")
-            # Create client with the new SDK
             client = genai.Client(api_key=api_key)
             print(f"DEBUG: Successfully created client: {client}")
-
-            # Map model names to actual Gemini model names
 
             gemini_model = "gemini-2.0-flash-001"
 
             print(f"DEBUG: Using model: {gemini_model}")
             print("DEBUG: About to call client.models.generate_content")
 
-            # Use the correct API pattern from the official docs
             response = client.models.generate_content(
                 model=gemini_model,
                 contents=text,
@@ -239,7 +230,7 @@ class Translator:
                 success=True,
                 text=response.text,
                 model_used=model,
-                tokens_used=None,  # New SDK may provide usage metadata
+                tokens_used=None,
             )
 
         except Exception as e:

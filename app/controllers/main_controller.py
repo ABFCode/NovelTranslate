@@ -23,19 +23,16 @@ class MainController:
         self.app_state = app_state
         self.config_manager = config_manager
 
-        # Sub-controllers
         self.api_key_controller = ApiKeyController(page)
         self.translation_orchestrator = TranslationOrchestrator(
             app_state, config_manager
         )
 
-        # Current view controls (set by route handlers)
         self.view_controls = None
 
     def set_view_controls(self, view_controls):
         """Set the current view controls."""
         self.view_controls = view_controls
-        # Also set for sub-controllers that need it
         if hasattr(view_controls, "key_control_sets"):
             self.api_key_controller.set_view_controls(view_controls)
 
@@ -49,7 +46,6 @@ class MainController:
         self.view_controls.selected_epub_path_text.value = "Processing..."
         self.view_controls.output_log_field.value = ""
 
-        # Reset EPUB data
         self.app_state.reset_epub_data()
         self._update_epub_ui()
         self.page.update()
@@ -67,7 +63,6 @@ class MainController:
         )
         logging.info(f"File Selected: {selected_file_path}")
 
-        # Parse EPUB
         success, result = parse_epub(selected_file_path)
 
         if success:
@@ -79,7 +74,6 @@ class MainController:
 
     def _process_successful_epub_parse(self, chapter_texts: list, file_path: str):
         """Process successfully parsed EPUB data."""
-        # Create chapter metadata
         for i, chap_text in enumerate(chapter_texts):
             snippet = chap_text[:70].replace("\n", " ").strip()
             self.app_state.epub_data["chapters_meta"].append(
@@ -92,7 +86,6 @@ class MainController:
                 }
             )
 
-        # Extract metadata
         try:
             from ebooklib import epub
 
@@ -106,11 +99,9 @@ class MainController:
         except Exception as meta_ex:
             logging.warning(f"Could not extract metadata: {meta_ex}")
 
-        # Update UI
         self._update_epub_ui()
         self._populate_chapter_list()
 
-        # Create success log message
         log_message = (
             f"Successfully parsed EPUB: {self.app_state.epub_data['title']}.\n"
             f"Found {len(self.app_state.epub_data['chapters_meta'])} chapters.\n"
@@ -212,7 +203,6 @@ class MainController:
         for name in all_configs.keys():
             dropdown.options.append(ft.dropdown.Option(name))
 
-        # Preserve selection if still valid
         new_options = [opt.key for opt in dropdown.options]
         if current_value in new_options:
             dropdown.value = current_value
@@ -244,10 +234,8 @@ class MainController:
             self._show_error("Please set up at least one API key in Settings.")
             return
 
-        # Update UI state
         self._set_translation_ui_state(translating=True)
 
-        # Start translation
         success = self.translation_orchestrator.start_translation(
             self._handle_translation_update
         )
@@ -290,7 +278,6 @@ class MainController:
             elif update.type == "error":
                 self._handle_translation_error(update)
 
-            # Force UI update
             self.page.update()
 
         except Exception as e:
@@ -302,7 +289,6 @@ class MainController:
     def _handle_progress_update(self, update: TranslationUpdate):
         """Handle progress updates."""
         if update.chapter_number and update.status:
-            # Update specific chapter in the list
             self._update_chapter_status(update.chapter_number, update.status)
 
         if update.progress_percentage is not None:
@@ -319,7 +305,6 @@ class MainController:
         self._add_log_message(update.message)
         self.view_controls.export_novel_button.disabled = False
 
-        # Show completion notification
         project_dir = self.translation_orchestrator.get_project_directory()
         if project_dir:
             self.page.open(
@@ -350,7 +335,6 @@ class MainController:
         if not self.view_controls or not self.view_controls.chapter_list_view:
             return
 
-        # Find and update the chapter item
         chapter_index = chapter_number - 1
         if 0 <= chapter_index < len(self.view_controls.chapter_list_view.controls):
             # Update the app state
@@ -359,7 +343,6 @@ class MainController:
                     status
                 )
 
-            # Recreate the chapter item with new status
             chap_meta = self.app_state.epub_data["chapters_meta"][chapter_index]
             new_item = create_chapter_item(
                 chapter_number=chap_meta["number"],
@@ -455,7 +438,6 @@ class MainController:
             import platform
             import subprocess
 
-            # Cross-platform way to open folder
             if platform.system() == "Windows":
                 os.startfile(project_dir)
             elif platform.system() == "Darwin":  # macOS

@@ -4,6 +4,7 @@ import queue
 import re
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
@@ -34,25 +35,24 @@ class TranslationOrchestrator:
         self.config_manager = config_manager
         self.translator = Translator()
 
-        # Thread control
         self.is_running = False
         self.is_paused = threading.Event()
-        self.is_paused.set()  # Initially not paused
+        self.is_paused.set()
         self.should_cancel = threading.Event()
         self.translation_thread = None
 
-        # UI Communication
         self.ui_update_queue = queue.Queue()
 
-        # Status tracking
         self.current_chapter = 0
         self.total_chapters = 0
         self.completed_chapters = 0
         self.failed_chapters = 0
+        self.chapters_lock = threading.Lock()
 
-        # Project management
         self.project_dir = None
         self.chapters_dir = None
+
+        self.max_concurrent_chapters = 3
 
     def start_translation(
         self, on_update_callback: Callable[[TranslationUpdate], None]
@@ -74,7 +74,6 @@ class TranslationOrchestrator:
             self._send_update(TranslationUpdate(type="error", error="No EPUB loaded"))
             return False
 
-        # Reset state
         self.is_running = True
         self.should_cancel.clear()
         self.is_paused.set()
@@ -83,7 +82,6 @@ class TranslationOrchestrator:
         self.completed_chapters = 0
         self.failed_chapters = 0
 
-        # Setup project directory
         if not self._setup_project_directory():
             on_update_callback(
                 TranslationUpdate(
@@ -92,7 +90,6 @@ class TranslationOrchestrator:
             )
             return False
 
-        # Start background thread
         self.translation_thread = threading.Thread(
             target=self._translation_worker, args=(on_update_callback,), daemon=True
         )
@@ -119,7 +116,7 @@ class TranslationOrchestrator:
         """Cancel the translation process."""
         if self.is_running:
             self.should_cancel.set()
-            self.is_paused.set()  # Unblock if paused
+            self.is_paused.set()
             self._send_update(
                 TranslationUpdate(type="status", message="Cancelling translation...")
             )
@@ -127,12 +124,11 @@ class TranslationOrchestrator:
     def _translation_worker(
         self, on_update_callback: Callable[[TranslationUpdate], None]
     ):
-        """Main translation loop running in background thread."""
+        """Main translation loop running in background thread with parallel processing."""
         try:
             update = TranslationUpdate(type="status", message="Starting translation...")
             on_update_callback(update)
 
-            # Get configuration
             config = self.config_manager.get_config(self.app_state.active_config_name)
             if not config:
                 update = TranslationUpdate(
@@ -141,89 +137,97 @@ class TranslationOrchestrator:
                 on_update_callback(update)
                 return
 
-            # Get API keys
             api_keys = self._load_api_keys()
 
             chapters = self.app_state.epub_data["chapters_meta"]
 
-            for i, chapter_meta in enumerate(chapters):
-                # Check for cancellation
-                if self.should_cancel.is_set():
-                    update = TranslationUpdate(
-                        type="status", message="Translation cancelled"
-                    )
-                    on_update_callback(update)
-                    break
+            chapters_to_translate = [
+                (i, chapter_meta)
+                for i, chapter_meta in enumerate(chapters)
+                if chapter_meta.get("status") != "completed"
+            ]
 
-                # Wait if paused
-                self.is_paused.wait()
-
-                # Skip if already completed
-                if chapter_meta.get("status") == "completed":
-                    self.completed_chapters += 1
-                    continue
-
-                self.current_chapter = i + 1
-
-                # Update chapter status to in_progress
-                chapter_meta["status"] = "in_progress"
+            if not chapters_to_translate:
                 update = TranslationUpdate(
-                    type="progress",
-                    chapter_number=self.current_chapter,
-                    status="in_progress",
-                    message=f"Translating chapter {self.current_chapter}/{self.total_chapters}...",
+                    type="complete",
+                    message="All chapters already completed!",
+                    progress_percentage=100.0,
                 )
                 on_update_callback(update)
+                return
 
-                # Perform translation
-                result = self._translate_chapter(chapter_meta, config, api_keys)
+            update = TranslationUpdate(
+                type="status",
+                message=f"Starting parallel translation of {len(chapters_to_translate)} chapters (max {self.max_concurrent_chapters} concurrent)...",
+            )
+            on_update_callback(update)
 
-                if result.success:
-                    chapter_meta["translated_text"] = result.text
-                    chapter_meta["status"] = "completed"
-                    chapter_meta["model_used"] = result.model_used
-                    self.completed_chapters += 1
+            with ThreadPoolExecutor(
+                max_workers=self.max_concurrent_chapters
+            ) as executor:
+                future_to_chapter = {}
+                for chapter_index, chapter_meta in chapters_to_translate:
+                    if self.should_cancel.is_set():
+                        break
 
-                    # Save the translated chapter to file
-                    self._save_chapter_files(chapter_meta, self.current_chapter)
+                    future = executor.submit(
+                        self._translate_chapter_with_updates,
+                        chapter_meta,
+                        chapter_index + 1,
+                        config,
+                        api_keys,
+                        on_update_callback,
+                    )
+                    future_to_chapter[future] = (chapter_index, chapter_meta)
 
-                    update = TranslationUpdate(
-                        type="progress",
-                        chapter_number=self.current_chapter,
-                        status="completed",
-                        message=f"Chapter {self.current_chapter} completed using {result.model_used} (saved to {self.chapters_dir})",
-                        progress_percentage=(
-                            self.completed_chapters / self.total_chapters
+                for future in as_completed(future_to_chapter):
+                    if self.should_cancel.is_set():
+                        for f in future_to_chapter:
+                            f.cancel()
+                        break
+
+                    chapter_index, chapter_meta = future_to_chapter[future]
+                    chapter_number = chapter_index + 1
+
+                    try:
+                        result = future.result()
+                        if result:
+                            logging.debug(
+                                f"Chapter {chapter_number} completed successfully"
+                            )
+                        else:
+                            logging.debug(
+                                f"Chapter {chapter_number} failed (handled in worker)"
+                            )
+                    except Exception as e:
+                        logging.error(
+                            f"Unexpected error in chapter {chapter_number}: {e}"
                         )
-                        * 100,
-                    )
-                    on_update_callback(update)
-                else:
-                    chapter_meta["status"] = "error"
-                    chapter_meta["error"] = result.error_message
-                    self.failed_chapters += 1
+                        with self.chapters_lock:
+                            chapter_meta["status"] = "error"
+                            chapter_meta["error"] = str(e)
+                            self.failed_chapters += 1
 
-                    update = TranslationUpdate(
-                        type="progress",
-                        chapter_number=self.current_chapter,
-                        status="error",
-                        message=f"Chapter {self.current_chapter} failed: {result.error_message}",
-                    )
-                    on_update_callback(update)
+                        update = TranslationUpdate(
+                            type="progress",
+                            chapter_number=chapter_number,
+                            status="error",
+                            message=f"Chapter {chapter_number} failed: {str(e)}",
+                        )
+                        on_update_callback(update)
 
-                # Brief pause between chapters
-                if not self.should_cancel.is_set():
-                    time.sleep(1)
-
-            # Translation complete
             if not self.should_cancel.is_set():
-                # Save project info
                 self._save_project_info()
 
                 update = TranslationUpdate(
                     type="complete",
-                    message=f"Translation complete! {self.completed_chapters} chapters completed, {self.failed_chapters} failed.\nFiles saved to: {self.project_dir}",
+                    message=f"Parallel translation complete! {self.completed_chapters} chapters completed, {self.failed_chapters} failed.\nFiles saved to: {self.project_dir}",
                     progress_percentage=100.0,
+                )
+                on_update_callback(update)
+            else:
+                update = TranslationUpdate(
+                    type="status", message="Translation cancelled"
                 )
                 on_update_callback(update)
 
@@ -236,6 +240,84 @@ class TranslationOrchestrator:
 
         finally:
             self.is_running = False
+
+    def _translate_chapter_with_updates(
+        self,
+        chapter_meta: dict,
+        chapter_number: int,
+        config: dict,
+        api_keys: dict,
+        on_update_callback: Callable[[TranslationUpdate], None],
+    ) -> bool:
+        """
+        Translate a single chapter and handle all updates.
+        Returns True if successful, False if failed.
+        """
+        try:
+            while not self.is_paused.is_set():
+                if self.should_cancel.is_set():
+                    return False
+                time.sleep(0.1)
+
+            if self.should_cancel.is_set():
+                return False
+
+            with self.chapters_lock:
+                chapter_meta["status"] = "in_progress"
+
+            update = TranslationUpdate(
+                type="progress",
+                chapter_number=chapter_number,
+                status="in_progress",
+                message=f"Translating chapter {chapter_number}...",
+            )
+            on_update_callback(update)
+
+            result = self._translate_chapter(chapter_meta, config, api_keys)
+
+            with self.chapters_lock:
+                if result.success:
+                    chapter_meta["translated_text"] = result.text
+                    chapter_meta["status"] = "completed"
+                    chapter_meta["model_used"] = result.model_used
+                    self.completed_chapters += 1
+
+                    self._save_chapter_files(chapter_meta, chapter_number)
+
+                    progress_percentage = (
+                        self.completed_chapters / self.total_chapters
+                    ) * 100
+
+                    update = TranslationUpdate(
+                        type="progress",
+                        chapter_number=chapter_number,
+                        status="completed",
+                        message=f"Chapter {chapter_number} completed using {result.model_used}",
+                        progress_percentage=progress_percentage,
+                    )
+                    on_update_callback(update)
+                    return True
+                else:
+                    chapter_meta["status"] = "error"
+                    chapter_meta["error"] = result.error_message
+                    self.failed_chapters += 1
+
+                    update = TranslationUpdate(
+                        type="progress",
+                        chapter_number=chapter_number,
+                        status="error",
+                        message=f"Chapter {chapter_number} failed: {result.error_message}",
+                    )
+                    on_update_callback(update)
+                    return False
+
+        except Exception as e:
+            logging.error(f"Error translating chapter {chapter_number}: {e}")
+            with self.chapters_lock:
+                chapter_meta["status"] = "error"
+                chapter_meta["error"] = str(e)
+                self.failed_chapters += 1
+            return False
 
     def _translate_chapter(
         self, chapter_meta: dict, config: dict, api_keys: dict
@@ -282,15 +364,12 @@ class TranslationOrchestrator:
     def _setup_project_directory(self) -> bool:
         """Setup the project directory structure for saving files."""
         try:
-            # Create main projects directory
             projects_root = Path("projects")
             projects_root.mkdir(exist_ok=True)
 
-            # Sanitize book title for directory name
             book_title = self.app_state.epub_data.get("title", "Unknown_Book")
             safe_title = self._sanitize_filename(book_title)
 
-            # Create project directory (with timestamp to avoid conflicts)
             import datetime
 
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -299,7 +378,6 @@ class TranslationOrchestrator:
             self.project_dir = projects_root / project_name
             self.project_dir.mkdir(exist_ok=True)
 
-            # Create chapters subdirectory
             self.chapters_dir = self.project_dir / "chapters"
             self.chapters_dir.mkdir(exist_ok=True)
 
@@ -312,13 +390,9 @@ class TranslationOrchestrator:
 
     def _sanitize_filename(self, filename: str) -> str:
         """Sanitize a string to be safe for use as a filename."""
-        # Remove invalid characters and replace with underscores
         safe_name = re.sub(r'[<>:"/\\|?*]', "_", filename)
-        # Remove multiple consecutive underscores
         safe_name = re.sub(r"_+", "_", safe_name)
-        # Remove leading/trailing underscores and spaces
         safe_name = safe_name.strip("_ ")
-        # Limit length
         if len(safe_name) > 50:
             safe_name = safe_name[:50]
         return safe_name or "Unknown"
@@ -326,9 +400,8 @@ class TranslationOrchestrator:
     def _save_chapter_files(self, chapter_meta: dict, chapter_number: int):
         """Save both original and translated chapter content to files."""
         try:
-            chapter_num_str = f"{chapter_number:03d}"  # e.g., "001", "002"
+            chapter_num_str = f"{chapter_number:03d}"
 
-            # Save original chapter
             original_file = (
                 self.chapters_dir / f"chapter_{chapter_num_str}_original.txt"
             )
@@ -337,7 +410,6 @@ class TranslationOrchestrator:
                 f.write("=" * 50 + "\n\n")
                 f.write(chapter_meta.get("original_text", ""))
 
-            # Save translated chapter
             translated_file = (
                 self.chapters_dir / f"chapter_{chapter_num_str}_translated.txt"
             )
@@ -369,7 +441,6 @@ class TranslationOrchestrator:
                 "chapters_info": [],
             }
 
-            # Add info about each chapter
             for i, chapter_meta in enumerate(self.app_state.epub_data["chapters_meta"]):
                 chapter_info = {
                     "number": i + 1,
@@ -379,12 +450,10 @@ class TranslationOrchestrator:
                 }
                 project_info["chapters_info"].append(chapter_info)
 
-            # Save project info
             info_file = self.project_dir / "project_info.json"
             with open(info_file, "w", encoding="utf-8") as f:
                 json.dump(project_info, f, indent=2, ensure_ascii=False)
 
-            # Save a README for easy access
             readme_file = self.project_dir / "README.txt"
             with open(readme_file, "w", encoding="utf-8") as f:
                 f.write(f"Translation Project: {project_info['book_title']}\n")
@@ -407,6 +476,16 @@ class TranslationOrchestrator:
 
         except Exception as e:
             logging.error(f"Failed to save project info: {e}")
+
+    def set_max_concurrent_chapters(self, max_concurrent: int):
+        """Set the maximum number of chapters to translate concurrently."""
+        if 1 <= max_concurrent <= 10:
+            self.max_concurrent_chapters = max_concurrent
+            logging.info(f"Set max concurrent chapters to: {max_concurrent}")
+        else:
+            logging.warning(
+                f"Invalid concurrency value: {max_concurrent}. Using default."
+            )
 
     def get_project_directory(self) -> Optional[str]:
         """Get the current project directory path."""

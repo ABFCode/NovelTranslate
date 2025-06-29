@@ -27,12 +27,10 @@ def main(page: ft.Page):
     page.window.width = 1200
     page.window.height = 900
 
-    # Initialize core components
     config_manager = ConfigManager()
     app_state = AppState()
     controller = MainController(page, app_state, config_manager)
 
-    # File picker for EPUB selection
     file_picker = ft.FilePicker(on_result=controller.handle_file_picker_result)
     page.overlay.append(file_picker)
 
@@ -60,7 +58,6 @@ def main(page: ft.Page):
         main_content_area.controls.append(novel_view_content)
         controller.set_view_controls(novel_controls)
 
-        # Connect UI events to controller
         novel_controls.select_epub_button.on_click = lambda _: file_picker.pick_files(
             allow_multiple=False, allowed_extensions=["epub"]
         )
@@ -71,20 +68,17 @@ def main(page: ft.Page):
             controller.on_active_config_change
         )
 
-        # Connect translation buttons
         novel_controls.start_translation_button.on_click = controller.start_translation
         novel_controls.pause_translation_button.on_click = controller.pause_translation
         novel_controls.cancel_translation_button.on_click = (
             controller.cancel_translation
         )
 
-        # Connect project management buttons (if they exist)
         if hasattr(novel_controls, "open_project_button"):
             novel_controls.open_project_button.on_click = controller.open_project_folder
         if hasattr(novel_controls, "project_info_button"):
             novel_controls.project_info_button.on_click = controller.show_project_info
 
-        # Initialize UI state
         controller.update_active_config_dropdown()
         _restore_epub_state(novel_controls)
 
@@ -112,7 +106,6 @@ def main(page: ft.Page):
                 len(app_state.epub_data["chapters_meta"])
             )
 
-            # Restore chapter list
             if novel_controls.chapter_list_view:
                 novel_controls.chapter_list_view.controls.clear()
                 for chap_meta in app_state.epub_data["chapters_meta"]:
@@ -126,7 +119,6 @@ def main(page: ft.Page):
         else:
             novel_controls.selected_epub_path_text.value = "No file selected."
 
-    # Navigation rail
     rail = ft.NavigationRail(
         selected_index=0,
         label_type=ft.NavigationRailLabelType.ALL,
