@@ -1,8 +1,11 @@
+import json
 import logging
 import queue
+import re
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Optional
 
 import keyring
@@ -47,6 +50,10 @@ class TranslationOrchestrator:
         self.completed_chapters = 0
         self.failed_chapters = 0
 
+        # Project management
+        self.project_dir = None
+        self.chapters_dir = None
+
     def start_translation(
         self, on_update_callback: Callable[[TranslationUpdate], None]
     ):
@@ -75,6 +82,15 @@ class TranslationOrchestrator:
         self.total_chapters = len(self.app_state.epub_data["chapters_meta"])
         self.completed_chapters = 0
         self.failed_chapters = 0
+
+        # Setup project directory
+        if not self._setup_project_directory():
+            on_update_callback(
+                TranslationUpdate(
+                    type="error", error="Failed to create project directory"
+                )
+            )
+            return False
 
         # Start background thread
         self.translation_thread = threading.Thread(
@@ -168,11 +184,14 @@ class TranslationOrchestrator:
                     chapter_meta["model_used"] = result.model_used
                     self.completed_chapters += 1
 
+                    # Save the translated chapter to file
+                    self._save_chapter_files(chapter_meta, self.current_chapter)
+
                     update = TranslationUpdate(
                         type="progress",
                         chapter_number=self.current_chapter,
                         status="completed",
-                        message=f"Chapter {self.current_chapter} completed using {result.model_used}",
+                        message=f"Chapter {self.current_chapter} completed using {result.model_used} (saved to {self.chapters_dir})",
                         progress_percentage=(
                             self.completed_chapters / self.total_chapters
                         )
@@ -198,9 +217,12 @@ class TranslationOrchestrator:
 
             # Translation complete
             if not self.should_cancel.is_set():
+                # Save project info
+                self._save_project_info()
+
                 update = TranslationUpdate(
                     type="complete",
-                    message=f"Translation complete! {self.completed_chapters} chapters completed, {self.failed_chapters} failed.",
+                    message=f"Translation complete! {self.completed_chapters} chapters completed, {self.failed_chapters} failed.\nFiles saved to: {self.project_dir}",
                     progress_percentage=100.0,
                 )
                 on_update_callback(update)
@@ -256,3 +278,136 @@ class TranslationOrchestrator:
             if self.total_chapters > 0
             else 0,
         }
+
+    def _setup_project_directory(self) -> bool:
+        """Setup the project directory structure for saving files."""
+        try:
+            # Create main projects directory
+            projects_root = Path("projects")
+            projects_root.mkdir(exist_ok=True)
+
+            # Sanitize book title for directory name
+            book_title = self.app_state.epub_data.get("title", "Unknown_Book")
+            safe_title = self._sanitize_filename(book_title)
+
+            # Create project directory (with timestamp to avoid conflicts)
+            import datetime
+
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            project_name = f"{safe_title}_{timestamp}"
+
+            self.project_dir = projects_root / project_name
+            self.project_dir.mkdir(exist_ok=True)
+
+            # Create chapters subdirectory
+            self.chapters_dir = self.project_dir / "chapters"
+            self.chapters_dir.mkdir(exist_ok=True)
+
+            logging.info(f"Created project directory: {self.project_dir}")
+            return True
+
+        except Exception as e:
+            logging.error(f"Failed to create project directory: {e}")
+            return False
+
+    def _sanitize_filename(self, filename: str) -> str:
+        """Sanitize a string to be safe for use as a filename."""
+        # Remove invalid characters and replace with underscores
+        safe_name = re.sub(r'[<>:"/\\|?*]', "_", filename)
+        # Remove multiple consecutive underscores
+        safe_name = re.sub(r"_+", "_", safe_name)
+        # Remove leading/trailing underscores and spaces
+        safe_name = safe_name.strip("_ ")
+        # Limit length
+        if len(safe_name) > 50:
+            safe_name = safe_name[:50]
+        return safe_name or "Unknown"
+
+    def _save_chapter_files(self, chapter_meta: dict, chapter_number: int):
+        """Save both original and translated chapter content to files."""
+        try:
+            chapter_num_str = f"{chapter_number:03d}"  # e.g., "001", "002"
+
+            # Save original chapter
+            original_file = (
+                self.chapters_dir / f"chapter_{chapter_num_str}_original.txt"
+            )
+            with open(original_file, "w", encoding="utf-8") as f:
+                f.write(f"Chapter {chapter_number}\n")
+                f.write("=" * 50 + "\n\n")
+                f.write(chapter_meta.get("original_text", ""))
+
+            # Save translated chapter
+            translated_file = (
+                self.chapters_dir / f"chapter_{chapter_num_str}_translated.txt"
+            )
+            with open(translated_file, "w", encoding="utf-8") as f:
+                f.write(f"Chapter {chapter_number} (Translated)\n")
+                f.write("=" * 50 + "\n")
+                f.write(f"Model used: {chapter_meta.get('model_used', 'Unknown')}\n")
+                f.write("=" * 50 + "\n\n")
+                f.write(chapter_meta.get("translated_text", ""))
+
+            logging.info(
+                f"Saved chapter {chapter_number} files: {original_file.name}, {translated_file.name}"
+            )
+
+        except Exception as e:
+            logging.error(f"Failed to save chapter {chapter_number} files: {e}")
+
+    def _save_project_info(self):
+        """Save project metadata and summary."""
+        try:
+            project_info = {
+                "book_title": self.app_state.epub_data.get("title", "Unknown"),
+                "book_author": self.app_state.epub_data.get("author", "Unknown"),
+                "total_chapters": self.total_chapters,
+                "completed_chapters": self.completed_chapters,
+                "failed_chapters": self.failed_chapters,
+                "translation_config": self.app_state.active_config_name,
+                "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "chapters_info": [],
+            }
+
+            # Add info about each chapter
+            for i, chapter_meta in enumerate(self.app_state.epub_data["chapters_meta"]):
+                chapter_info = {
+                    "number": i + 1,
+                    "status": chapter_meta.get("status", "pending"),
+                    "model_used": chapter_meta.get("model_used"),
+                    "title_preview": chapter_meta.get("title_source", "")[:100],
+                }
+                project_info["chapters_info"].append(chapter_info)
+
+            # Save project info
+            info_file = self.project_dir / "project_info.json"
+            with open(info_file, "w", encoding="utf-8") as f:
+                json.dump(project_info, f, indent=2, ensure_ascii=False)
+
+            # Save a README for easy access
+            readme_file = self.project_dir / "README.txt"
+            with open(readme_file, "w", encoding="utf-8") as f:
+                f.write(f"Translation Project: {project_info['book_title']}\n")
+                f.write(f"Author: {project_info['book_author']}\n")
+                f.write(f"Created: {project_info['created_at']}\n")
+                f.write(f"Configuration: {project_info['translation_config']}\n\n")
+                f.write(
+                    f"Progress: {self.completed_chapters}/{self.total_chapters} chapters completed\n"
+                )
+                f.write(f"Failed: {self.failed_chapters} chapters\n\n")
+                f.write("Files:\n")
+                f.write("- chapters/: Contains original and translated chapter files\n")
+                f.write("- project_info.json: Detailed project metadata\n\n")
+                f.write("Translated chapters are saved as:\n")
+                f.write("- chapter_001_original.txt, chapter_001_translated.txt\n")
+                f.write("- chapter_002_original.txt, chapter_002_translated.txt\n")
+                f.write("- etc.\n")
+
+            logging.info(f"Saved project info to {info_file}")
+
+        except Exception as e:
+            logging.error(f"Failed to save project info: {e}")
+
+    def get_project_directory(self) -> Optional[str]:
+        """Get the current project directory path."""
+        return str(self.project_dir) if self.project_dir else None

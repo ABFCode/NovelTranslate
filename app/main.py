@@ -78,6 +78,12 @@ def main(page: ft.Page):
             controller.cancel_translation
         )
 
+        # Connect project management buttons (if they exist)
+        if hasattr(novel_controls, "open_project_button"):
+            novel_controls.open_project_button.on_click = controller.open_project_folder
+        if hasattr(novel_controls, "project_info_button"):
+            novel_controls.project_info_button.on_click = controller.show_project_info
+
         # Initialize UI state
         controller.update_active_config_dropdown()
         _restore_epub_state(novel_controls)

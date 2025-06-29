@@ -320,11 +320,24 @@ class MainController:
         self.view_controls.export_novel_button.disabled = False
 
         # Show completion notification
-        self.page.open(
-            ft.SnackBar(
-                content=ft.Text("Translation completed!"), bgcolor=ft.colors.GREEN_700
+        project_dir = self.translation_orchestrator.get_project_directory()
+        if project_dir:
+            self.page.open(
+                ft.SnackBar(
+                    content=ft.Text(
+                        f"Translation completed! Files saved to: {project_dir}"
+                    ),
+                    bgcolor=ft.colors.GREEN_700,
+                    duration=5000,  # Show for 5 seconds
+                )
             )
-        )
+        else:
+            self.page.open(
+                ft.SnackBar(
+                    content=ft.Text("Translation completed!"),
+                    bgcolor=ft.colors.GREEN_700,
+                )
+            )
 
     def _handle_translation_error(self, update: TranslationUpdate):
         """Handle translation errors."""
@@ -425,3 +438,68 @@ class MainController:
     def delete_key(self, e, key_name: str):
         """Delete API key (delegate to ApiKeyController)."""
         self.api_key_controller.delete_key(e, key_name)
+
+    # ========== File Management ==========
+
+    def open_project_folder(self, e):
+        """Open the current project folder in the system file explorer."""
+        project_dir = self.translation_orchestrator.get_project_directory()
+        if not project_dir:
+            self._show_error(
+                "No project folder available. Please complete a translation first."
+            )
+            return
+
+        try:
+            import os
+            import platform
+            import subprocess
+
+            # Cross-platform way to open folder
+            if platform.system() == "Windows":
+                os.startfile(project_dir)
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.run(["open", project_dir])
+            else:  # Linux and others
+                subprocess.run(["xdg-open", project_dir])
+
+            logging.info(f"Opened project folder: {project_dir}")
+
+        except Exception as e:
+            logging.error(f"Failed to open project folder: {e}")
+            self._show_error(f"Failed to open project folder: {str(e)}")
+
+    def show_project_info(self, e):
+        """Show information about the current project."""
+        project_dir = self.translation_orchestrator.get_project_directory()
+        if not project_dir:
+            self._show_error("No project available.")
+            return
+
+        status = self.translation_orchestrator.get_status()
+
+        info_dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Project Information"),
+            content=ft.Column(
+                [
+                    ft.Text(
+                        f"Book: {self.app_state.epub_data.get('title', 'Unknown')}"
+                    ),
+                    ft.Text(
+                        f"Author: {self.app_state.epub_data.get('author', 'Unknown')}"
+                    ),
+                    ft.Text(f"Total Chapters: {status['total_chapters']}"),
+                    ft.Text(f"Completed: {status['completed_chapters']}"),
+                    ft.Text(f"Failed: {status['failed_chapters']}"),
+                    ft.Text(f"Project Folder: {project_dir}"),
+                ],
+                tight=True,
+            ),
+            actions=[
+                ft.ElevatedButton("Open Folder", on_click=self.open_project_folder),
+                ft.TextButton("Close", on_click=lambda _: self.page.close(info_dialog)),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self.page.open(info_dialog)
