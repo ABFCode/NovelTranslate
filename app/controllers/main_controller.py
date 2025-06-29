@@ -274,8 +274,11 @@ class MainController:
         if not self.view_controls:
             return
 
-        # Schedule UI update on main thread
-        def update_ui():
+        try:
+            logging.info(
+                f"Received translation update: {update.type} - {update.message}"
+            )
+
             if update.type == "progress":
                 self._handle_progress_update(update)
             elif update.type == "log":
@@ -287,10 +290,14 @@ class MainController:
             elif update.type == "error":
                 self._handle_translation_error(update)
 
+            # Force UI update
             self.page.update()
 
-        # Use Flet's thread-safe update mechanism
-        self.page.run_in_thread(update_ui)
+        except Exception as e:
+            logging.error(f"Error handling translation update: {e}")
+            import traceback
+
+            traceback.print_exc()
 
     def _handle_progress_update(self, update: TranslationUpdate):
         """Handle progress updates."""

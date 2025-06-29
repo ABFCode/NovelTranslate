@@ -113,16 +113,16 @@ class TranslationOrchestrator:
     ):
         """Main translation loop running in background thread."""
         try:
-            self._send_update(
-                TranslationUpdate(type="status", message="Starting translation...")
-            )
+            update = TranslationUpdate(type="status", message="Starting translation...")
+            on_update_callback(update)
 
             # Get configuration
             config = self.config_manager.get_config(self.app_state.active_config_name)
             if not config:
-                self._send_update(
-                    TranslationUpdate(type="error", error="Configuration not found")
+                update = TranslationUpdate(
+                    type="error", error="Configuration not found"
                 )
+                on_update_callback(update)
                 return
 
             # Get API keys
@@ -133,11 +133,10 @@ class TranslationOrchestrator:
             for i, chapter_meta in enumerate(chapters):
                 # Check for cancellation
                 if self.should_cancel.is_set():
-                    self._send_update(
-                        TranslationUpdate(
-                            type="status", message="Translation cancelled"
-                        )
+                    update = TranslationUpdate(
+                        type="status", message="Translation cancelled"
                     )
+                    on_update_callback(update)
                     break
 
                 # Wait if paused
@@ -152,14 +151,13 @@ class TranslationOrchestrator:
 
                 # Update chapter status to in_progress
                 chapter_meta["status"] = "in_progress"
-                self._send_update(
-                    TranslationUpdate(
-                        type="progress",
-                        chapter_number=self.current_chapter,
-                        status="in_progress",
-                        message=f"Translating chapter {self.current_chapter}/{self.total_chapters}...",
-                    )
+                update = TranslationUpdate(
+                    type="progress",
+                    chapter_number=self.current_chapter,
+                    status="in_progress",
+                    message=f"Translating chapter {self.current_chapter}/{self.total_chapters}...",
                 )
+                on_update_callback(update)
 
                 # Perform translation
                 result = self._translate_chapter(chapter_meta, config, api_keys)
@@ -170,31 +168,29 @@ class TranslationOrchestrator:
                     chapter_meta["model_used"] = result.model_used
                     self.completed_chapters += 1
 
-                    self._send_update(
-                        TranslationUpdate(
-                            type="progress",
-                            chapter_number=self.current_chapter,
-                            status="completed",
-                            message=f"Chapter {self.current_chapter} completed using {result.model_used}",
-                            progress_percentage=(
-                                self.completed_chapters / self.total_chapters
-                            )
-                            * 100,
+                    update = TranslationUpdate(
+                        type="progress",
+                        chapter_number=self.current_chapter,
+                        status="completed",
+                        message=f"Chapter {self.current_chapter} completed using {result.model_used}",
+                        progress_percentage=(
+                            self.completed_chapters / self.total_chapters
                         )
+                        * 100,
                     )
+                    on_update_callback(update)
                 else:
                     chapter_meta["status"] = "error"
                     chapter_meta["error"] = result.error_message
                     self.failed_chapters += 1
 
-                    self._send_update(
-                        TranslationUpdate(
-                            type="progress",
-                            chapter_number=self.current_chapter,
-                            status="error",
-                            message=f"Chapter {self.current_chapter} failed: {result.error_message}",
-                        )
+                    update = TranslationUpdate(
+                        type="progress",
+                        chapter_number=self.current_chapter,
+                        status="error",
+                        message=f"Chapter {self.current_chapter} failed: {result.error_message}",
                     )
+                    on_update_callback(update)
 
                 # Brief pause between chapters
                 if not self.should_cancel.is_set():
@@ -202,19 +198,19 @@ class TranslationOrchestrator:
 
             # Translation complete
             if not self.should_cancel.is_set():
-                self._send_update(
-                    TranslationUpdate(
-                        type="complete",
-                        message=f"Translation complete! {self.completed_chapters} chapters completed, {self.failed_chapters} failed.",
-                        progress_percentage=100.0,
-                    )
+                update = TranslationUpdate(
+                    type="complete",
+                    message=f"Translation complete! {self.completed_chapters} chapters completed, {self.failed_chapters} failed.",
+                    progress_percentage=100.0,
                 )
+                on_update_callback(update)
 
         except Exception as e:
             logging.error(f"Translation worker error: {e}")
-            self._send_update(
-                TranslationUpdate(type="error", error=f"Translation error: {str(e)}")
+            update = TranslationUpdate(
+                type="error", error=f"Translation error: {str(e)}"
             )
+            on_update_callback(update)
 
         finally:
             self.is_running = False
