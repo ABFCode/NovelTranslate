@@ -3,25 +3,8 @@ from dataclasses import dataclass
 from typing import Optional
 
 import openai
-
-# Debug the import
-try:
-    from google import genai
-
-    print(f"DEBUG: Successfully imported genai: {genai}")
-    print(f"DEBUG: genai.Client: {genai.Client}")
-except Exception as e:
-    print(f"DEBUG: Import failed: {e}")
-    raise
-
-try:
-    from google.genai import types
-
-    print(f"DEBUG: Successfully imported types: {types}")
-    print(f"DEBUG: types.GenerateContentConfig: {types.GenerateContentConfig}")
-except Exception as e:
-    print(f"DEBUG: Types import failed: {e}")
-    raise
+from google import genai
+from google.genai import types
 
 
 @dataclass

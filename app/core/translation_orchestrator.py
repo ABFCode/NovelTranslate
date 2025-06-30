@@ -1,6 +1,5 @@
 import json
 import logging
-import queue
 import re
 import threading
 import time
@@ -41,8 +40,6 @@ class TranslationOrchestrator:
         self.should_cancel = threading.Event()
         self.translation_thread = None
 
-        self.ui_update_queue = queue.Queue()
-
         self.current_chapter = 0
         self.total_chapters = 0
         self.completed_chapters = 0
@@ -63,15 +60,9 @@ class TranslationOrchestrator:
             return False
 
         if not self.app_state.active_config_name:
-            self._send_update(
-                TranslationUpdate(
-                    type="error", error="No active configuration selected"
-                )
-            )
             return False
 
         if not self.app_state.epub_data["chapters_meta"]:
-            self._send_update(TranslationUpdate(type="error", error="No EPUB loaded"))
             return False
 
         self.is_running = True
@@ -100,26 +91,17 @@ class TranslationOrchestrator:
         """Pause the translation process."""
         if self.is_running:
             self.is_paused.clear()
-            self._send_update(
-                TranslationUpdate(type="status", message="Translation paused")
-            )
 
     def resume_translation(self):
         """Resume the translation process."""
         if self.is_running:
             self.is_paused.set()
-            self._send_update(
-                TranslationUpdate(type="status", message="Translation resumed")
-            )
 
     def cancel_translation(self):
         """Cancel the translation process."""
         if self.is_running:
             self.should_cancel.set()
             self.is_paused.set()
-            self._send_update(
-                TranslationUpdate(type="status", message="Cancelling translation...")
-            )
 
     def _translation_worker(
         self, on_update_callback: Callable[[TranslationUpdate], None]
@@ -342,10 +324,6 @@ class TranslationOrchestrator:
             "openai_api_key": keyring.get_password(APP_SERVICE_NAME, "openai_api_key"),
             "gemini_api_key": keyring.get_password(APP_SERVICE_NAME, "gemini_api_key"),
         }
-
-    def _send_update(self, update: TranslationUpdate):
-        """Send update to UI queue."""
-        self.ui_update_queue.put(update)
 
     def get_status(self) -> dict:
         """Get current translation status."""
