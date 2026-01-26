@@ -39,7 +39,7 @@ export function registerProjectHandlers(): void {
   })
 
   // Import EPUB
-  ipcMain.handle('project:import-epub', async (_event, filePath?: string): Promise<Project> => {
+  ipcMain.handle('project:import-epub', async (_event, filePath?: string): Promise<Project | null> => {
     // If no file path provided, open file dialog
     if (!filePath) {
       const mainWindow = getMainWindow()
@@ -54,7 +54,8 @@ export function registerProjectHandlers(): void {
       })
 
       if (result.canceled || result.filePaths.length === 0) {
-        throw new Error('No file selected')
+        // User cancelled - return null instead of throwing
+        return null
       }
 
       filePath = result.filePaths[0]

@@ -96,13 +96,13 @@ export function ProjectPage() {
               </TabsList>
             </div>
 
-            <TabsContent value="all" className="flex-1 overflow-hidden">
+            <TabsContent value="all" className="m-0 flex-1 overflow-hidden">
               <ChapterList chapters={chapters} />
             </TabsContent>
-            <TabsContent value="pending" className="flex-1 overflow-hidden">
+            <TabsContent value="pending" className="m-0 flex-1 overflow-hidden">
               <ChapterList chapters={chapters.filter((c) => c.status === 'pending')} />
             </TabsContent>
-            <TabsContent value="error" className="flex-1 overflow-hidden">
+            <TabsContent value="error" className="m-0 flex-1 overflow-hidden">
               <ChapterList chapters={chapters.filter((c) => c.status === 'error')} />
             </TabsContent>
           </Tabs>

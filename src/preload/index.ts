@@ -28,7 +28,7 @@ const api = {
     delete: (id: string) => invoke<void>('project:delete', id),
     list: () => invoke<Project[]>('project:list'),
     get: (id: string) => invoke<Project | null>('project:get', id),
-    importEpub: (filePath: string) => invoke<Project>('project:import-epub', filePath),
+    importEpub: (filePath?: string) => invoke<Project | null>('project:import-epub', filePath),
   },
 
   // =========================================================================

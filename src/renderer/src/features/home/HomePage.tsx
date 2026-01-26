@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { BookOpen, FolderOpen, Settings, Upload, Clock } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useProjectStore } from '@/features/project/project.store'
@@ -34,8 +35,29 @@ export function HomePage() {
   }
 
   const handleImportEpub = async () => {
-    // TODO: Open file dialog and import EPUB
-    console.log('Import EPUB')
+    if (!window.api) {
+      toast.error('API not available')
+      return
+    }
+
+    try {
+      // This will open file dialog and import EPUB via the main process
+      const project = await window.api.project.importEpub()
+      
+      // User cancelled the file dialog
+      if (!project) {
+        return
+      }
+
+      toast.success(`Imported: ${project.name}`)
+      // Refresh project list
+      loadProjects()
+      // Navigate to the new project
+      navigate({ to: '/project/$projectId', params: { projectId: project.id } })
+    } catch (error) {
+      console.error('Import failed:', error)
+      toast.error(`Import failed: ${error}`)
+    }
   }
 
   return (
@@ -112,7 +134,7 @@ export function HomePage() {
               <Card
                 key={project.id}
                 className="cursor-pointer transition-shadow hover:shadow-lg"
-                onClick={() => navigate({ to: `/project/${project.id}` })}
+                onClick={() => navigate({ to: '/project/$projectId', params: { projectId: project.id } })}
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">

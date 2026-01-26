@@ -64,6 +64,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   loadProject: async (id: string) => {
+    if (!window.api) {
+      console.error('[ProjectStore] window.api not available')
+      set({ error: 'API not available', isLoading: false })
+      return
+    }
+
     set({ isLoading: true, error: null })
     try {
       const project = await window.api.project.get(id)
@@ -72,10 +78,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         set({ currentProject: project, chapters, isLoading: false })
         get().addRecentProject(project)
       } else {
-        set({ error: 'Project not found', isLoading: false })
+        set({ error: 'Project not found', isLoading: false, currentProject: null, chapters: [] })
       }
     } catch (error) {
-      set({ error: String(error), isLoading: false })
+      console.error('[ProjectStore] Failed to load project:', error)
+      set({ error: String(error), isLoading: false, currentProject: null, chapters: [] })
     }
   },
 
