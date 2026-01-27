@@ -4,29 +4,36 @@ import type { Project, ProjectMetadata } from '../../../shared/types'
 /**
  * Create a new project
  */
-export function createProject(name: string, sourcePath?: string): Project {
+export function createProject(
+  name: string,
+  sourcePath?: string,
+  sourceLanguage = 'auto',
+  targetLanguage = 'en'
+): Project {
   const db = getDatabase()
   const id = generateId()
   const now = new Date().toISOString()
   const metadata: ProjectMetadata = {
     totalChapters: 0,
-    translatedChapters: 0,
+    translatedChapters: 0
   }
 
   const stmt = db.prepare(`
-    INSERT INTO projects (id, name, source_path, created_at, updated_at, metadata_json)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO projects (id, name, source_path, source_language, target_language, created_at, updated_at, metadata_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
-  stmt.run(id, name, sourcePath || null, now, now, JSON.stringify(metadata))
+  stmt.run(id, name, sourcePath || null, sourceLanguage, targetLanguage, now, now, JSON.stringify(metadata))
 
   return {
     id,
     name,
     sourcePath: sourcePath || '',
+    sourceLanguage,
+    targetLanguage,
     createdAt: now,
     updatedAt: now,
-    metadata,
+    metadata
   }
 }
 
@@ -36,7 +43,7 @@ export function createProject(name: string, sourcePath?: string): Project {
 export function getProject(id: string): Project | null {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, name, source_path, created_at, updated_at, metadata_json
+    SELECT id, name, source_path, source_language, target_language, created_at, updated_at, metadata_json
     FROM projects
     WHERE id = ?
   `)
@@ -56,7 +63,7 @@ export function getProject(id: string): Project | null {
 export function listProjects(): Project[] {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, name, source_path, created_at, updated_at, metadata_json
+    SELECT id, name, source_path, source_language, target_language, created_at, updated_at, metadata_json
     FROM projects
     ORDER BY updated_at DESC
   `)
@@ -105,6 +112,34 @@ export function updateProjectName(id: string, name: string): void {
 }
 
 /**
+ * Update project languages
+ */
+export function updateProjectLanguages(
+  id: string,
+  sourceLanguage?: string,
+  targetLanguage?: string
+): void {
+  const db = getDatabase()
+  const now = new Date().toISOString()
+
+  const setClauses: string[] = ['updated_at = ?']
+  const values: unknown[] = [now]
+
+  if (sourceLanguage !== undefined) {
+    setClauses.push('source_language = ?')
+    values.push(sourceLanguage)
+  }
+  if (targetLanguage !== undefined) {
+    setClauses.push('target_language = ?')
+    values.push(targetLanguage)
+  }
+
+  values.push(id)
+  const stmt = db.prepare(`UPDATE projects SET ${setClauses.join(', ')} WHERE id = ?`)
+  stmt.run(...values)
+}
+
+/**
  * Delete a project and all related data (cascades via foreign keys)
  */
 export function deleteProject(id: string): void {
@@ -131,6 +166,8 @@ interface ProjectRow {
   id: string
   name: string
   source_path: string | null
+  source_language: string
+  target_language: string
   created_at: string
   updated_at: string
   metadata_json: string
@@ -141,8 +178,10 @@ function rowToProject(row: ProjectRow): Project {
     id: row.id,
     name: row.name,
     sourcePath: row.source_path || '',
+    sourceLanguage: row.source_language || 'auto',
+    targetLanguage: row.target_language || 'en',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    metadata: JSON.parse(row.metadata_json),
+    metadata: JSON.parse(row.metadata_json)
   }
 }

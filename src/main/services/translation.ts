@@ -1,12 +1,21 @@
-import { providerRegistry } from '../providers'
 import {
   getChapterContent,
   updateChapterStatus,
   updateChapterTranslation,
   getConfig,
+  getProjectDefaultConfig
 } from '../database'
+import { getProject } from '../database/repositories/project.repository'
 import { getMainWindow } from '../window'
-import type { TranslationProgressEvent, ChapterStatus } from '../../shared/types'
+import { executeChain, ChainExecutorOptions } from './chain-executor'
+import { keyManager } from './key-manager'
+import { getSettings } from '../database/repositories/settings.repository'
+import type {
+  TranslationProgressEvent,
+  ChapterStatus,
+  ChainExecutionStep,
+  TranslationConfig
+} from '../../shared/types'
 
 // Active translation jobs
 const activeJobs = new Map<string, TranslationJob>()
@@ -19,17 +28,9 @@ interface TranslationJob {
   isPaused: boolean
   isCancelled: boolean
   concurrency: number
-}
-
-// In-memory API key cache (in production, use safeStorage)
-const apiKeyCache = new Map<string, string>()
-
-export function setApiKey(providerId: string, key: string): void {
-  apiKeyCache.set(providerId, key)
-}
-
-export function getApiKey(providerId: string): string | null {
-  return apiKeyCache.get(providerId) || null
+  completedCount: number
+  errorCount: number
+  totalCost: number
 }
 
 /**
@@ -38,22 +39,32 @@ export function getApiKey(providerId: string): string | null {
 export async function startTranslation(
   projectId: string,
   chapterIds: string[],
-  configId: string,
-  concurrency = 3
+  configId?: string,
+  concurrency?: number
 ): Promise<void> {
   // Check if already running
   if (activeJobs.has(projectId)) {
     throw new Error('Translation already in progress for this project')
   }
 
-  // Get config
-  const config = getConfig(configId)
+  // Get settings
+  const settings = getSettings()
+  const effectiveConcurrency = concurrency ?? settings.translationConcurrency
+
+  // Get config (project default or specified)
+  let config: TranslationConfig | null
+  if (configId) {
+    config = getConfig(configId)
+  } else {
+    config = getProjectDefaultConfig(projectId)
+  }
+
   if (!config) {
     throw new Error('Translation config not found')
   }
 
   // Get API key
-  const apiKey = getApiKey(config.providerId)
+  const apiKey = await keyManager.getKey(config.providerId)
   if (!apiKey) {
     throw new Error(`No API key configured for ${config.providerId}`)
   }
@@ -62,14 +73,21 @@ export async function startTranslation(
   const job: TranslationJob = {
     projectId,
     chapterIds,
-    configId,
+    configId: config.id,
     currentIndex: 0,
     isPaused: false,
     isCancelled: false,
-    concurrency,
+    concurrency: effectiveConcurrency,
+    completedCount: 0,
+    errorCount: 0,
+    totalCost: 0
   }
 
   activeJobs.set(projectId, job)
+
+  console.log(
+    `[Translation] Starting for project ${projectId}, ${chapterIds.length} chapters, concurrency ${effectiveConcurrency}`
+  )
 
   // Start processing
   processJob(job, config, apiKey)
@@ -89,7 +107,7 @@ export function pauseTranslation(projectId: string): void {
 /**
  * Resume translation
  */
-export function resumeTranslation(projectId: string): void {
+export async function resumeTranslation(projectId: string): Promise<void> {
   const job = activeJobs.get(projectId)
   if (job && job.isPaused) {
     job.isPaused = false
@@ -98,7 +116,7 @@ export function resumeTranslation(projectId: string): void {
     // Get config and API key to continue
     const config = getConfig(job.configId)
     if (config) {
-      const apiKey = getApiKey(config.providerId)
+      const apiKey = await keyManager.getKey(config.providerId)
       if (apiKey) {
         processJob(job, config, apiKey)
       }
@@ -119,17 +137,41 @@ export function cancelTranslation(projectId: string): void {
 }
 
 /**
+ * Get translation status
+ */
+export function getTranslationStatus(projectId: string): {
+  isRunning: boolean
+  isPaused: boolean
+  progress: number
+  completedCount: number
+  errorCount: number
+  totalCost: number
+} | null {
+  const job = activeJobs.get(projectId)
+  if (!job) return null
+
+  return {
+    isRunning: !job.isPaused && !job.isCancelled,
+    isPaused: job.isPaused,
+    progress: (job.currentIndex / job.chapterIds.length) * 100,
+    completedCount: job.completedCount,
+    errorCount: job.errorCount,
+    totalCost: job.totalCost
+  }
+}
+
+/**
  * Process translation job
  */
 async function processJob(
   job: TranslationJob,
-  config: any,
+  config: TranslationConfig,
   apiKey: string
 ): Promise<void> {
-  const provider = providerRegistry.get(config.providerId)
-  if (!provider) {
-    throw new Error(`Provider not found: ${config.providerId}`)
-  }
+  const settings = getSettings()
+  const project = getProject(job.projectId)
+  const sourceLanguage = project?.sourceLanguage || 'auto'
+  const targetLanguage = project?.targetLanguage || 'en'
 
   // Process in batches based on concurrency
   while (job.currentIndex < job.chapterIds.length) {
@@ -138,15 +180,21 @@ async function processJob(
     }
 
     // Get batch of chapters to process
-    const batchIds = job.chapterIds.slice(
-      job.currentIndex,
-      job.currentIndex + job.concurrency
-    )
+    const batchIds = job.chapterIds.slice(job.currentIndex, job.currentIndex + job.concurrency)
 
     // Process batch in parallel
     await Promise.all(
       batchIds.map((chapterId) =>
-        translateChapter(job, chapterId, config, provider, apiKey)
+        translateChapter(
+          job,
+          chapterId,
+          config,
+          apiKey,
+          sourceLanguage,
+          targetLanguage,
+          settings.enableTranslationMemory,
+          settings.enableGlossaryInjection
+        )
       )
     )
 
@@ -156,23 +204,30 @@ async function processJob(
   // Clean up if complete
   if (job.currentIndex >= job.chapterIds.length && !job.isCancelled) {
     activeJobs.delete(job.projectId)
-    console.log(`[Translation] Completed for project ${job.projectId}`)
+    console.log(
+      `[Translation] Completed for project ${job.projectId}: ${job.completedCount} succeeded, ${job.errorCount} failed, $${job.totalCost.toFixed(4)} total cost`
+    )
   }
 }
 
 /**
- * Translate a single chapter
+ * Translate a single chapter using the chain executor
  */
 async function translateChapter(
   job: TranslationJob,
   chapterId: string,
-  config: any,
-  provider: any,
-  apiKey: string
+  config: TranslationConfig,
+  apiKey: string,
+  sourceLanguage: string,
+  targetLanguage: string,
+  useMemory: boolean,
+  useGlossary: boolean
 ): Promise<void> {
+  const mainWindow = getMainWindow()
+
   // Update status to translating
   updateChapterStatus(chapterId, 'translating')
-  sendProgressEvent(job.projectId, chapterId, 'translating', 0, 'Translating...')
+  sendProgressEvent(job.projectId, chapterId, 'translating', 0, 'Translating...', config.id)
 
   try {
     // Get chapter content
@@ -181,37 +236,72 @@ async function translateChapter(
       throw new Error('Chapter content not found')
     }
 
-    // Build prompt
-    const userPrompt = config.userPromptTemplate
-      .replace('{{text}}', content.sourceText)
-      .replace('{{sourceLanguage}}', 'Chinese')
-      .replace('{{targetLanguage}}', 'English')
-
-    // Call provider
-    const result = await provider.translate({
-      modelId: config.modelId,
-      systemPrompt: config.systemPrompt,
-      userPrompt,
-      temperature: config.temperature,
-      maxTokens: config.maxTokens,
+    // Execute translation with chain support
+    const options: ChainExecutorOptions = {
+      configId: config.id,
+      sourceText: content.sourceText,
+      sourceLanguage,
+      targetLanguage,
       apiKey,
-    })
-
-    if (result.finishReason === 'error') {
-      throw new Error(result.error || 'Translation failed')
+      projectId: job.projectId,
+      useMemory,
+      useGlossary,
+      createSnapshot: false,
+      window: mainWindow || undefined
     }
 
-    // Save translation
-    updateChapterTranslation(chapterId, result.translatedText)
-    updateChapterStatus(chapterId, 'translated')
-    sendProgressEvent(job.projectId, chapterId, 'translated', 100, 'Complete')
+    const result = await executeChain(options)
 
-    console.log(`[Translation] Chapter ${chapterId} completed`)
+    if (result.success && result.translatedText) {
+      // Save translation
+      updateChapterTranslation(chapterId, result.translatedText)
+      updateChapterStatus(chapterId, 'translated')
+
+      job.completedCount++
+      job.totalCost += result.totalCostUsd
+
+      sendProgressEvent(
+        job.projectId,
+        chapterId,
+        'translated',
+        100,
+        `Complete (${result.source}, $${result.totalCostUsd.toFixed(4)})`,
+        result.finalConfigId,
+        result.executionPath
+      )
+
+      console.log(
+        `[Translation] Chapter ${chapterId} completed via ${result.source}, cost: $${result.totalCostUsd.toFixed(4)}`
+      )
+    } else {
+      // Translation failed
+      const errorMessage = result.finalError || 'Translation failed'
+      updateChapterStatus(chapterId, 'error', errorMessage)
+
+      job.errorCount++
+
+      sendProgressEvent(
+        job.projectId,
+        chapterId,
+        'error',
+        0,
+        errorMessage,
+        result.finalConfigId,
+        result.executionPath
+      )
+
+      console.error(
+        `[Translation] Chapter ${chapterId} failed: ${errorMessage} (${result.finalErrorType})`
+      )
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     updateChapterStatus(chapterId, 'error', errorMessage)
-    sendProgressEvent(job.projectId, chapterId, 'error', 0, errorMessage)
-    console.error(`[Translation] Chapter ${chapterId} failed:`, errorMessage)
+
+    job.errorCount++
+
+    sendProgressEvent(job.projectId, chapterId, 'error', 0, errorMessage, config.id)
+    console.error(`[Translation] Chapter ${chapterId} error:`, errorMessage)
   }
 }
 
@@ -223,7 +313,9 @@ function sendProgressEvent(
   chapterId: string,
   status: ChapterStatus,
   progress: number,
-  message?: string
+  message?: string,
+  configId?: string,
+  executionPath?: ChainExecutionStep[]
 ): void {
   const mainWindow = getMainWindow()
   if (mainWindow) {
@@ -233,7 +325,31 @@ function sendProgressEvent(
       status,
       progress,
       message,
+      configId,
+      executionPath
     }
     mainWindow.webContents.send('translation:progress', event)
   }
+}
+
+// ============================================================================
+// Legacy API Key Cache (for backward compatibility during migration)
+// ============================================================================
+
+const legacyApiKeyCache = new Map<string, string>()
+
+/**
+ * @deprecated Use keyManager.addKey() instead
+ */
+export function setApiKey(providerId: string, key: string): void {
+  legacyApiKeyCache.set(providerId, key)
+  // Also add to new key manager
+  keyManager.addKey(providerId, key, 'Legacy key').catch(console.error)
+}
+
+/**
+ * @deprecated Use keyManager.getKey() instead
+ */
+export function getApiKey(providerId: string): string | null {
+  return legacyApiKeyCache.get(providerId) || null
 }

@@ -3,10 +3,17 @@ import type { AppSettings } from '../../../shared/types'
 
 const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
+  uiMode: 'simple',
+  defaultConfigId: undefined,
   defaultProviderId: undefined,
   defaultModelId: undefined,
   translationConcurrency: 3,
   autoSaveInterval: 30000, // 30 seconds
+  keyRotationStrategy: 'priority',
+  globalRetryConfigId: undefined,
+  enableTranslationMemory: true,
+  enableGlossaryInjection: true,
+  showCostEstimates: true
 }
 
 /**
@@ -67,4 +74,11 @@ export function resetSettings(): AppSettings {
   const stmt = db.prepare('DELETE FROM app_settings WHERE key = ?')
   stmt.run('settings')
   return DEFAULT_SETTINGS
+}
+
+/**
+ * Get the default settings object (for reference)
+ */
+export function getDefaultSettings(): AppSettings {
+  return { ...DEFAULT_SETTINGS }
 }

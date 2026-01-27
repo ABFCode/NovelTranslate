@@ -1,6 +1,31 @@
+# Dependencies
 node_modules
+.pnpm-store
+
+# Build output
 dist
 out
+
+# Editor/OS
 .DS_Store
-.eslintcache
+*.swp
+*.swo
+.idea
+.vscode
+*.sublime-*
+
+# Logs
 *.log*
+
+# Cache
+.eslintcache
+.tsbuildinfo
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Plan files (temporary working docs)
+*.plan.md
