@@ -5,8 +5,6 @@
  */
 
 import type {
-  GlossarySuggestion,
-  Chapter,
   CostEstimate,
   TermType,
   GlossaryGender
@@ -16,9 +14,7 @@ import { estimateTokens, estimateCostForTokens } from './cost-estimator'
 import { keyManager } from './key-manager'
 import { providerRegistry } from '../providers'
 import { logger, generateCorrelationId } from './logger'
-import { getChapter, listChapters } from '../database/repositories/chapter.repository'
 import { getChapterContent } from '../database/repositories/chapter.repository'
-import { BrowserWindow } from 'electron'
 
 // Recommended cheap models for extraction
 const CHEAP_MODELS = [
@@ -63,7 +59,7 @@ export class GlossaryRunService {
    * Estimate cost for running glossary extraction
    */
   async estimateCost(
-    projectId: string,
+    _projectId: string,
     chapterIds: string[],
     providerId: string,
     modelId: string
@@ -232,11 +228,11 @@ export class GlossaryRunService {
       // Call the API
       const startTime = Date.now()
       const response = await provider.translate({
-        text: prompt,
+        userPrompt: prompt,
         systemPrompt: this.getExtractionSystemPrompt(),
-        model: modelId,
+        modelId,
         apiKey,
-        temperature: 0.3 // Lower temperature for more consistent extraction
+        temperature: 0.3
       })
 
       const durationMs = Date.now() - startTime
@@ -269,8 +265,8 @@ export class GlossaryRunService {
 
       // Calculate cost
       const cost = estimateCostForTokens(
-        response.usage?.inputTokens || 0,
-        response.usage?.outputTokens || 0,
+        response.tokensUsed.input,
+        response.tokensUsed.output,
         providerId,
         modelId
       )
@@ -285,7 +281,7 @@ export class GlossaryRunService {
       return {
         chapterId,
         suggestionsCreated,
-        tokensUsed: (response.usage?.inputTokens || 0) + (response.usage?.outputTokens || 0),
+        tokensUsed: response.tokensUsed.total,
         costUsd: cost.totalCostUsd
       }
     } catch (error) {

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { TestRun, TestResult, TranslationConfig, CostEstimate } from '../../../../shared/types'
+import type { TestRun, TranslationConfig, CostEstimate } from '../../../../shared/types'
 
 interface TestingState {
   // Data

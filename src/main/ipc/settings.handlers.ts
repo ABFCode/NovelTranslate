@@ -5,8 +5,7 @@ import {
   listApiKeys,
   listAllApiKeys,
   getApiKey,
-  updateApiKey,
-  deleteApiKey
+  updateApiKey
 } from '../database/repositories/apikey.repository'
 import {
   getProjectBudget,

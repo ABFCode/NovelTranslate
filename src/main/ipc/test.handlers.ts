@@ -6,17 +6,15 @@ import {
   listTestRuns,
   deleteTestRun,
   createTestResult,
-  getResultsForTestRun,
   addChapterToBatchTest,
   linkResultToBatchChapter,
-  getBatchTestChapters,
   getConfigTestStats
 } from '../database/repositories/test.repository'
 import { getConfig, createConfigSnapshot } from '../database'
 import { executeChain } from '../services/chain-executor'
 import { estimateSingleCost, estimateChainCost, formatCost } from '../services/cost-estimator'
 import { keyManager } from '../services/key-manager'
-import type { TestRun, TestResult, TestType, CostEstimate } from '../../shared/types'
+import type { TestRun, CostEstimate } from '../../shared/types'
 
 /**
  * Register test-related IPC handlers (Testing Center)

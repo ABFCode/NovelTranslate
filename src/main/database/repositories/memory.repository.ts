@@ -193,6 +193,52 @@ export function listMemoryEntries(
 }
 
 /**
+ * Search memory entries by query text
+ */
+export function searchMemory(
+  query: string,
+  projectId?: string,
+  limit = 50
+): TranslationMemoryEntry[] {
+  const db = getDatabase()
+  const searchPattern = `%${query}%`
+
+  let sql = `
+    SELECT id, source_hash, source_text, target_text, provider_id, model_id,
+           config_id, project_id, confidence, manually_verified, usage_count,
+           last_used_at, created_at
+    FROM translation_memory
+    WHERE (source_text LIKE ? OR target_text LIKE ?)
+  `
+  const params: unknown[] = [searchPattern, searchPattern]
+
+  if (projectId) {
+    sql += ' AND (project_id = ? OR project_id IS NULL)'
+    params.push(projectId)
+  }
+
+  sql += ' ORDER BY usage_count DESC, last_used_at DESC LIMIT ?'
+  params.push(limit)
+
+  const rows = db.prepare(sql).all(...params) as MemoryRow[]
+  return rows.map(rowToMemoryEntry)
+}
+
+/**
+ * Get override by ID
+ */
+export function getOverrideById(id: string): TranslationOverride | null {
+  const db = getDatabase()
+  const row = db.prepare(`
+    SELECT id, project_id, chapter_id, source_segment, original_translation,
+           override_translation, scope, reason, created_at
+    FROM translation_overrides
+    WHERE id = ?
+  `).get(id) as OverrideRow | undefined
+  return row ? rowToOverride(row) : null
+}
+
+/**
  * Get memory statistics
  */
 export function getMemoryStats(projectId?: string): {
@@ -298,6 +344,7 @@ export function getOverride(
   chapterId?: string
 ): TranslationOverride | null {
   const db = getDatabase()
+  const params: unknown[] = [sourceSegment, projectId]
 
   // Priority: chapter > project > global
   let sql = `
@@ -305,24 +352,22 @@ export function getOverride(
            override_translation, scope, reason, created_at
     FROM translation_overrides
     WHERE source_segment = ? AND project_id = ?
-    ORDER BY 
-      CASE scope 
-        WHEN 'chapter' THEN 1 
-        WHEN 'project' THEN 2 
-        WHEN 'global' THEN 3 
-      END
   `
-  const params: unknown[] = [sourceSegment, projectId]
 
   if (chapterId) {
-    sql = sql.replace(
-      'ORDER BY',
-      `AND (chapter_id = ? OR chapter_id IS NULL) ORDER BY`
-    )
-    params.splice(2, 0, chapterId)
+    sql += ' AND (chapter_id = ? OR chapter_id IS NULL)'
+    params.push(chapterId)
   }
 
-  sql += ' LIMIT 1'
+  sql += `
+    ORDER BY
+      CASE scope
+        WHEN 'chapter' THEN 1
+        WHEN 'project' THEN 2
+        WHEN 'global' THEN 3
+      END
+    LIMIT 1
+  `
 
   const row = db.prepare(sql).get(...params) as OverrideRow | undefined
   return row ? rowToOverride(row) : null

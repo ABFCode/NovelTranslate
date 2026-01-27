@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Settings, Key, Palette, Zap, Save, Plus, Trash2, Check, X, RefreshCw } from 'lucide-react'
+import { Settings, Key, Palette, Zap, Save, Plus, Trash2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/select'
 import { GlobalModeToggle } from '@/components/ModeToggle'
 import { useUIMode } from '@/contexts/UIModeContext'
-import { cn } from '@/lib/utils'
 import type { AppSettings, ProviderInfo, ApiKeyEntry, TranslationConfig } from '@shared/types'
 
 export function SettingsPage() {

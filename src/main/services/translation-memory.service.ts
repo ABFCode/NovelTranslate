@@ -17,9 +17,11 @@ import {
   updateMemoryConfidence,
   deleteMemoryEntry,
   listMemoryEntries,
+  searchMemory,
   getMemoryStats,
   createOverride,
   getOverride,
+  getOverrideById,
   listOverrides,
   deleteOverride
 } from '../database/repositories/memory.repository'
@@ -159,7 +161,7 @@ export class TranslationMemoryService {
    * Get an override by ID
    */
   getOverrideById(id: string): TranslationOverride | null {
-    return getOverride(id)
+    return getOverrideById(id)
   }
 
   /**

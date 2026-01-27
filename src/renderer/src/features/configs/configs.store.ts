@@ -4,7 +4,8 @@ import type {
   ConfigFallback,
   ConfigSnapshot,
   PromptTemplate,
-  ConfigWithFallbacks
+  ConfigWithFallbacks,
+  FallbackConditionType
 } from '../../../../shared/types'
 
 interface ConfigsState {
@@ -33,7 +34,7 @@ interface ConfigsState {
     configId: string,
     fallbackConfigId: string,
     priority: number,
-    conditionType: string
+    conditionType: FallbackConditionType
   ) => Promise<ConfigFallback>
   updateFallback: (id: string, updates: Partial<ConfigFallback>) => Promise<void>
   deleteFallback: (id: string) => Promise<void>

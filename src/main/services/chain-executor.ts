@@ -306,7 +306,7 @@ async function executeWithFallbacks(
     (attempt, err, delayMs) => {
       totalRetries++
       console.log(
-        `[ChainExecutor] Retry ${attempt} for ${config.name}, waiting ${delayMs}ms`
+        `[ChainExecutor] Retry ${attempt} for ${config.name}, waiting ${delayMs}ms: ${err}`
       )
     }
   )

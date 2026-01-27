@@ -13,7 +13,6 @@ import type {
   AppSettings,
   ProviderInfo,
   TestRun,
-  TestResult,
   CostEstimate,
   GlossaryTerm,
   GlossarySuggestion,

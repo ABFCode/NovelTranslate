@@ -17,7 +17,6 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { cn } from '@/lib/utils'
 import { translationConfigSchema, type TranslationConfigFormData } from '../../../../shared/validation'
 import type {
   TranslationConfig,
@@ -396,7 +395,7 @@ function FallbackChainEditor({
         <span className="rounded bg-primary/10 px-2 py-1 font-medium text-primary">
           This Config
         </span>
-        {sortedFallbacks.map((fb, index) => {
+        {sortedFallbacks.map((fb) => {
           const config = availableConfigs.find((c) => c.id === fb.fallbackConfigId)
           return (
             <motion.div

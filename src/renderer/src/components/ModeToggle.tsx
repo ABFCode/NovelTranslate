@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils'
 import { useUIMode, useFeatureMode, type Feature } from '@/contexts/UIModeContext'
-import type { UIMode } from '../../../shared/types'
 
 interface GlobalModeToggleProps {
   className?: string

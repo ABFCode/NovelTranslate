@@ -256,9 +256,9 @@ function classifyAnthropicError(
 }
 
 function classifyGeminiError(
-  error: unknown,
+  _error: unknown,
   message: string,
-  code?: string,
+  _code?: string,
   statusCode?: number
 ): ClassificationResult {
   // Safety blocked

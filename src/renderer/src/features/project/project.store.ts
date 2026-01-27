@@ -79,10 +79,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ translationProgress: progress })
 
     // Update chapter status if we have chapter info
-    if (progress.currentChapterId) {
+    if (progress.chapterId) {
       const { chapters } = get()
       const updatedChapters = chapters.map((ch) => {
-        if (ch.id === progress.currentChapterId) {
+        if (ch.id === progress.chapterId) {
           return { ...ch, status: progress.status === 'translating' ? 'translating' : ch.status }
         }
         return ch
@@ -221,8 +221,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const unsubProgress = window.api.on.translationProgress((event) => {
       get().updateTranslationProgress(event)
 
-      // Handle completion
-      if (event.status === 'completed' || event.status === 'cancelled') {
+      // Handle completion (translated = done, skipped = cancelled/skipped)
+      if (event.progress >= 100 || event.status === 'error') {
         set({ isTranslating: false, isPaused: false })
         // Reload chapters to get updated statuses
         const { currentProject } = get()

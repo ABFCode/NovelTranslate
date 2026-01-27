@@ -107,7 +107,7 @@ export const useGlossaryStore = create<GlossaryState>((set, get) => ({
     set({ isSaving: true })
     try {
       await window.api.glossary.update(id, updates)
-      const { terms, selectedProjectId } = get()
+      const { selectedProjectId } = get()
       // Refresh terms
       const refreshedTerms = await window.api.glossary.list(selectedProjectId)
       set({ terms: refreshedTerms, isSaving: false, selectedTerm: null })

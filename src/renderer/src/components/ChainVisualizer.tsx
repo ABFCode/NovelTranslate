@@ -46,7 +46,7 @@ export function ChainVisualizer({
     return (
       <div className={cn('flex items-center gap-1 text-xs', className)}>
         <ConfigBadge config={primaryConfig} isPrimary />
-        {sortedFallbacks.map((fb, i) => {
+        {sortedFallbacks.map((fb) => {
           const config = configs.find((c) => c.id === fb.fallbackConfigId)
           return (
             <span key={fb.id} className="flex items-center gap-1">
@@ -123,7 +123,7 @@ function ExecutionPathVisualizer({
             <span
               className={cn(
                 'rounded px-1.5 py-0.5',
-                step.success
+                !step.error
                   ? 'bg-green-500/10 text-green-600'
                   : 'bg-destructive/10 text-destructive'
               )}
@@ -146,11 +146,11 @@ function ExecutionPathVisualizer({
           transition={{ delay: i * 0.1 }}
           className={cn(
             'flex items-center gap-3 rounded-md border p-2',
-            step.success ? 'border-green-500/30 bg-green-500/5' : 'border-destructive/30 bg-destructive/5'
+            !step.error ? 'border-green-500/30 bg-green-500/5' : 'border-destructive/30 bg-destructive/5'
           )}
         >
           <div className="flex-shrink-0">
-            {step.success ? (
+            {!step.error ? (
               <SuccessIcon className="h-4 w-4 text-green-600" />
             ) : (
               <ErrorIcon className="h-4 w-4 text-destructive" />
@@ -161,12 +161,12 @@ function ExecutionPathVisualizer({
             <div className="text-xs text-muted-foreground">
               {step.providerId} / {step.modelId}
               {step.durationMs && ` • ${step.durationMs}ms`}
-              {step.attempt > 1 && ` • Attempt ${step.attempt}`}
+              {step.attemptNumber > 1 && ` • Attempt ${step.attemptNumber}`}
             </div>
           </div>
-          {!step.success && step.errorType && (
+          {step.error && (
             <span className="text-xs rounded-full bg-destructive/10 px-2 py-0.5 text-destructive">
-              {step.errorType}
+              {step.error}
             </span>
           )}
         </motion.div>

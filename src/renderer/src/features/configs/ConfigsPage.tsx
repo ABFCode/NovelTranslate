@@ -90,7 +90,7 @@ export function ConfigsPage(): JSX.Element {
       const data = JSON.parse(text)
       const result = await window.api.config.import(data)
       await fetchConfigs()
-      toast.success(`Imported ${result.imported} configs, skipped ${result.skipped}`)
+      toast.success(`Imported ${result.configsImported} configs, skipped ${result.configsSkipped}`)
       setShowImportDialog(false)
     } catch (error) {
       console.error('Failed to import configs:', error)

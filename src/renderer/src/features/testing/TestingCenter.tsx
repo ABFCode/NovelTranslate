@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
 import { useTestingStore } from './testing.store'
 import { useFeatureMode } from '@/contexts/UIModeContext'
 import { FeatureModeToggle, AdvancedSection, ShowAdvancedToggle } from '@/components/ModeToggle'
@@ -14,9 +13,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import type { TestRun, TestResult, TranslationConfig } from '../../../../shared/types'
 
@@ -41,7 +39,6 @@ export function TestingCenter(): JSX.Element {
     sourceLanguage,
     targetLanguage,
     selectedConfigIds,
-    isLoading,
     isRunning,
     fetchConfigs,
     fetchTestRuns,
@@ -53,8 +50,7 @@ export function TestingCenter(): JSX.Element {
     clearConfigSelection,
     runSingleTest,
     runComparisonTest,
-    loadTestRun,
-    deleteTestRun
+    loadTestRun
   } = useTestingStore()
 
   const [testName, setTestName] = useState('')
