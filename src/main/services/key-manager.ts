@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { app } from 'electron'
 import { logger } from './logger'
-import type { ApiKeyEntry, KeyRotationStrategy } from '../../shared/types'
+import type { ApiKeyEntry, KeyRotationStrategy, KeyValidationResult } from '../../shared/types'
 import {
   listApiKeys,
   getApiKeyValue,
@@ -166,6 +166,45 @@ export class KeyManager {
     } else {
       markKeyError(keyId, error)
     }
+  }
+
+  /**
+   * Validate all stored keys and return results
+   */
+  async validateAllKeys(): Promise<KeyValidationResult[]> {
+    const allKeys = listApiKeys('')
+    const results: KeyValidationResult[] = []
+
+    // Validate keys in parallel with concurrency limit
+    const batchSize = 3
+    for (let i = 0; i < allKeys.length; i += batchSize) {
+      const batch = allKeys.slice(i, i + batchSize)
+      const batchResults = await Promise.all(
+        batch.map(async (key) => {
+          try {
+            const isValid = await this.validateStoredKey(key.id)
+            return {
+              keyId: key.id,
+              providerId: key.providerId,
+              label: key.label,
+              isValid,
+              error: isValid ? undefined : 'Validation failed'
+            }
+          } catch (error) {
+            return {
+              keyId: key.id,
+              providerId: key.providerId,
+              label: key.label,
+              isValid: false,
+              error: error instanceof Error ? error.message : String(error)
+            }
+          }
+        })
+      )
+      results.push(...batchResults)
+    }
+
+    return results
   }
 
   /**

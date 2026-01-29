@@ -3,7 +3,8 @@ import {
   updateChapterStatus,
   updateChapterTranslation,
   getConfig,
-  getProjectDefaultConfig
+  getProjectDefaultConfig,
+  archiveTranslation
 } from '../database'
 import { getProject } from '../database/repositories/project.repository'
 import { getMainWindow } from '../window'
@@ -254,7 +255,19 @@ async function translateChapter(
     const result = await executeChain(options)
 
     if (result.success && result.translatedText) {
-      // Save translation
+      // Archive existing translation if present
+      if (content.translatedText) {
+        archiveTranslation(
+          chapterId,
+          content.translatedText,
+          config.id,
+          config.name,
+          config.providerId,
+          config.modelId
+        )
+      }
+
+      // Save new translation
       updateChapterTranslation(chapterId, result.translatedText)
       updateChapterStatus(chapterId, 'translated')
 
@@ -330,6 +343,110 @@ function sendProgressEvent(
       executionPath
     }
     mainWindow.webContents.send('translation:progress', event)
+  }
+}
+
+// ============================================================================
+// Preview Translation
+// ============================================================================
+
+export interface PreviewResult {
+  success: boolean
+  translatedText?: string
+  originalText: string
+  costUsd: number
+  tokensUsed: { input: number; output: number }
+  providerId: string
+  modelId: string
+  error?: string
+}
+
+/**
+ * Preview translation for a text sample
+ * Takes first ~1000 characters to give a quick preview
+ */
+export async function previewTranslation(
+  text: string,
+  configId: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<PreviewResult> {
+  // Limit to first ~1000 characters, but try to end at a sentence
+  const maxLength = 1000
+  let previewText = text.substring(0, maxLength)
+
+  // Try to find a good break point (end of sentence or paragraph)
+  const lastPeriod = previewText.lastIndexOf('.')
+  const lastNewline = previewText.lastIndexOf('\n')
+  const breakPoint = Math.max(lastPeriod, lastNewline)
+
+  if (breakPoint > maxLength * 0.5) {
+    previewText = text.substring(0, breakPoint + 1)
+  }
+
+  const config = getConfig(configId)
+  if (!config) {
+    return {
+      success: false,
+      originalText: previewText,
+      costUsd: 0,
+      tokensUsed: { input: 0, output: 0 },
+      providerId: '',
+      modelId: '',
+      error: 'Config not found'
+    }
+  }
+
+  const apiKey = await keyManager.getKey(config.providerId)
+  if (!apiKey) {
+    return {
+      success: false,
+      originalText: previewText,
+      costUsd: 0,
+      tokensUsed: { input: 0, output: 0 },
+      providerId: config.providerId,
+      modelId: config.modelId,
+      error: `No API key for ${config.providerId}`
+    }
+  }
+
+  try {
+    const options: ChainExecutorOptions = {
+      configId,
+      sourceText: previewText,
+      sourceLanguage,
+      targetLanguage,
+      apiKey,
+      useMemory: false,
+      useGlossary: false,
+      createSnapshot: false
+    }
+
+    const result = await executeChain(options)
+
+    return {
+      success: result.success,
+      translatedText: result.translatedText,
+      originalText: previewText,
+      costUsd: result.totalCostUsd,
+      tokensUsed: {
+        input: result.tokensUsed.input,
+        output: result.tokensUsed.output
+      },
+      providerId: config.providerId,
+      modelId: config.modelId,
+      error: result.finalError
+    }
+  } catch (error) {
+    return {
+      success: false,
+      originalText: previewText,
+      costUsd: 0,
+      tokensUsed: { input: 0, output: 0 },
+      providerId: config.providerId,
+      modelId: config.modelId,
+      error: error instanceof Error ? error.message : String(error)
+    }
   }
 }
 

@@ -4,6 +4,8 @@ import {
   resumeTranslation,
   cancelTranslation,
   setApiKey,
+  previewTranslation,
+  type PreviewResult
 } from '../services/translation'
 import { handleIpc } from './utils'
 import { logger } from '../services/logger'
@@ -34,6 +36,19 @@ export function registerTranslationHandlers(): void {
   handleIpc('translation:cancel', (projectId: string): void => {
     cancelTranslation(projectId)
   })
+
+  // Preview translation
+  handleIpc(
+    'translation:preview',
+    async (
+      text: string,
+      configId: string,
+      sourceLanguage: string,
+      targetLanguage: string
+    ): Promise<PreviewResult> => {
+      return previewTranslation(text, configId, sourceLanguage, targetLanguage)
+    }
+  )
 
   logger.info('[IPC] Translation handlers registered')
 }

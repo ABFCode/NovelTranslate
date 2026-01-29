@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Settings, Key, Palette, Zap, Save, Plus, Trash2, RefreshCw } from 'lucide-react'
+import { Settings, Key, Palette, Zap, Save, Plus, Trash2, RefreshCw, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,11 @@ import {
 } from '@/components/ui/select'
 import { GlobalModeToggle } from '@/components/ModeToggle'
 import { useUIMode } from '@/contexts/UIModeContext'
-import type { AppSettings, ProviderInfo, ApiKeyEntry, TranslationConfig } from '@shared/types'
+import { EditKeyDialog } from './components/EditKeyDialog'
+import { KeyUsageStats } from './components/KeyUsageStats'
+import { ValidationResultsDialog } from './components/ValidationResultsDialog'
+import { BackupRestore } from './components/BackupRestore'
+import type { AppSettings, ProviderInfo, ApiKeyEntry, TranslationConfig, KeyValidationResult } from '@shared/types'
 
 export function SettingsPage() {
   const { isAdvanced } = useUIMode()
@@ -28,6 +32,11 @@ export function SettingsPage() {
   const [apiKeys, setApiKeys] = useState<Record<string, ApiKeyEntry[]>>({})
   const [newKeyInputs, setNewKeyInputs] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
+  const [editingKey, setEditingKey] = useState<ApiKeyEntry | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [validationResults, setValidationResults] = useState<KeyValidationResult[]>([])
+  const [validationDialogOpen, setValidationDialogOpen] = useState(false)
+  const [isValidatingAll, setIsValidatingAll] = useState(false)
 
   useEffect(() => {
     loadSettings()
@@ -139,6 +148,21 @@ export function SettingsPage() {
     }
   }
 
+  const handleValidateAllKeys = async () => {
+    setIsValidatingAll(true)
+    try {
+      const results = await window.api.apiKey.validateAll()
+      setValidationResults(results)
+      setValidationDialogOpen(true)
+      loadApiKeys()
+    } catch (error) {
+      toast.error('Failed to validate keys')
+      console.error('Failed to validate keys:', error)
+    } finally {
+      setIsValidatingAll(false)
+    }
+  }
+
   if (!settings) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -191,6 +215,23 @@ export function SettingsPage() {
           {/* API Keys Tab */}
           <TabsContent value="api-keys" className="mt-6">
             <div className="grid gap-6">
+              {/* Key Usage Statistics */}
+              <KeyUsageStats apiKeys={apiKeys} providers={providers} />
+
+              {/* Validate All Keys Button */}
+              {Object.values(apiKeys).flat().length > 0 && (
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={handleValidateAllKeys}
+                    disabled={isValidatingAll}
+                  >
+                    <RefreshCw className={`mr-2 h-4 w-4 ${isValidatingAll ? 'animate-spin' : ''}`} />
+                    {isValidatingAll ? 'Validating...' : 'Validate All Keys'}
+                  </Button>
+                </div>
+              )}
+
               {providers.map((provider) => (
                 <Card key={provider.id}>
                   <CardHeader>
@@ -240,6 +281,17 @@ export function SettingsPage() {
                             </div>
                           </div>
                           <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setEditingKey(key)
+                                setEditDialogOpen(true)
+                              }}
+                              title="Edit"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -527,10 +579,78 @@ export function SettingsPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Debug & Logging</CardTitle>
+                  <CardDescription>Configure logging verbosity and debug options</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Log Level</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Control the verbosity of log output
+                      </p>
+                    </div>
+                    <Select
+                      value={settings.logLevel}
+                      onValueChange={(value: 'debug' | 'info' | 'warn' | 'error') =>
+                        setSettings({ ...settings, logLevel: value })
+                      }
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="debug">Debug</SelectItem>
+                        <SelectItem value="info">Info</SelectItem>
+                        <SelectItem value="warn">Warning</SelectItem>
+                        <SelectItem value="error">Error</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>File Logging</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Save logs to file for troubleshooting
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.enableFileLogging}
+                      onCheckedChange={(checked) =>
+                        setSettings({ ...settings, enableFileLogging: checked })
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <BackupRestore onSettingsImported={loadSettings} />
             </TabsContent>
           )}
         </Tabs>
       </div>
+
+      {/* Edit Key Dialog */}
+      <EditKeyDialog
+        keyEntry={editingKey}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSave={loadApiKeys}
+      />
+
+      {/* Validation Results Dialog */}
+      <ValidationResultsDialog
+        results={validationResults}
+        providers={providers}
+        open={validationDialogOpen}
+        onOpenChange={setValidationDialogOpen}
+      />
     </div>
   )
 }

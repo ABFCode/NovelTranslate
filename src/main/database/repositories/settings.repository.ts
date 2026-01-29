@@ -13,7 +13,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   globalRetryConfigId: undefined,
   enableTranslationMemory: true,
   enableGlossaryInjection: true,
-  showCostEstimates: true
+  showCostEstimates: true,
+  // Debug/Logging settings
+  logLevel: 'info',
+  enableFileLogging: false
 }
 
 /**

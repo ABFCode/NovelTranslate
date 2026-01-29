@@ -237,6 +237,17 @@ export interface TranslationResult {
   executionPath?: ChainExecutionStep[]
 }
 
+export interface PreviewResult {
+  success: boolean
+  translatedText?: string
+  originalText: string
+  costUsd: number
+  tokensUsed: { input: number; output: number }
+  providerId: string
+  modelId: string
+  error?: string
+}
+
 export interface TokenUsage {
   input: number
   output: number
@@ -358,6 +369,18 @@ export interface TranslationOverride {
   createdAt: string
 }
 
+export interface TranslationVersion {
+  id: string
+  chapterId: string
+  translatedText: string
+  configId?: string
+  configName?: string
+  providerId?: string
+  modelId?: string
+  versionNumber: number
+  createdAt: string
+}
+
 // ============================================================================
 // Prompt Templates
 // ============================================================================
@@ -398,6 +421,14 @@ export interface ApiKeyEntry {
 }
 
 export type KeyRotationStrategy = 'priority' | 'round_robin' | 'least_recently_used'
+
+export interface KeyValidationResult {
+  keyId: string
+  providerId: string
+  label?: string
+  isValid: boolean
+  error?: string
+}
 
 // ============================================================================
 // Testing Center
@@ -474,6 +505,8 @@ export interface ImportResult {
 // Settings Types (Extended)
 // ============================================================================
 
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system'
   uiMode: UIMode
@@ -487,6 +520,9 @@ export interface AppSettings {
   enableTranslationMemory: boolean
   enableGlossaryInjection: boolean
   showCostEstimates: boolean
+  // Debug/Logging settings
+  logLevel: LogLevel
+  enableFileLogging: boolean
 }
 
 // ============================================================================

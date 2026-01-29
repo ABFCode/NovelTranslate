@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from '@tanstack/react-router'
-import { BookOpen, Play, Pause, Settings2 } from 'lucide-react'
+import { BookOpen, Play, Pause, Settings2, Eye, RotateCcw, CheckSquare, History } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,8 @@ import {
   GlossarySummary,
   OverridesList,
   ChapterContentViewer,
+  PreviewDialog,
+  TranslationHistory,
   type OverrideDraft
 } from './components'
 import type {
@@ -59,6 +61,8 @@ export function ProjectPage() {
   const [isLoadingOverrides, setIsLoadingOverrides] = useState(false)
   const [glossaryStats, setGlossaryStats] = useState({ termCount: 0, suggestionCount: 0 })
   const [overrideDraft, setOverrideDraft] = useState<OverrideDraft | null>(null)
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
 
   useEffect(() => {
     if (projectId) {
@@ -275,6 +279,34 @@ export function ProjectPage() {
     setSelectedChapters(new Set())
   }
 
+  const selectAllTranslated = (): void => {
+    const translatedIds = chapters
+      .filter((c) => c.status === 'translated')
+      .map((c) => c.id)
+    setSelectedChapters(new Set(translatedIds))
+  }
+
+  const handleClearSelectedTranslations = async (): Promise<void> => {
+    if (selectedChapters.size === 0) return
+    if (!confirm(`Clear translations for ${selectedChapters.size} chapter(s)? This cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const chapterIds = Array.from(selectedChapters)
+      const clearedCount = await window.api.chapter.clearTranslations(chapterIds)
+      toast.success(`Cleared translations for ${clearedCount} chapter(s)`)
+      setSelectedChapters(new Set())
+      // Reload chapters to reflect changes
+      if (projectId) {
+        loadProject(projectId)
+      }
+    } catch (error) {
+      toast.error('Failed to clear translations')
+      console.error('Failed to clear translations:', error)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -326,10 +358,30 @@ export function ProjectPage() {
                   </Button>
                 </>
               ) : (
-                <Button onClick={handleStartTranslation} disabled={!selectedConfigId}>
-                  <Play className="mr-2 h-4 w-4" />
-                  Translate{selectedChapters.size > 0 ? ` (${selectedChapters.size})` : ''}
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setHistoryDialogOpen(true)}
+                    disabled={!activeChapterId}
+                    title="View translation history"
+                  >
+                    <History className="mr-2 h-4 w-4" />
+                    History
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPreviewDialogOpen(true)}
+                    disabled={!selectedConfigId || !chapterContent?.sourceText}
+                    title="Preview translation for active chapter"
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    Preview
+                  </Button>
+                  <Button onClick={handleStartTranslation} disabled={!selectedConfigId}>
+                    <Play className="mr-2 h-4 w-4" />
+                    Translate{selectedChapters.size > 0 ? ` (${selectedChapters.size})` : ''}
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -452,18 +504,48 @@ export function ProjectPage() {
               </div>
 
               <AdvancedSection feature="project" className="border-b px-4 py-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {selectedChapters.size} selected
-                  </span>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={selectAllPending}>
-                      Select Pending
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={clearSelection}>
-                      Clear
-                    </Button>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      {selectedChapters.size} selected
+                    </span>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={selectAllPending}>
+                        Pending
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={selectAllTranslated}>
+                        Translated
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={clearSelection}>
+                        Clear
+                      </Button>
+                    </div>
                   </div>
+                  {/* Batch actions toolbar */}
+                  {selectedChapters.size > 0 && (
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 flex-1 text-xs"
+                        onClick={handleStartTranslation}
+                        disabled={isTranslating || !selectedConfigId}
+                      >
+                        <Play className="mr-1 h-3 w-3" />
+                        Translate ({selectedChapters.size})
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 flex-1 text-xs"
+                        onClick={handleClearSelectedTranslations}
+                        disabled={isTranslating}
+                      >
+                        <RotateCcw className="mr-1 h-3 w-3" />
+                        Clear ({selectedChapters.size})
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </AdvancedSection>
 
@@ -531,6 +613,35 @@ export function ProjectPage() {
         draft={overrideDraft}
         onDraftChange={setOverrideDraft}
         onSave={handleSaveOverride}
+      />
+
+      <PreviewDialog
+        open={previewDialogOpen}
+        onOpenChange={setPreviewDialogOpen}
+        sourceText={chapterContent?.sourceText || null}
+        configId={selectedConfigId}
+        sourceLanguage={currentProject?.sourceLanguage || 'auto'}
+        targetLanguage={currentProject?.targetLanguage || 'en'}
+        onTranslateChapter={
+          activeChapterId
+            ? () => {
+                setSelectedChapters(new Set([activeChapterId]))
+                handleStartTranslation()
+              }
+            : undefined
+        }
+      />
+
+      <TranslationHistory
+        chapterId={activeChapterId}
+        chapterTitle={activeChapter?.title}
+        open={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        onRestore={() => {
+          if (activeChapterId) {
+            loadChapterContent(activeChapterId)
+          }
+        }}
       />
     </>
   )

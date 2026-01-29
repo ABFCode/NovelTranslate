@@ -229,6 +229,58 @@ export function getChapterStats(projectId: string): {
 }
 
 /**
+ * Clear translation for a chapter (reset to pending)
+ */
+export function clearChapterTranslation(chapterId: string): void {
+  const db = getDatabase()
+
+  // Reset status to pending
+  db.prepare(`
+    UPDATE chapters
+    SET status = 'pending', error_message = NULL
+    WHERE id = ?
+  `).run(chapterId)
+
+  // Clear translated text
+  db.prepare(`
+    UPDATE chapter_content
+    SET translated_text = NULL
+    WHERE chapter_id = ?
+  `).run(chapterId)
+}
+
+/**
+ * Clear translations for multiple chapters (batch)
+ */
+export function clearChapterTranslationsBulk(chapterIds: string[]): number {
+  const db = getDatabase()
+
+  const updateChapter = db.prepare(`
+    UPDATE chapters
+    SET status = 'pending', error_message = NULL
+    WHERE id = ?
+  `)
+
+  const clearContent = db.prepare(`
+    UPDATE chapter_content
+    SET translated_text = NULL
+    WHERE chapter_id = ?
+  `)
+
+  const clearMany = db.transaction((ids: string[]) => {
+    let count = 0
+    for (const id of ids) {
+      updateChapter.run(id)
+      clearContent.run(id)
+      count++
+    }
+    return count
+  })
+
+  return clearMany(chapterIds)
+}
+
+/**
  * Search chapters using FTS5
  */
 export function searchChapters(projectId: string, query: string): Chapter[] {

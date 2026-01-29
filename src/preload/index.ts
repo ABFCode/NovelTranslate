@@ -27,7 +27,10 @@ import type {
   ChainFallbackEvent,
   FallbackConditionType,
   ConfigExport,
-  ImportResult
+  ImportResult,
+  KeyValidationResult,
+  PreviewResult,
+  TranslationVersion
 } from '../shared/types'
 
 // Type-safe IPC invoke wrapper
@@ -56,7 +59,11 @@ const api = {
     list: (projectId: string) => invoke<Chapter[]>('chapter:list', projectId),
     get: (id: string) => invoke<Chapter | null>('chapter:get', id),
     getContent: (id: string) => invoke<ChapterContent | null>('chapter:get-content', id),
-    updateStatus: (id: string, status: string) => invoke<void>('chapter:update-status', id, status)
+    updateStatus: (id: string, status: string) => invoke<void>('chapter:update-status', id, status),
+    clearTranslations: (chapterIds: string[]) => invoke<number>('chapter:clear-translations', chapterIds),
+    listVersions: (chapterId: string) => invoke<TranslationVersion[]>('chapter:list-versions', chapterId),
+    getVersion: (versionId: string) => invoke<TranslationVersion | null>('chapter:get-version', versionId),
+    restoreVersion: (versionId: string) => invoke<boolean>('chapter:restore-version', versionId)
   },
 
   // =========================================================================
@@ -67,7 +74,9 @@ const api = {
       invoke<void>('translation:start', projectId, chapterIds, configId),
     pause: (projectId: string) => invoke<void>('translation:pause', projectId),
     resume: (projectId: string) => invoke<void>('translation:resume', projectId),
-    cancel: (projectId: string) => invoke<void>('translation:cancel', projectId)
+    cancel: (projectId: string) => invoke<void>('translation:cancel', projectId),
+    preview: (text: string, configId: string, sourceLanguage: string, targetLanguage: string) =>
+      invoke<PreviewResult>('translation:preview', text, configId, sourceLanguage, targetLanguage)
   },
 
   // =========================================================================
@@ -319,7 +328,9 @@ const api = {
   // =========================================================================
   settings: {
     get: () => invoke<AppSettings>('settings:get'),
-    save: (settings: Partial<AppSettings>) => invoke<AppSettings>('settings:save', settings)
+    save: (settings: Partial<AppSettings>) => invoke<AppSettings>('settings:save', settings),
+    export: () => invoke<{ success: boolean; filePath?: string; error?: string }>('settings:export'),
+    import: () => invoke<{ success: boolean; imported?: { settings: boolean; glossaryTerms: number }; error?: string }>('settings:import')
   },
 
   // =========================================================================
@@ -342,6 +353,7 @@ const api = {
     validate: (providerId: string, keyValue: string) =>
       invoke<boolean>('apikey:validate', providerId, keyValue),
     validateStored: (keyId: string) => invoke<boolean>('apikey:validateStored', keyId),
+    validateAll: () => invoke<KeyValidationResult[]>('apikey:validateAll'),
     setRotationStrategy: (strategy: 'priority' | 'round_robin' | 'least_recently_used') =>
       invoke<void>('apikey:setRotationStrategy', strategy),
     getRotationStrategy: () => invoke<'priority' | 'round_robin' | 'least_recently_used'>(

@@ -28,7 +28,7 @@
  * - app_settings: Key-value store for settings
  */
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 export const SCHEMA_SQL = `
 -- Enable WAL mode for better concurrent read/write performance
@@ -443,6 +443,25 @@ CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
   value_json TEXT NOT NULL
 );
+
+-- ============================================================================
+-- Translation Versions (History)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS translation_versions (
+  id TEXT PRIMARY KEY,
+  chapter_id TEXT NOT NULL,
+  translated_text TEXT NOT NULL,
+  config_id TEXT,
+  config_name TEXT,
+  provider_id TEXT,
+  model_id TEXT,
+  version_number INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE,
+  FOREIGN KEY (config_id) REFERENCES translation_configs(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_translation_versions_chapter ON translation_versions(chapter_id, version_number DESC);
 `
 
 /**

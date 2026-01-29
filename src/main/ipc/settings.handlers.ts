@@ -1,4 +1,7 @@
-import { getSettings, saveSettings } from '../database'
+import { getSettings, saveSettings, resetSettings } from '../database'
+import { listGlossaryTerms, importGlossaryTerms } from '../database/repositories/glossary.repository'
+import { dialog } from 'electron'
+import { writeFileSync, readFileSync } from 'fs'
 import { keyManager } from '../services/key-manager'
 import {
   listApiKeys,
@@ -16,7 +19,7 @@ import {
 } from '../database/repositories/budget.repository'
 import { handleIpc } from './utils'
 import { logger } from '../services/logger'
-import type { AppSettings, ProviderInfo, ApiKeyEntry, ProjectBudget, KeyRotationStrategy } from '../../shared/types'
+import type { AppSettings, ProviderInfo, ApiKeyEntry, ProjectBudget, KeyRotationStrategy, KeyValidationResult } from '../../shared/types'
 
 /**
  * Register settings-related IPC handlers
@@ -33,7 +36,105 @@ export function registerSettingsHandlers(): void {
     if (updates.keyRotationStrategy) {
       keyManager.setRotationStrategy(updates.keyRotationStrategy)
     }
+    // Update logging settings if changed
+    if (updates.logLevel !== undefined) {
+      logger.setLevel(updates.logLevel)
+    }
+    if (updates.enableFileLogging !== undefined) {
+      logger.setFileLogging(updates.enableFileLogging)
+    }
     return saveSettings(updates)
+  })
+
+  // Export settings and data to JSON file
+  handleIpc('settings:export', async (): Promise<{ success: boolean; filePath?: string; error?: string }> => {
+    try {
+      const result = await dialog.showSaveDialog({
+        title: 'Export Settings',
+        defaultPath: `noveltranslate-backup-${new Date().toISOString().split('T')[0]}.json`,
+        filters: [{ name: 'JSON', extensions: ['json'] }]
+      })
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, error: 'Export cancelled' }
+      }
+
+      const settings = getSettings()
+      const glossaryTerms = listGlossaryTerms(null) // Global terms only
+
+      const exportData = {
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        settings,
+        glossaryTerms: glossaryTerms.map(term => ({
+          sourceTerm: term.sourceTerm,
+          targetTerm: term.targetTerm,
+          termType: term.termType,
+          gender: term.gender,
+          pronouns: term.pronouns,
+          aliases: term.aliases,
+          context: term.context,
+          notes: term.notes
+        }))
+      }
+
+      writeFileSync(result.filePath, JSON.stringify(exportData, null, 2))
+      return { success: true, filePath: result.filePath }
+    } catch (error) {
+      logger.error('[Settings] Export failed:', error instanceof Error ? error : new Error(String(error)))
+      return { success: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  })
+
+  // Import settings and data from JSON file
+  handleIpc('settings:import', async (): Promise<{ success: boolean; imported?: { settings: boolean; glossaryTerms: number }; error?: string }> => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: 'Import Settings',
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+        properties: ['openFile']
+      })
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, error: 'Import cancelled' }
+      }
+
+      const content = readFileSync(result.filePaths[0], 'utf-8')
+      const importData = JSON.parse(content)
+
+      if (!importData.version) {
+        return { success: false, error: 'Invalid backup file format' }
+      }
+
+      const imported = { settings: false, glossaryTerms: 0 }
+
+      // Import settings
+      if (importData.settings) {
+        saveSettings(importData.settings)
+        // Apply settings to services
+        if (importData.settings.keyRotationStrategy) {
+          keyManager.setRotationStrategy(importData.settings.keyRotationStrategy)
+        }
+        if (importData.settings.logLevel) {
+          logger.setLevel(importData.settings.logLevel)
+        }
+        if (importData.settings.enableFileLogging !== undefined) {
+          logger.setFileLogging(importData.settings.enableFileLogging)
+        }
+        imported.settings = true
+      }
+
+      // Import glossary terms
+      if (importData.glossaryTerms && Array.isArray(importData.glossaryTerms)) {
+        const result = importGlossaryTerms(importData.glossaryTerms, true)
+        imported.glossaryTerms = result.imported
+      }
+
+      return { success: true, imported }
+    } catch (error) {
+      logger.error('[Settings] Import failed:', error instanceof Error ? error : new Error(String(error)))
+      return { success: false, error: error instanceof Error ? error.message : String(error) }
+    }
   })
 
   logger.info('[IPC] Settings handlers registered')
@@ -124,6 +225,11 @@ export function registerApiKeyHandlers(): void {
   // Get current rotation strategy
   handleIpc('apikey:getRotationStrategy', (): KeyRotationStrategy => {
     return keyManager.getRotationStrategy()
+  })
+
+  // Validate all stored keys
+  handleIpc('apikey:validateAll', async (): Promise<KeyValidationResult[]> => {
+    return keyManager.validateAllKeys()
   })
 
   logger.info('[IPC] API Key handlers registered')
