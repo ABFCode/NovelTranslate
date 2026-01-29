@@ -1,4 +1,3 @@
-import { ipcMain } from 'electron'
 import {
   createGlossaryTerm,
   getGlossaryTerm,
@@ -15,6 +14,8 @@ import {
   importGlossaryTerms,
   exportGlossaryTerms
 } from '../database/repositories/glossary.repository'
+import { handleIpc } from './utils'
+import { logger } from '../services/logger'
 import type { GlossaryTerm, GlossarySuggestion, TermType } from '../../shared/types'
 
 /**
@@ -26,64 +27,52 @@ export function registerGlossaryHandlers(): void {
   // ============================================================================
 
   // List glossary terms for a project
-  ipcMain.handle(
-    'glossary:list',
-    async (_event, projectId: string | null): Promise<GlossaryTerm[]> => {
-      return listGlossaryTerms(projectId)
-    }
-  )
+  handleIpc('glossary:list', (projectId: string | null): GlossaryTerm[] => {
+    return listGlossaryTerms(projectId)
+  })
 
   // Get a specific term
-  ipcMain.handle('glossary:get', async (_event, id: string): Promise<GlossaryTerm | null> => {
+  handleIpc('glossary:get', (id: string): GlossaryTerm | null => {
     return getGlossaryTerm(id)
   })
 
   // Search terms
-  ipcMain.handle(
+  handleIpc(
     'glossary:search',
-    async (
-      _event,
-      query: string,
-      projectId?: string,
-      termType?: TermType
-    ): Promise<GlossaryTerm[]> => {
+    (query: string, projectId?: string, termType?: TermType): GlossaryTerm[] => {
       return searchGlossaryTerms(query, projectId, termType)
     }
   )
 
   // Find term by source text
-  ipcMain.handle(
+  handleIpc(
     'glossary:findBySource',
-    async (_event, sourceTerm: string, projectId?: string): Promise<GlossaryTerm | null> => {
+    (sourceTerm: string, projectId?: string): GlossaryTerm | null => {
       return findTermBySource(sourceTerm, projectId)
     }
   )
 
   // Create a term
-  ipcMain.handle(
+  handleIpc(
     'glossary:create',
-    async (
-      _event,
-      term: Omit<GlossaryTerm, 'id' | 'usageCount' | 'createdAt' | 'updatedAt'>
-    ): Promise<GlossaryTerm> => {
+    (term: Omit<GlossaryTerm, 'id' | 'usageCount' | 'createdAt' | 'updatedAt'>): GlossaryTerm => {
       return createGlossaryTerm(term)
     }
   )
 
   // Update a term
-  ipcMain.handle(
+  handleIpc(
     'glossary:update',
-    async (
-      _event,
+    (
       id: string,
       updates: Partial<Omit<GlossaryTerm, 'id' | 'usageCount' | 'createdAt' | 'updatedAt'>>
-    ): Promise<void> => {
+    ): void => {
       updateGlossaryTerm(id, updates)
     }
   )
 
   // Delete a term
-  ipcMain.handle('glossary:delete', async (_event, id: string): Promise<void> => {
+  handleIpc('glossary:delete', (id: string): void => {
     deleteGlossaryTerm(id)
   })
 
@@ -92,38 +81,32 @@ export function registerGlossaryHandlers(): void {
   // ============================================================================
 
   // Get pending suggestions for a project
-  ipcMain.handle(
+  handleIpc(
     'glossary:getPendingSuggestions',
-    async (_event, projectId: string): Promise<GlossarySuggestion[]> => {
+    (projectId: string): GlossarySuggestion[] => {
       return getPendingSuggestions(projectId)
     }
   )
 
   // Get a specific suggestion
-  ipcMain.handle(
-    'glossary:getSuggestion',
-    async (_event, id: string): Promise<GlossarySuggestion | null> => {
-      return getSuggestion(id)
-    }
-  )
+  handleIpc('glossary:getSuggestion', (id: string): GlossarySuggestion | null => {
+    return getSuggestion(id)
+  })
 
   // Accept a suggestion
-  ipcMain.handle(
-    'glossary:acceptSuggestion',
-    async (_event, id: string): Promise<GlossaryTerm> => {
-      return acceptSuggestion(id)
-    }
-  )
+  handleIpc('glossary:acceptSuggestion', (id: string): GlossaryTerm => {
+    return acceptSuggestion(id)
+  })
 
   // Reject a suggestion
-  ipcMain.handle('glossary:rejectSuggestion', async (_event, id: string): Promise<void> => {
+  handleIpc('glossary:rejectSuggestion', (id: string): void => {
     rejectSuggestion(id)
   })
 
   // Merge a suggestion with an existing term
-  ipcMain.handle(
+  handleIpc(
     'glossary:mergeSuggestion',
-    async (_event, suggestionId: string, existingTermId: string): Promise<void> => {
+    (suggestionId: string, existingTermId: string): void => {
       mergeSuggestion(suggestionId, existingTermId)
     }
   )
@@ -133,34 +116,29 @@ export function registerGlossaryHandlers(): void {
   // ============================================================================
 
   // Import terms from array
-  ipcMain.handle(
+  handleIpc(
     'glossary:import',
-    async (
-      _event,
+    (
       terms: Array<Omit<GlossaryTerm, 'id' | 'usageCount' | 'createdAt' | 'updatedAt'>>,
       skipDuplicates?: boolean
-    ): Promise<{ imported: number; skipped: number }> => {
+    ): { imported: number; skipped: number } => {
       return importGlossaryTerms(terms, skipDuplicates ?? true)
     }
   )
 
   // Export terms for a project
-  ipcMain.handle(
-    'glossary:export',
-    async (_event, projectId?: string): Promise<GlossaryTerm[]> => {
-      return exportGlossaryTerms(projectId)
-    }
-  )
+  handleIpc('glossary:export', (projectId?: string): GlossaryTerm[] => {
+    return exportGlossaryTerms(projectId)
+  })
 
   // Parse CSV and import
-  ipcMain.handle(
+  handleIpc(
     'glossary:importCSV',
-    async (
-      _event,
+    (
       csvData: string,
       projectId: string | null,
       skipDuplicates?: boolean
-    ): Promise<{ imported: number; skipped: number; errors: string[] }> => {
+    ): { imported: number; skipped: number; errors: string[] } => {
       const errors: string[] = []
       const terms: Array<Omit<GlossaryTerm, 'id' | 'usageCount' | 'createdAt' | 'updatedAt'>> = []
 
@@ -228,7 +206,7 @@ export function registerGlossaryHandlers(): void {
     }
   )
 
-  console.log('[IPC] Glossary handlers registered')
+  logger.info('[IPC] Glossary handlers registered')
 }
 
 // ============================================================================

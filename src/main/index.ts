@@ -6,6 +6,7 @@ import { registerIpcHandlers } from './ipc'
 import { initDatabase, closeDatabase } from './database'
 import { startSidecar, stopSidecar } from './services/sidecar'
 import { setMainWindow } from './window'
+import { logger } from './services/logger'
 
 // Disable GPU for WSL compatibility (check for WSL environment)
 const isWSL = process.platform === 'linux' && process.env.WSL_DISTRO_NAME
@@ -73,14 +74,14 @@ app.whenReady().then(async () => {
   // Initialize database
   try {
     initDatabase()
-    console.log('[Main] Database initialized')
+    logger.info('[Main] Database initialized')
   } catch (error) {
-    console.error('[Main] Failed to initialize database:', error)
+    logger.error('[Main] Failed to initialize database:', error instanceof Error ? error : new Error(String(error)))
   }
 
   // Start Go sidecar (don't await - let it start in background)
   startSidecar().catch((error) => {
-    console.error('[Main] Failed to start sidecar:', error)
+    logger.error('[Main] Failed to start sidecar:', error instanceof Error ? error : new Error(String(error)))
   })
 
   // Default open or close DevTools by F12 in development
@@ -115,7 +116,7 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   stopSidecar()
   closeDatabase()
-  console.log('[Main] Application shutting down')
+  logger.info('[Main] Application shutting down')
 })
 
 // Re-export getMainWindow for convenience

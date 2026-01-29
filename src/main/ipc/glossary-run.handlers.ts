@@ -1,19 +1,20 @@
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow } from 'electron'
 import type { CostEstimate, GlossaryRunResult } from '../../shared/types'
 import { glossaryRunService } from '../services/glossary-run.service'
+import { handleIpc, handleIpcWithEvent } from './utils'
+import { logger } from '../services/logger'
 
 /**
  * Register glossary run IPC handlers
  */
 export function registerGlossaryRunHandlers(): void {
-  ipcMain.handle('glossaryRun:getRecommendedModels', async () => {
+  handleIpc('glossaryRun:getRecommendedModels', () => {
     return glossaryRunService.getRecommendedModels()
   })
 
-  ipcMain.handle(
+  handleIpc(
     'glossaryRun:estimate',
-    async (
-      _event,
+    (
       projectId: string,
       chapterIds: string[],
       providerId: string,
@@ -23,7 +24,7 @@ export function registerGlossaryRunHandlers(): void {
     }
   )
 
-  ipcMain.handle(
+  handleIpcWithEvent(
     'glossaryRun:run',
     async (
       event,
@@ -37,10 +38,10 @@ export function registerGlossaryRunHandlers(): void {
 
       return glossaryRunService.runExtraction(
         projectId,
-        chapterIds,
-        providerId,
-        modelId,
-        concurrency ?? 3,
+        chapterIds as string[],
+        providerId as string,
+        modelId as string,
+        (concurrency as number | undefined) ?? 3,
         (current, total, chapterId) => {
           window?.webContents.send('glossary:runProgress', {
             projectId,
@@ -53,5 +54,5 @@ export function registerGlossaryRunHandlers(): void {
     }
   )
 
-  console.log('[IPC] Glossary run handlers registered')
+  logger.info('[IPC] Glossary run handlers registered')
 }

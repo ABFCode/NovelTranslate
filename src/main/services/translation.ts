@@ -10,6 +10,7 @@ import { getMainWindow } from '../window'
 import { executeChain, ChainExecutorOptions } from './chain-executor'
 import { keyManager } from './key-manager'
 import { getSettings } from '../database/repositories/settings.repository'
+import { logger } from './logger'
 import type {
   TranslationProgressEvent,
   ChapterStatus,
@@ -85,7 +86,7 @@ export async function startTranslation(
 
   activeJobs.set(projectId, job)
 
-  console.log(
+  logger.info(
     `[Translation] Starting for project ${projectId}, ${chapterIds.length} chapters, concurrency ${effectiveConcurrency}`
   )
 
@@ -100,7 +101,7 @@ export function pauseTranslation(projectId: string): void {
   const job = activeJobs.get(projectId)
   if (job) {
     job.isPaused = true
-    console.log(`[Translation] Paused for project ${projectId}`)
+    logger.info(`[Translation] Paused for project ${projectId}`)
   }
 }
 
@@ -111,7 +112,7 @@ export async function resumeTranslation(projectId: string): Promise<void> {
   const job = activeJobs.get(projectId)
   if (job && job.isPaused) {
     job.isPaused = false
-    console.log(`[Translation] Resumed for project ${projectId}`)
+    logger.info(`[Translation] Resumed for project ${projectId}`)
 
     // Get config and API key to continue
     const config = getConfig(job.configId)
@@ -132,7 +133,7 @@ export function cancelTranslation(projectId: string): void {
   if (job) {
     job.isCancelled = true
     activeJobs.delete(projectId)
-    console.log(`[Translation] Cancelled for project ${projectId}`)
+    logger.info(`[Translation] Cancelled for project ${projectId}`)
   }
 }
 
@@ -204,7 +205,7 @@ async function processJob(
   // Clean up if complete
   if (job.currentIndex >= job.chapterIds.length && !job.isCancelled) {
     activeJobs.delete(job.projectId)
-    console.log(
+    logger.info(
       `[Translation] Completed for project ${job.projectId}: ${job.completedCount} succeeded, ${job.errorCount} failed, $${job.totalCost.toFixed(4)} total cost`
     )
   }
@@ -270,7 +271,7 @@ async function translateChapter(
         result.executionPath
       )
 
-      console.log(
+      logger.info(
         `[Translation] Chapter ${chapterId} completed via ${result.source}, cost: $${result.totalCostUsd.toFixed(4)}`
       )
     } else {
@@ -290,7 +291,7 @@ async function translateChapter(
         result.executionPath
       )
 
-      console.error(
+      logger.error(
         `[Translation] Chapter ${chapterId} failed: ${errorMessage} (${result.finalErrorType})`
       )
     }
@@ -301,7 +302,7 @@ async function translateChapter(
     job.errorCount++
 
     sendProgressEvent(job.projectId, chapterId, 'error', 0, errorMessage, config.id)
-    console.error(`[Translation] Chapter ${chapterId} error:`, errorMessage)
+    logger.error(`[Translation] Chapter ${chapterId} error: ${errorMessage}`)
   }
 }
 
@@ -344,7 +345,7 @@ const legacyApiKeyCache = new Map<string, string>()
 export function setApiKey(providerId: string, key: string): void {
   legacyApiKeyCache.set(providerId, key)
   // Also add to new key manager
-  keyManager.addKey(providerId, key, 'Legacy key').catch(console.error)
+  keyManager.addKey(providerId, key, 'Legacy key').catch((err) => logger.error('[Translation] Failed to add legacy key', err instanceof Error ? err : new Error(String(err))))
 }
 
 /**

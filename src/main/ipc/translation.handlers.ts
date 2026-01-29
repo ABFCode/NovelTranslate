@@ -1,4 +1,3 @@
-import { ipcMain } from 'electron'
 import {
   startTranslation,
   pauseTranslation,
@@ -6,40 +5,37 @@ import {
   cancelTranslation,
   setApiKey,
 } from '../services/translation'
+import { handleIpc } from './utils'
+import { logger } from '../services/logger'
 
 /**
  * Register translation-related IPC handlers
  */
 export function registerTranslationHandlers(): void {
   // Start translation
-  ipcMain.handle(
+  handleIpc(
     'translation:start',
-    async (
-      _event,
-      projectId: string,
-      chapterIds: string[],
-      configId: string
-    ): Promise<void> => {
+    async (projectId: string, chapterIds: string[], configId: string): Promise<void> => {
       await startTranslation(projectId, chapterIds, configId)
     }
   )
 
   // Pause translation
-  ipcMain.handle('translation:pause', async (_event, projectId: string): Promise<void> => {
+  handleIpc('translation:pause', (projectId: string): void => {
     pauseTranslation(projectId)
   })
 
   // Resume translation
-  ipcMain.handle('translation:resume', async (_event, projectId: string): Promise<void> => {
+  handleIpc('translation:resume', (projectId: string): void => {
     resumeTranslation(projectId)
   })
 
   // Cancel translation
-  ipcMain.handle('translation:cancel', async (_event, projectId: string): Promise<void> => {
+  handleIpc('translation:cancel', (projectId: string): void => {
     cancelTranslation(projectId)
   })
 
-  console.log('[IPC] Translation handlers registered')
+  logger.info('[IPC] Translation handlers registered')
 }
 
 // Export setApiKey for use in settings handlers

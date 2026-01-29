@@ -8,6 +8,7 @@ import { safeStorage } from 'electron'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { app } from 'electron'
+import { logger } from './logger'
 import type { ApiKeyEntry, KeyRotationStrategy } from '../../shared/types'
 import {
   listApiKeys,
@@ -216,7 +217,7 @@ export class KeyManager {
 
       return migrated
     } catch (error) {
-      console.error('[KeyManager] Failed to migrate legacy keys:', error)
+      logger.error('[KeyManager] Failed to migrate legacy keys:', error instanceof Error ? error : new Error(String(error)))
       return 0
     }
   }
@@ -243,7 +244,7 @@ export class KeyManager {
       // Fallback: simple de-obfuscation
       return Buffer.from(encryptedKey, 'base64').toString('utf-8')
     } catch (error) {
-      console.error('[KeyManager] Failed to decrypt key:', error)
+      logger.error('[KeyManager] Failed to decrypt key:', error instanceof Error ? error : new Error(String(error)))
       return null
     }
   }
@@ -283,7 +284,7 @@ export function loadApiKeysFromFile(): Map<string, string> {
 
   try {
     if (!safeStorage.isEncryptionAvailable()) {
-      console.warn('[KeyManager] Encryption not available')
+      logger.warn('[KeyManager] Encryption not available')
       return new Map()
     }
 
@@ -291,7 +292,7 @@ export function loadApiKeysFromFile(): Map<string, string> {
     const decrypted = safeStorage.decryptString(encrypted)
     return new Map(Object.entries(JSON.parse(decrypted)))
   } catch (error) {
-    console.error('[KeyManager] Failed to load legacy keys:', error)
+    logger.error('[KeyManager] Failed to load legacy keys:', error instanceof Error ? error : new Error(String(error)))
     return new Map()
   }
 }
@@ -302,7 +303,7 @@ export function loadApiKeysFromFile(): Map<string, string> {
  */
 export function saveApiKeysToFile(keys: Map<string, string>): void {
   if (!safeStorage.isEncryptionAvailable()) {
-    console.warn('[KeyManager] Encryption not available, keys not saved')
+    logger.warn('[KeyManager] Encryption not available, keys not saved')
     return
   }
 
@@ -311,6 +312,6 @@ export function saveApiKeysToFile(keys: Map<string, string>): void {
     const encrypted = safeStorage.encryptString(json)
     writeFileSync(LEGACY_KEYS_PATH, encrypted)
   } catch (error) {
-    console.error('[KeyManager] Failed to save keys:', error)
+    logger.error('[KeyManager] Failed to save keys:', error instanceof Error ? error : new Error(String(error)))
   }
 }

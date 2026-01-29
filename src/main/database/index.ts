@@ -3,6 +3,7 @@ import { app } from 'electron'
 import { join } from 'path'
 import { existsSync, mkdirSync, unlinkSync } from 'fs'
 import { SCHEMA_SQL, SCHEMA_VERSION, SEED_PROMPT_TEMPLATES, DEFAULT_RETRY_CONFIG } from './schema'
+import { logger } from '../services/logger'
 
 let db: Database.Database | null = null
 
@@ -38,16 +39,16 @@ function shouldRecreateDatabase(dbPath: string): boolean {
 
     const currentVersion = result?.version ?? 0
     if (currentVersion < SCHEMA_VERSION) {
-      console.log(
+      logger.info(
         `[Database] Schema version mismatch: current=${currentVersion}, required=${SCHEMA_VERSION}`
       )
-      console.log('[Database] Recreating database (no user data to preserve)')
+      logger.info('[Database] Recreating database (no user data to preserve)')
       return true
     }
     return false
   } catch {
     // Table doesn't exist or other error, recreate
-    console.log('[Database] Cannot read schema version, recreating database')
+    logger.info('[Database] Cannot read schema version, recreating database')
     return true
   }
 }
@@ -62,7 +63,7 @@ function seedDatabase(database: Database.Database): void {
     .get() as { count: number }
 
   if (existingTemplates.count === 0) {
-    console.log('[Database] Seeding prompt templates...')
+    logger.info('[Database] Seeding prompt templates...')
     const insertTemplate = database.prepare(`
       INSERT INTO prompt_templates (
         id, name, description, category, system_prompt, user_prompt_template,
@@ -84,7 +85,7 @@ function seedDatabase(database: Database.Database): void {
     })
 
     insertMany(SEED_PROMPT_TEMPLATES)
-    console.log(`[Database] Seeded ${SEED_PROMPT_TEMPLATES.length} prompt templates`)
+    logger.info(`[Database] Seeded ${SEED_PROMPT_TEMPLATES.length} prompt templates`)
   }
 
   // Seed default retry config
@@ -93,7 +94,7 @@ function seedDatabase(database: Database.Database): void {
     .get() as { count: number }
 
   if (existingRetryConfig.count === 0) {
-    console.log('[Database] Seeding default retry config...')
+    logger.info('[Database] Seeding default retry config...')
     database
       .prepare(
         `
@@ -107,7 +108,7 @@ function seedDatabase(database: Database.Database): void {
     `
       )
       .run(DEFAULT_RETRY_CONFIG)
-    console.log('[Database] Seeded default retry config')
+    logger.info('[Database] Seeded default retry config')
   }
 }
 
@@ -120,7 +121,7 @@ export function initDatabase(): Database.Database {
   }
 
   const dbPath = getDatabasePath()
-  console.log(`[Database] Initializing at: ${dbPath}`)
+  logger.info(`[Database] Initializing at: ${dbPath}`)
 
   // Check if we need to recreate the database
   if (shouldRecreateDatabase(dbPath)) {
@@ -129,9 +130,9 @@ export function initDatabase(): Database.Database {
       // Also remove WAL and SHM files if they exist
       if (existsSync(`${dbPath}-wal`)) unlinkSync(`${dbPath}-wal`)
       if (existsSync(`${dbPath}-shm`)) unlinkSync(`${dbPath}-shm`)
-      console.log('[Database] Removed old database files')
+      logger.info('[Database] Removed old database files')
     } catch (error) {
-      console.error('[Database] Error removing old database:', error)
+      logger.error('[Database] Error removing old database:', error instanceof Error ? error : new Error(String(error)))
     }
   }
 
@@ -154,7 +155,7 @@ export function initDatabase(): Database.Database {
   // Seed initial data
   seedDatabase(db)
 
-  console.log(`[Database] Initialized successfully (version ${SCHEMA_VERSION})`)
+  logger.info(`[Database] Initialized successfully (version ${SCHEMA_VERSION})`)
 
   return db
 }
@@ -176,7 +177,7 @@ export function closeDatabase(): void {
   if (db) {
     db.close()
     db = null
-    console.log('[Database] Connection closed')
+    logger.info('[Database] Connection closed')
   }
 }
 

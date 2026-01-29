@@ -1,4 +1,3 @@
-import { ipcMain } from 'electron'
 import { getSettings, saveSettings } from '../database'
 import { keyManager } from '../services/key-manager'
 import {
@@ -15,6 +14,8 @@ import {
   resetSpending,
   listProjectBudgets
 } from '../database/repositories/budget.repository'
+import { handleIpc } from './utils'
+import { logger } from '../services/logger'
 import type { AppSettings, ProviderInfo, ApiKeyEntry, ProjectBudget, KeyRotationStrategy } from '../../shared/types'
 
 /**
@@ -22,23 +23,20 @@ import type { AppSettings, ProviderInfo, ApiKeyEntry, ProjectBudget, KeyRotation
  */
 export function registerSettingsHandlers(): void {
   // Get app settings
-  ipcMain.handle('settings:get', async (): Promise<AppSettings> => {
+  handleIpc('settings:get', (): AppSettings => {
     return getSettings()
   })
 
   // Save app settings
-  ipcMain.handle(
-    'settings:save',
-    async (_event, updates: Partial<AppSettings>): Promise<AppSettings> => {
-      // Update key rotation strategy if changed
-      if (updates.keyRotationStrategy) {
-        keyManager.setRotationStrategy(updates.keyRotationStrategy)
-      }
-      return saveSettings(updates)
+  handleIpc('settings:save', (updates: Partial<AppSettings>): AppSettings => {
+    // Update key rotation strategy if changed
+    if (updates.keyRotationStrategy) {
+      keyManager.setRotationStrategy(updates.keyRotationStrategy)
     }
-  )
+    return saveSettings(updates)
+  })
 
-  console.log('[IPC] Settings handlers registered')
+  logger.info('[IPC] Settings handlers registered')
 }
 
 /**
@@ -46,7 +44,7 @@ export function registerSettingsHandlers(): void {
  */
 export function registerApiKeyHandlers(): void {
   // List all API keys (metadata only, not the actual key values)
-  ipcMain.handle('apikey:list', async (_event, providerId?: string): Promise<ApiKeyEntry[]> => {
+  handleIpc('apikey:list', (providerId?: string): ApiKeyEntry[] => {
     if (providerId) {
       return listApiKeys(providerId)
     }
@@ -54,28 +52,24 @@ export function registerApiKeyHandlers(): void {
   })
 
   // Get a specific API key's metadata
-  ipcMain.handle('apikey:get', async (_event, keyId: string): Promise<ApiKeyEntry | null> => {
+  handleIpc('apikey:get', (keyId: string): ApiKeyEntry | null => {
     return getApiKey(keyId)
   })
 
   // Get API key for provider (for making API calls)
-  ipcMain.handle(
-    'apikey:getForProvider',
-    async (_event, providerId: string): Promise<string | null> => {
-      return keyManager.getKey(providerId)
-    }
-  )
+  handleIpc('apikey:getForProvider', async (providerId: string): Promise<string | null> => {
+    return keyManager.getKey(providerId)
+  })
 
   // Check if provider has valid keys
-  ipcMain.handle('apikey:hasValidKeys', async (_event, providerId: string): Promise<boolean> => {
+  handleIpc('apikey:hasValidKeys', (providerId: string): boolean => {
     return keyManager.hasValidKeys(providerId)
   })
 
   // Save/Add a new API key
-  ipcMain.handle(
+  handleIpc(
     'apikey:save',
     async (
-      _event,
       providerId: string,
       keyValue: string,
       label?: string,
@@ -86,60 +80,53 @@ export function registerApiKeyHandlers(): void {
   )
 
   // Update an existing key's value
-  ipcMain.handle(
-    'apikey:updateValue',
-    async (_event, keyId: string, newKeyValue: string): Promise<void> => {
-      await keyManager.updateKey(keyId, newKeyValue)
-    }
-  )
+  handleIpc('apikey:updateValue', async (keyId: string, newKeyValue: string): Promise<void> => {
+    await keyManager.updateKey(keyId, newKeyValue)
+  })
 
   // Update key metadata (label, priority, enabled)
-  ipcMain.handle(
+  handleIpc(
     'apikey:updateMeta',
-    async (
-      _event,
+    (
       keyId: string,
       updates: Partial<{ label: string | null; priority: number; isEnabled: boolean }>
-    ): Promise<void> => {
+    ): void => {
       updateApiKey(keyId, updates)
     }
   )
 
   // Delete API key
-  ipcMain.handle('apikey:delete', async (_event, keyId: string): Promise<void> => {
+  handleIpc('apikey:delete', async (keyId: string): Promise<void> => {
     await keyManager.removeKey(keyId)
   })
 
   // Validate an API key (tests it against the provider)
-  ipcMain.handle(
+  handleIpc(
     'apikey:validate',
-    async (_event, providerId: string, keyValue: string): Promise<boolean> => {
+    async (providerId: string, keyValue: string): Promise<boolean> => {
       return keyManager.validateKey(providerId, keyValue)
     }
   )
 
   // Validate a stored key
-  ipcMain.handle('apikey:validateStored', async (_event, keyId: string): Promise<boolean> => {
+  handleIpc('apikey:validateStored', async (keyId: string): Promise<boolean> => {
     return keyManager.validateStoredKey(keyId)
   })
 
   // Set key rotation strategy
-  ipcMain.handle(
-    'apikey:setRotationStrategy',
-    async (_event, strategy: KeyRotationStrategy): Promise<void> => {
-      keyManager.setRotationStrategy(strategy)
-      // Also persist in settings
-      const settings = getSettings()
-      saveSettings({ ...settings, keyRotationStrategy: strategy })
-    }
-  )
+  handleIpc('apikey:setRotationStrategy', (strategy: KeyRotationStrategy): void => {
+    keyManager.setRotationStrategy(strategy)
+    // Also persist in settings
+    const settings = getSettings()
+    saveSettings({ ...settings, keyRotationStrategy: strategy })
+  })
 
   // Get current rotation strategy
-  ipcMain.handle('apikey:getRotationStrategy', async (): Promise<KeyRotationStrategy> => {
+  handleIpc('apikey:getRotationStrategy', (): KeyRotationStrategy => {
     return keyManager.getRotationStrategy()
   })
 
-  console.log('[IPC] API Key handlers registered')
+  logger.info('[IPC] API Key handlers registered')
 }
 
 /**
@@ -147,7 +134,7 @@ export function registerApiKeyHandlers(): void {
  */
 export function registerProviderHandlers(): void {
   // List available providers
-  ipcMain.handle('provider:list', async (): Promise<ProviderInfo[]> => {
+  handleIpc('provider:list', (): ProviderInfo[] => {
     // Return static list of supported providers with updated pricing
     return [
       {
@@ -241,7 +228,7 @@ export function registerProviderHandlers(): void {
     ]
   })
 
-  console.log('[IPC] Provider handlers registered')
+  logger.info('[IPC] Provider handlers registered')
 }
 
 /**
@@ -249,53 +236,48 @@ export function registerProviderHandlers(): void {
  */
 export function registerBudgetHandlers(): void {
   // Get budget for a project
-  ipcMain.handle('budget:get', async (_event, projectId: string): Promise<ProjectBudget | null> => {
+  handleIpc('budget:get', (projectId: string): ProjectBudget | null => {
     return getProjectBudget(projectId)
   })
 
   // Set/update budget for a project
-  ipcMain.handle(
+  handleIpc(
     'budget:set',
-    async (
-      _event,
+    (
       projectId: string,
       budgetUsd: number,
       alertThreshold?: number,
       hardLimit?: boolean
-    ): Promise<ProjectBudget> => {
+    ): ProjectBudget => {
       return setProjectBudget(projectId, budgetUsd, alertThreshold, hardLimit)
     }
   )
 
   // Check if within budget
-  ipcMain.handle(
+  handleIpc(
     'budget:check',
-    async (
-      _event,
+    (
       projectId: string,
       estimatedCostUsd: number
-    ): Promise<{ allowed: boolean; warning?: string; remaining?: number }> => {
+    ): { allowed: boolean; warning?: string; remaining?: number } => {
       return checkBudget(projectId, estimatedCostUsd)
     }
   )
 
   // Record spending
-  ipcMain.handle(
-    'budget:recordSpending',
-    async (_event, projectId: string, amountUsd: number): Promise<void> => {
-      recordSpending(projectId, amountUsd)
-    }
-  )
+  handleIpc('budget:recordSpending', (projectId: string, amountUsd: number): void => {
+    recordSpending(projectId, amountUsd)
+  })
 
   // Reset spending (new billing period)
-  ipcMain.handle('budget:resetSpending', async (_event, projectId: string): Promise<void> => {
+  handleIpc('budget:resetSpending', (projectId: string): void => {
     resetSpending(projectId)
   })
 
   // List all project budgets
-  ipcMain.handle('budget:list', async (): Promise<ProjectBudget[]> => {
+  handleIpc('budget:list', (): ProjectBudget[] => {
     return listProjectBudgets()
   })
 
-  console.log('[IPC] Budget handlers registered')
+  logger.info('[IPC] Budget handlers registered')
 }

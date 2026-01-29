@@ -9,6 +9,7 @@ import { BrowserWindow } from 'electron'
 import { providerRegistry } from '../providers'
 import { classifyError, ClassificationResult } from './error-classifier'
 import { executeWithRetry, DEFAULT_RETRY_CONFIG } from './retry-strategy'
+import { logger } from './logger'
 import {
   getConfig,
   getFallbacksForConfig,
@@ -305,7 +306,7 @@ async function executeWithFallbacks(
     effectiveRetryConfig,
     (attempt, err, delayMs) => {
       totalRetries++
-      console.log(
+      logger.debug(
         `[ChainExecutor] Retry ${attempt} for ${config.name}, waiting ${delayMs}ms: ${err}`
       )
     }

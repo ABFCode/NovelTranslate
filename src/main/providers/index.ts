@@ -2,6 +2,7 @@ import { providerRegistry } from './types'
 import { OpenAIProvider } from './openai.provider'
 import { GeminiProvider } from './gemini.provider'
 import { AnthropicProvider } from './anthropic.provider'
+import { logger } from '../services/logger'
 
 export * from './types'
 
@@ -13,5 +14,5 @@ export function registerProviders(): void {
   providerRegistry.register(new GeminiProvider())
   providerRegistry.register(new AnthropicProvider())
 
-  console.log('[Providers] All providers registered')
+  logger.info('[Providers] All providers registered')
 }

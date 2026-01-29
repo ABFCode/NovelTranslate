@@ -1,4 +1,3 @@
-import { ipcMain } from 'electron'
 import { registerProjectHandlers } from './project.handlers'
 import { registerChapterHandlers } from './chapter.handlers'
 import { registerConfigHandlers } from './config.handlers'
@@ -16,6 +15,8 @@ import { registerMemoryHandlers } from './memory.handlers'
 import { healthCheck } from '../services/sidecar'
 import { registerProviders } from '../providers'
 import { keyManager } from '../services/key-manager'
+import { handleIpc } from './utils'
+import { logger } from '../services/logger'
 
 /**
  * Register all IPC handlers for main process
@@ -27,12 +28,12 @@ export function registerIpcHandlers(): void {
   // Migrate legacy API keys
   keyManager.migrateLegacyKeys().then((count) => {
     if (count > 0) {
-      console.log(`[IPC] Migrated ${count} legacy API keys`)
+      logger.info(`[IPC] Migrated ${count} legacy API keys`)
     }
   })
 
   // Ping handler for testing connectivity
-  ipcMain.handle('ping', () => 'pong')
+  handleIpc('ping', () => 'pong')
 
   // Project handlers
   registerProjectHandlers()
@@ -71,9 +72,9 @@ export function registerIpcHandlers(): void {
   registerBudgetHandlers()
 
   // Sidecar health check
-  ipcMain.handle('sidecar:health', async () => {
+  handleIpc('sidecar:health', async () => {
     return healthCheck()
   })
 
-  console.log('[IPC] All handlers registered')
+  logger.info('[IPC] All handlers registered')
 }

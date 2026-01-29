@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from 'electron'
+import { dialog } from 'electron'
 import { basename } from 'path'
 import {
   createProject,
@@ -12,6 +12,8 @@ import {
 } from '../database'
 import { parseEpub, exportEpub, isSidecarConnected } from '../services/sidecar'
 import { getMainWindow } from '../window'
+import { handleIpc } from './utils'
+import { logger } from '../services/logger'
 import type { Project } from '../../shared/types'
 
 /**
@@ -19,27 +21,27 @@ import type { Project } from '../../shared/types'
  */
 export function registerProjectHandlers(): void {
   // Create a new project
-  ipcMain.handle('project:create', async (_event, name: string, sourcePath?: string): Promise<Project> => {
+  handleIpc('project:create', (name: string, sourcePath?: string): Project => {
     return createProject(name, sourcePath)
   })
 
   // Get a project by ID
-  ipcMain.handle('project:get', async (_event, id: string): Promise<Project | null> => {
+  handleIpc('project:get', (id: string): Project | null => {
     return getProject(id)
   })
 
   // List all projects
-  ipcMain.handle('project:list', async (): Promise<Project[]> => {
+  handleIpc('project:list', (): Project[] => {
     return listProjects()
   })
 
   // Delete a project
-  ipcMain.handle('project:delete', async (_event, id: string): Promise<void> => {
+  handleIpc('project:delete', (id: string): void => {
     deleteProject(id)
   })
 
   // Import EPUB
-  ipcMain.handle('project:import-epub', async (_event, filePath?: string): Promise<Project | null> => {
+  handleIpc('project:import-epub', async (filePath?: string): Promise<Project | null> => {
     // If no file path provided, open file dialog
     if (!filePath) {
       const mainWindow = getMainWindow()
@@ -103,7 +105,7 @@ export function registerProjectHandlers(): void {
   })
 
   // Export project to EPUB
-  ipcMain.handle('project:export-epub', async (_event, projectId: string): Promise<string> => {
+  handleIpc('project:export-epub', async (projectId: string): Promise<string> => {
     // Get project
     const project = getProject(projectId)
     if (!project) {
@@ -166,5 +168,5 @@ export function registerProjectHandlers(): void {
     return exportResult.filePath
   })
 
-  console.log('[IPC] Project handlers registered')
+  logger.info('[IPC] Project handlers registered')
 }

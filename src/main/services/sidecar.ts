@@ -2,6 +2,7 @@ import { spawn, ChildProcess } from 'child_process'
 import { join } from 'path'
 import { app } from 'electron'
 import http from 'http'
+import { logger } from './logger'
 
 // Sidecar state
 let sidecarProcess: ChildProcess | null = null
@@ -116,7 +117,7 @@ function streamRequest<T>(
               const data = JSON.parse(eventStr.slice(6))
               onEvent(data as T)
             } catch (e) {
-              console.error('[Sidecar] Failed to parse SSE event:', eventStr)
+              logger.error(`[Sidecar] Failed to parse SSE event: ${eventStr}`)
             }
           }
         }
@@ -149,13 +150,13 @@ function streamRequest<T>(
  */
 export async function startSidecar(): Promise<void> {
   if (sidecarProcess) {
-    console.log('[Sidecar] Already running')
+    logger.info('[Sidecar] Already running')
     return
   }
 
   return new Promise((resolve, reject) => {
     const sidecarPath = getSidecarPath()
-    console.log(`[Sidecar] Starting: ${sidecarPath}`)
+    logger.info(`[Sidecar] Starting: ${sidecarPath}`)
 
     sidecarProcess = spawn(sidecarPath, ['--port', '0'], {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -165,21 +166,21 @@ export async function startSidecar(): Promise<void> {
 
     sidecarProcess.stdout?.on('data', (data: Buffer) => {
       const output = data.toString()
-      console.log(`[Sidecar stdout] ${output}`)
+      logger.debug(`[Sidecar stdout] ${output}`)
 
       // Parse port from output
       const portMatch = output.match(/PORT:(\d+)/)
       if (portMatch && !portReceived) {
         portReceived = true
         sidecarPort = parseInt(portMatch[1], 10)
-        console.log(`[Sidecar] Listening on port ${sidecarPort}`)
+        logger.info(`[Sidecar] Listening on port ${sidecarPort}`)
 
         // Test connection with health check
         healthCheck()
           .then((healthy) => {
             if (healthy) {
               isConnected = true
-              console.log('[Sidecar] Connected and healthy')
+              logger.info('[Sidecar] Connected and healthy')
               resolve()
             } else {
               reject(new Error('Sidecar health check failed'))
@@ -190,11 +191,11 @@ export async function startSidecar(): Promise<void> {
     })
 
     sidecarProcess.stderr?.on('data', (data: Buffer) => {
-      console.error(`[Sidecar stderr] ${data.toString()}`)
+      logger.error(`[Sidecar stderr] ${data.toString()}`)
     })
 
     sidecarProcess.on('error', (err) => {
-      console.error('[Sidecar] Process error:', err)
+      logger.error('[Sidecar] Process error:', err)
       sidecarProcess = null
       isConnected = false
       if (!portReceived) {
@@ -203,7 +204,7 @@ export async function startSidecar(): Promise<void> {
     })
 
     sidecarProcess.on('exit', (code) => {
-      console.log(`[Sidecar] Process exited with code ${code}`)
+      logger.info(`[Sidecar] Process exited with code ${code}`)
       sidecarProcess = null
       sidecarPort = null
       isConnected = false
@@ -223,7 +224,7 @@ export async function startSidecar(): Promise<void> {
  */
 export function stopSidecar(): void {
   if (sidecarProcess) {
-    console.log('[Sidecar] Stopping...')
+    logger.info('[Sidecar] Stopping...')
     sidecarProcess.kill('SIGTERM')
     sidecarProcess = null
     sidecarPort = null
@@ -248,7 +249,7 @@ export async function healthCheck(): Promise<boolean> {
 
   try {
     const response = await request<{ healthy: boolean; version: string }>('/health')
-    console.log(`[Sidecar] Health check: v${response.version}`)
+    logger.debug(`[Sidecar] Health check: v${response.version}`)
     return response.healthy
   } catch {
     return false

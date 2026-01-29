@@ -1,8 +1,10 @@
 /**
  * Translation Provider Interface
- * 
+ *
  * All LLM providers must implement this interface to be used for translation.
  */
+
+import { logger } from '../services/logger'
 
 export interface TranslationProvider {
   readonly id: string
@@ -52,7 +54,7 @@ class ProviderRegistry {
 
   register(provider: TranslationProvider): void {
     this.providers.set(provider.id, provider)
-    console.log(`[Providers] Registered: ${provider.name}`)
+    logger.info(`[Providers] Registered: ${provider.name}`)
   }
 
   get(id: string): TranslationProvider | undefined {

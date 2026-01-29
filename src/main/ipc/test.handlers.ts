@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { BrowserWindow } from 'electron'
 import {
   createTestRun,
   getTestRun,
@@ -14,6 +14,8 @@ import { getConfig, createConfigSnapshot } from '../database'
 import { executeChain } from '../services/chain-executor'
 import { estimateSingleCost, estimateChainCost, formatCost } from '../services/cost-estimator'
 import { keyManager } from '../services/key-manager'
+import { handleIpc, handleIpcWithEvent } from './utils'
+import { logger } from '../services/logger'
 import type { TestRun, CostEstimate } from '../../shared/types'
 
 /**
@@ -25,37 +27,34 @@ export function registerTestHandlers(): void {
   // ============================================================================
 
   // List test runs
-  ipcMain.handle('test:list', async (_event, limit?: number): Promise<TestRun[]> => {
+  handleIpc('test:list', (limit?: number): TestRun[] => {
     return listTestRuns(limit)
   })
 
   // Get a test run
-  ipcMain.handle('test:get', async (_event, id: string): Promise<TestRun | null> => {
+  handleIpc('test:get', (id: string): TestRun | null => {
     return getTestRun(id)
   })
 
   // Get a test run with results
-  ipcMain.handle('test:getWithResults', async (_event, id: string): Promise<TestRun | null> => {
+  handleIpc('test:getWithResults', (id: string): TestRun | null => {
     return getTestRunWithResults(id)
   })
 
   // Delete a test run
-  ipcMain.handle('test:delete', async (_event, id: string): Promise<void> => {
+  handleIpc('test:delete', (id: string): void => {
     deleteTestRun(id)
   })
 
   // Get test statistics for a config
-  ipcMain.handle(
+  handleIpc(
     'test:getConfigStats',
-    async (
-      _event,
-      configId: string
-    ): Promise<{
+    (configId: string): {
       totalTests: number
       successRate: number
       avgDurationMs: number
       avgCostUsd: number
-    }> => {
+    } => {
       return getConfigTestStats(configId)
     }
   )
@@ -64,7 +63,7 @@ export function registerTestHandlers(): void {
   // Single Test
   // ============================================================================
 
-  ipcMain.handle(
+  handleIpcWithEvent(
     'test:runSingle',
     async (
       event,
@@ -75,7 +74,7 @@ export function registerTestHandlers(): void {
       targetLanguage: string
     ): Promise<TestRun> => {
       const window = BrowserWindow.fromWebContents(event.sender) || undefined
-      const config = getConfig(configId)
+      const config = getConfig(configId as string)
 
       if (!config) {
         throw new Error(`Config not found: ${configId}`)
@@ -88,20 +87,26 @@ export function registerTestHandlers(): void {
       }
 
       // Create the test run
-      const testRun = createTestRun(name, sampleText, sourceLanguage, targetLanguage, 'single')
+      const testRun = createTestRun(
+        name as string,
+        sampleText as string,
+        sourceLanguage as string,
+        targetLanguage as string,
+        'single'
+      )
 
       // Create config snapshot for reproducibility
-      const snapshot = createConfigSnapshot(configId, 'test')
+      const snapshot = createConfigSnapshot(configId as string, 'test')
 
       // Execute the translation
       const startTime = Date.now()
 
       try {
         const result = await executeChain({
-          configId,
-          sourceText: sampleText,
-          sourceLanguage,
-          targetLanguage,
+          configId: configId as string,
+          sourceText: sampleText as string,
+          sourceLanguage: sourceLanguage as string,
+          targetLanguage: targetLanguage as string,
           apiKey,
           useMemory: false,
           useGlossary: false,
@@ -112,7 +117,7 @@ export function registerTestHandlers(): void {
         // Create test result
         createTestResult(
           testRun.id,
-          configId,
+          configId as string,
           snapshot.id,
           config.name,
           config.providerId,
@@ -129,7 +134,7 @@ export function registerTestHandlers(): void {
       } catch (error) {
         createTestResult(
           testRun.id,
-          configId,
+          configId as string,
           snapshot.id,
           config.name,
           config.providerId,
@@ -153,7 +158,7 @@ export function registerTestHandlers(): void {
   // Comparison Test (A/B Testing)
   // ============================================================================
 
-  ipcMain.handle(
+  handleIpcWithEvent(
     'test:runComparison',
     async (
       event,
@@ -166,15 +171,21 @@ export function registerTestHandlers(): void {
       const window = BrowserWindow.fromWebContents(event.sender) || undefined
 
       // Create the test run
-      const testRun = createTestRun(name, sampleText, sourceLanguage, targetLanguage, 'comparison')
+      const testRun = createTestRun(
+        name as string,
+        sampleText as string,
+        sourceLanguage as string,
+        targetLanguage as string,
+        'comparison'
+      )
 
       // Run each config
-      for (const configId of configIds) {
-        const config = getConfig(configId)
+      for (const cfgId of configIds as string[]) {
+        const config = getConfig(cfgId)
         if (!config) {
           createTestResult(
             testRun.id,
-            configId,
+            cfgId,
             null,
             'Unknown Config',
             '',
@@ -184,7 +195,7 @@ export function registerTestHandlers(): void {
             0,
             0,
             0,
-            `Config not found: ${configId}`,
+            `Config not found: ${cfgId}`,
             'unknown',
             []
           )
@@ -195,7 +206,7 @@ export function registerTestHandlers(): void {
         if (!apiKey) {
           createTestResult(
             testRun.id,
-            configId,
+            cfgId,
             null,
             config.name,
             config.providerId,
@@ -213,16 +224,16 @@ export function registerTestHandlers(): void {
         }
 
         // Create snapshot
-        const snapshot = createConfigSnapshot(configId, 'test')
+        const snapshot = createConfigSnapshot(cfgId, 'test')
 
         const startTime = Date.now()
 
         try {
           const result = await executeChain({
-            configId,
-            sourceText: sampleText,
-            sourceLanguage,
-            targetLanguage,
+            configId: cfgId,
+            sourceText: sampleText as string,
+            sourceLanguage: sourceLanguage as string,
+            targetLanguage: targetLanguage as string,
             apiKey,
             useMemory: false,
             useGlossary: false,
@@ -231,7 +242,7 @@ export function registerTestHandlers(): void {
 
           createTestResult(
             testRun.id,
-            configId,
+            cfgId,
             snapshot.id,
             config.name,
             config.providerId,
@@ -248,7 +259,7 @@ export function registerTestHandlers(): void {
         } catch (error) {
           createTestResult(
             testRun.id,
-            configId,
+            cfgId,
             snapshot.id,
             config.name,
             config.providerId,
@@ -273,7 +284,7 @@ export function registerTestHandlers(): void {
   // Batch Test (Multiple Chapters)
   // ============================================================================
 
-  ipcMain.handle(
+  handleIpcWithEvent(
     'test:runBatch',
     async (
       event,
@@ -284,7 +295,7 @@ export function registerTestHandlers(): void {
       targetLanguage: string
     ): Promise<TestRun> => {
       const window = BrowserWindow.fromWebContents(event.sender) || undefined
-      const config = getConfig(configId)
+      const config = getConfig(configId as string)
 
       if (!config) {
         throw new Error(`Config not found: ${configId}`)
@@ -295,32 +306,34 @@ export function registerTestHandlers(): void {
         throw new Error(`No API key for provider: ${config.providerId}`)
       }
 
+      const chapters = chapterTexts as Array<{ chapterId: string; text: string }>
+
       // Create the batch test run
       const testRun = createTestRun(
-        name,
-        chapterTexts.map((c) => c.text).join('\n\n---\n\n'),
-        sourceLanguage,
-        targetLanguage,
+        name as string,
+        chapters.map((c) => c.text).join('\n\n---\n\n'),
+        sourceLanguage as string,
+        targetLanguage as string,
         'batch'
       )
 
       // Add chapters to batch
-      for (const chapter of chapterTexts) {
+      for (const chapter of chapters) {
         addChapterToBatchTest(testRun.id, chapter.chapterId)
       }
 
       // Create snapshot
-      const snapshot = createConfigSnapshot(configId, 'test')
+      const snapshot = createConfigSnapshot(configId as string, 'test')
 
       // Run each chapter
-      for (let i = 0; i < chapterTexts.length; i++) {
-        const chapter = chapterTexts[i]
+      for (let i = 0; i < chapters.length; i++) {
+        const chapter = chapters[i]
 
         // Emit progress
         window?.webContents.send('test:batchProgress', {
           testRunId: testRun.id,
           current: i + 1,
-          total: chapterTexts.length,
+          total: chapters.length,
           chapterId: chapter.chapterId
         })
 
@@ -328,10 +341,10 @@ export function registerTestHandlers(): void {
 
         try {
           const result = await executeChain({
-            configId,
+            configId: configId as string,
             sourceText: chapter.text,
-            sourceLanguage,
-            targetLanguage,
+            sourceLanguage: sourceLanguage as string,
+            targetLanguage: targetLanguage as string,
             apiKey,
             useMemory: false,
             useGlossary: false,
@@ -340,7 +353,7 @@ export function registerTestHandlers(): void {
 
           const testResult = createTestResult(
             testRun.id,
-            configId,
+            configId as string,
             snapshot.id,
             config.name,
             config.providerId,
@@ -359,7 +372,7 @@ export function registerTestHandlers(): void {
         } catch (error) {
           const testResult = createTestResult(
             testRun.id,
-            configId,
+            configId as string,
             snapshot.id,
             config.name,
             config.providerId,
@@ -386,20 +399,16 @@ export function registerTestHandlers(): void {
   // Cost Estimation
   // ============================================================================
 
-  ipcMain.handle(
-    'test:estimateCost',
-    async (_event, text: string, configId: string): Promise<CostEstimate> => {
-      return estimateChainCost(text, configId)
-    }
-  )
+  handleIpc('test:estimateCost', (text: string, configId: string): CostEstimate => {
+    return estimateChainCost(text, configId)
+  })
 
-  ipcMain.handle(
+  handleIpc(
     'test:estimateSingleCost',
-    async (
-      _event,
+    (
       text: string,
       configId: string
-    ): Promise<{ inputTokens: number; outputTokens: number; costUsd: number; formatted: string }> => {
+    ): { inputTokens: number; outputTokens: number; costUsd: number; formatted: string } => {
       const config = getConfig(configId)
       if (!config) {
         throw new Error(`Config not found: ${configId}`)
@@ -413,5 +422,5 @@ export function registerTestHandlers(): void {
     }
   )
 
-  console.log('[IPC] Test handlers registered')
+  logger.info('[IPC] Test handlers registered')
 }

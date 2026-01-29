@@ -1,4 +1,3 @@
-import { ipcMain } from 'electron'
 import {
   getConfig,
   getConfigWithFallbacks,
@@ -31,6 +30,8 @@ import {
   cloneTemplate,
   incrementTemplateUsage
 } from '../database/repositories/template.repository'
+import { handleIpc } from './utils'
+import { logger } from '../services/logger'
 import type {
   TranslationConfig,
   ConfigFallback,
@@ -52,49 +53,43 @@ export function registerConfigHandlers(): void {
   // ============================================================================
 
   // List all configs
-  ipcMain.handle('config:list', async (): Promise<TranslationConfig[]> => {
+  handleIpc('config:list', (): TranslationConfig[] => {
     return listConfigs()
   })
 
   // Get a config by ID
-  ipcMain.handle('config:get', async (_event, id: string): Promise<TranslationConfig | null> => {
+  handleIpc('config:get', (id: string): TranslationConfig | null => {
     return getConfig(id)
   })
 
   // Get a config with its fallbacks
-  ipcMain.handle(
-    'config:getWithFallbacks',
-    async (_event, id: string): Promise<ConfigWithFallbacks | null> => {
-      return getConfigWithFallbacks(id)
-    }
-  )
+  handleIpc('config:getWithFallbacks', (id: string): ConfigWithFallbacks | null => {
+    return getConfigWithFallbacks(id)
+  })
 
   // Save a config (create or update)
-  ipcMain.handle(
-    'config:save',
-    async (_event, config: TranslationConfig): Promise<TranslationConfig> => {
-      const existing = getConfig(config.id)
+  handleIpc('config:save', (config: TranslationConfig): TranslationConfig => {
+    const existing = getConfig(config.id)
 
-      if (existing) {
-        updateConfig(config.id, config)
-        return { ...existing, ...config }
-      } else {
-        return createConfig(config)
-      }
+    if (existing) {
+      updateConfig(config.id, config)
+      return { ...existing, ...config }
+    } else {
+      return createConfig(config)
     }
-  )
+  })
 
   // Delete a config
-  ipcMain.handle('config:delete', async (_event, id: string): Promise<void> => {
+  handleIpc('config:delete', (id: string): void => {
     deleteConfig(id)
   })
 
   // Get/set default config
-  ipcMain.handle('config:getDefault', async (): Promise<TranslationConfig | null> => {
+  handleIpc('config:getDefault', (): TranslationConfig | null => {
     return getDefaultConfig()
   })
 
-  ipcMain.handle('config:setDefault', async (_event, id: string): Promise<void> => {
+  handleIpc('config:setDefault', (id: string): void => {
     setDefaultConfig(id)
   })
 
@@ -103,46 +98,44 @@ export function registerConfigHandlers(): void {
   // ============================================================================
 
   // Get fallbacks for a config
-  ipcMain.handle('config:getFallbacks', async (_event, configId: string): Promise<ConfigFallback[]> => {
+  handleIpc('config:getFallbacks', (configId: string): ConfigFallback[] => {
     return getFallbacksForConfig(configId)
   })
 
   // Create a fallback
-  ipcMain.handle(
+  handleIpc(
     'config:createFallback',
-    async (
-      _event,
+    (
       configId: string,
       fallbackConfigId: string,
       priority: number,
       conditionType: FallbackConditionType,
       conditionValue?: string
-    ): Promise<ConfigFallback> => {
+    ): ConfigFallback => {
       return createFallback(configId, fallbackConfigId, priority, conditionType, conditionValue)
     }
   )
 
   // Update a fallback
-  ipcMain.handle(
+  handleIpc(
     'config:updateFallback',
-    async (
-      _event,
+    (
       id: string,
       updates: Partial<Omit<ConfigFallback, 'id' | 'configId' | 'createdAt'>>
-    ): Promise<void> => {
+    ): void => {
       updateFallback(id, updates)
     }
   )
 
   // Delete a fallback
-  ipcMain.handle('config:deleteFallback', async (_event, id: string): Promise<void> => {
+  handleIpc('config:deleteFallback', (id: string): void => {
     deleteFallback(id)
   })
 
   // Check if fallback would create a cycle
-  ipcMain.handle(
+  handleIpc(
     'config:wouldCreateCycle',
-    async (_event, sourceConfigId: string, targetConfigId: string): Promise<boolean> => {
+    (sourceConfigId: string, targetConfigId: string): boolean => {
       return wouldCreateCycle(sourceConfigId, targetConfigId)
     }
   )
@@ -152,28 +145,25 @@ export function registerConfigHandlers(): void {
   // ============================================================================
 
   // Get snapshots for a config
-  ipcMain.handle(
-    'config:getSnapshots',
-    async (_event, configId: string): Promise<ConfigSnapshot[]> => {
-      return getSnapshotsForConfig(configId)
-    }
-  )
+  handleIpc('config:getSnapshots', (configId: string): ConfigSnapshot[] => {
+    return getSnapshotsForConfig(configId)
+  })
 
   // Get a specific snapshot
-  ipcMain.handle('config:getSnapshot', async (_event, id: string): Promise<ConfigSnapshot | null> => {
+  handleIpc('config:getSnapshot', (id: string): ConfigSnapshot | null => {
     return getSnapshot(id)
   })
 
   // Create a snapshot manually
-  ipcMain.handle(
+  handleIpc(
     'config:createSnapshot',
-    async (_event, configId: string, reason: 'edit' | 'test' | 'translation'): Promise<ConfigSnapshot> => {
+    (configId: string, reason: 'edit' | 'test' | 'translation'): ConfigSnapshot => {
       return createConfigSnapshot(configId, reason)
     }
   )
 
   // Restore from a snapshot
-  ipcMain.handle('config:restoreSnapshot', async (_event, snapshotId: string): Promise<void> => {
+  handleIpc('config:restoreSnapshot', (snapshotId: string): void => {
     restoreFromSnapshot(snapshotId)
   })
 
@@ -182,123 +172,105 @@ export function registerConfigHandlers(): void {
   // ============================================================================
 
   // Get configs assigned to a project
-  ipcMain.handle(
-    'projectConfig:list',
-    async (_event, projectId: string): Promise<ProjectConfig[]> => {
-      return getProjectConfigs(projectId)
-    }
-  )
+  handleIpc('projectConfig:list', (projectId: string): ProjectConfig[] => {
+    return getProjectConfigs(projectId)
+  })
 
   // Get the default config for a project
-  ipcMain.handle(
-    'projectConfig:getDefault',
-    async (_event, projectId: string): Promise<TranslationConfig | null> => {
-      return getProjectDefaultConfig(projectId)
-    }
-  )
+  handleIpc('projectConfig:getDefault', (projectId: string): TranslationConfig | null => {
+    return getProjectDefaultConfig(projectId)
+  })
 
   // Assign a config to a project
-  ipcMain.handle(
+  handleIpc(
     'projectConfig:assign',
-    async (
-      _event,
+    (
       projectId: string,
       configId: string,
       isDefault: boolean,
       priority: number
-    ): Promise<ProjectConfig> => {
+    ): ProjectConfig => {
       return assignConfigToProject(projectId, configId, isDefault, priority)
     }
   )
 
   // Remove a config from a project
-  ipcMain.handle(
-    'projectConfig:remove',
-    async (_event, projectId: string, configId: string): Promise<void> => {
-      removeConfigFromProject(projectId, configId)
-    }
-  )
+  handleIpc('projectConfig:remove', (projectId: string, configId: string): void => {
+    removeConfigFromProject(projectId, configId)
+  })
 
   // ============================================================================
   // Templates
   // ============================================================================
 
   // List all templates
-  ipcMain.handle('template:list', async (): Promise<PromptTemplate[]> => {
+  handleIpc('template:list', (): PromptTemplate[] => {
     return listTemplates()
   })
 
   // Get a template
-  ipcMain.handle('template:get', async (_event, id: string): Promise<PromptTemplate | null> => {
+  handleIpc('template:get', (id: string): PromptTemplate | null => {
     return getTemplate(id)
   })
 
   // Create a template
-  ipcMain.handle(
+  handleIpc(
     'template:create',
-    async (
-      _event,
+    (
       template: Omit<PromptTemplate, 'id' | 'isBuiltIn' | 'usageCount' | 'createdAt'>
-    ): Promise<PromptTemplate> => {
+    ): PromptTemplate => {
       return createTemplate(template)
     }
   )
 
   // Update a template
-  ipcMain.handle(
+  handleIpc(
     'template:update',
-    async (
-      _event,
+    (
       id: string,
       updates: Partial<Omit<PromptTemplate, 'id' | 'isBuiltIn' | 'usageCount' | 'createdAt'>>
-    ): Promise<void> => {
+    ): void => {
       updateTemplate(id, updates)
     }
   )
 
   // Delete a template
-  ipcMain.handle('template:delete', async (_event, id: string): Promise<void> => {
+  handleIpc('template:delete', (id: string): void => {
     deleteTemplate(id)
   })
 
   // Clone a template
-  ipcMain.handle(
-    'template:clone',
-    async (_event, id: string, newName: string): Promise<PromptTemplate> => {
-      return cloneTemplate(id, newName)
-    }
-  )
+  handleIpc('template:clone', (id: string, newName: string): PromptTemplate => {
+    return cloneTemplate(id, newName)
+  })
 
   // Use a template (increment usage and create config)
-  ipcMain.handle(
-    'template:use',
-    async (_event, templateId: string, configName: string): Promise<TranslationConfig> => {
-      const template = getTemplate(templateId)
-      if (!template) {
-        throw new Error(`Template not found: ${templateId}`)
-      }
-
-      incrementTemplateUsage(templateId)
-
-      // Create a config from the template
-      return createConfig({
-        name: configName,
-        providerId: 'openai', // Default provider
-        modelId: 'gpt-4o-mini', // Default model
-        systemPrompt: template.systemPrompt,
-        userPromptTemplate: template.userPromptTemplate,
-        temperature: template.suggestedTemperature,
-        maxTokens: template.suggestedMaxTokens
-      })
+  handleIpc('template:use', (templateId: string, configName: string): TranslationConfig => {
+    const template = getTemplate(templateId)
+    if (!template) {
+      throw new Error(`Template not found: ${templateId}`)
     }
-  )
+
+    incrementTemplateUsage(templateId)
+
+    // Create a config from the template
+    return createConfig({
+      name: configName,
+      providerId: 'openai', // Default provider
+      modelId: 'gpt-4o-mini', // Default model
+      systemPrompt: template.systemPrompt,
+      userPromptTemplate: template.userPromptTemplate,
+      temperature: template.suggestedTemperature,
+      maxTokens: template.suggestedMaxTokens
+    })
+  })
 
   // ============================================================================
   // Import/Export
   // ============================================================================
 
   // Export configs
-  ipcMain.handle('config:export', async (_event, configIds: string[]): Promise<ConfigExport> => {
+  handleIpc('config:export', (configIds: string[]): ConfigExport => {
     const configs = configIds.map((id) => getConfigWithFallbacks(id)).filter(Boolean)
 
     return {
@@ -325,7 +297,7 @@ export function registerConfigHandlers(): void {
   })
 
   // Import configs
-  ipcMain.handle('config:import', async (_event, exportData: ConfigExport): Promise<ImportResult> => {
+  handleIpc('config:import', (exportData: ConfigExport): ImportResult => {
     const result: ImportResult = {
       configsImported: 0,
       configsSkipped: 0,
@@ -393,5 +365,5 @@ export function registerConfigHandlers(): void {
     return result
   })
 
-  console.log('[IPC] Config handlers registered')
+  logger.info('[IPC] Config handlers registered')
 }
