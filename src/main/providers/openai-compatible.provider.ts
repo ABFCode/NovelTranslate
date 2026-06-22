@@ -1,8 +1,9 @@
 import OpenAI from 'openai'
-import type {
-  TranslationProvider,
-  ProviderTranslationRequest,
-  ProviderTranslationResult
+import {
+  describeProviderError,
+  type TranslationProvider,
+  type ProviderTranslationRequest,
+  type ProviderTranslationResult
 } from './types'
 import type { ModelInfo, ProviderSettings } from '../../shared/types'
 
@@ -137,8 +138,8 @@ export class OpenAICompatibleProvider implements TranslationProvider {
       }
 
       return models.sort((a, b) => a.name.localeCompare(b.name))
-    } catch {
-      return []
+    } catch (error) {
+      throw new Error(describeProviderError(error))
     }
   }
 

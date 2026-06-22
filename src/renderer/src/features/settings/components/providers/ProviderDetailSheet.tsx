@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, RefreshCw, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,7 +15,12 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { KeyManagement } from './KeyManagement'
-import type { ProviderConfig, ProviderInfoExtended, BuiltinProviderTemplate } from '@shared/types'
+import type {
+  ProviderConfig,
+  ProviderInfoExtended,
+  BuiltinProviderTemplate,
+  ModelInfo
+} from '@shared/types'
 
 interface ProviderDetailSheetProps {
   provider: ProviderInfoExtended | null
@@ -32,9 +37,14 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
   const [baseUrl, setBaseUrl] = useState('')
   const [isEnabled, setIsEnabled] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [models, setModels] = useState<ModelInfo[]>([])
+  const [newModelId, setNewModelId] = useState('')
+  const [newModelName, setNewModelName] = useState('')
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     if (open && provider) {
+      setModels(provider.models)
       Promise.all([
         window.api.providerConfig.get(provider.configId),
         window.api.providerConfig.getTemplates()
@@ -95,6 +105,53 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
     }
   }
 
+  const persistModels = async (next: ModelInfo[]) => {
+    if (!config) return
+    setModels(next)
+    try {
+      await window.api.providerConfig.update(config.id, { customModels: next })
+      onChanged()
+    } catch (error) {
+      toast.error('Failed to update models')
+      console.error(error)
+    }
+  }
+
+  const handleRefreshModels = async () => {
+    if (!config) return
+    setIsRefreshing(true)
+    try {
+      // No key passed: the main process uses a stored key for this provider.
+      const fetched = await window.api.providerConfig.fetchModels(config.id)
+      if (fetched.length === 0) {
+        toast.warning('No models returned. Add a valid API key, or add models manually below.')
+      } else {
+        await persistModels(fetched)
+        toast.success(`Loaded ${fetched.length} models from provider`)
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to fetch models')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  const handleAddModel = () => {
+    const id = newModelId.trim()
+    if (!id) return
+    if (models.some((m) => m.id === id)) {
+      toast.error('That model is already in the list')
+      return
+    }
+    persistModels([...models, { id, name: newModelName.trim() || id, contextWindow: 8192 }])
+    setNewModelId('')
+    setNewModelName('')
+  }
+
+  const handleRemoveModel = (id: string) => {
+    persistModels(models.filter((m) => m.id !== id))
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -150,19 +207,73 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
             <Separator />
 
             {/* Models */}
-            <section className="space-y-2">
-              <h4 className="text-sm font-medium">Models</h4>
-              {provider.models.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No models configured.</p>
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium">Models</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefreshModels}
+                  disabled={isRefreshing}
+                  title="Fetch the current model list from the provider using a saved key"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  {isRefreshing ? 'Refreshing...' : 'Refresh from provider'}
+                </Button>
+              </div>
+
+              {models.length === 0 ? (
+                <p className="rounded-lg border border-dashed p-3 text-center text-sm text-muted-foreground">
+                  No models yet. Refresh from the provider or add one manually.
+                </p>
               ) : (
-                <div className="flex flex-wrap gap-1">
-                  {provider.models.map((m) => (
-                    <span key={m.id} className="rounded bg-muted px-2 py-0.5 text-xs">
-                      {m.name}
-                    </span>
+                <div className="space-y-1">
+                  {models.map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm"
+                    >
+                      <span className="flex-1 truncate">
+                        {m.name}
+                        {m.name !== m.id && (
+                          <span className="ml-2 text-xs text-muted-foreground">{m.id}</span>
+                        )}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => handleRemoveModel(m.id)}
+                        title="Remove model"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   ))}
                 </div>
               )}
+
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Model ID (e.g. gpt-5.5)"
+                  value={newModelId}
+                  onChange={(e) => setNewModelId(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddModel()
+                  }}
+                />
+                <Input
+                  placeholder="Display name (optional)"
+                  value={newModelName}
+                  onChange={(e) => setNewModelName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddModel()
+                  }}
+                />
+                <Button variant="outline" onClick={handleAddModel} disabled={!newModelId.trim()}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </section>
 
             <Separator />

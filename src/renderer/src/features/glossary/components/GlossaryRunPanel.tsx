@@ -107,34 +107,32 @@ export function GlossaryRunPanel({
     }
   }, [providerConfigId, providers, modelId])
 
+  // Clear any prior estimate when the inputs change; estimation is on-demand.
   useEffect(() => {
+    setEstimate(null)
+  }, [projectId, providerConfigId, modelId, chaptersForRun])
+
+  const handleEstimate = async (): Promise<void> => {
     if (!projectId || !providerConfigId || !modelId || chaptersForRun.length === 0) {
-      setEstimate(null)
+      toast.error('Select a provider, model, and at least one chapter')
       return
     }
-
-    let cancelled = false
     setIsEstimating(true)
-    window.api.glossaryRun
-      .estimateCost(projectId, chaptersForRun, providerConfigId, modelId)
-      .then((result) => {
-        if (cancelled) return
-        setEstimate(result)
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          console.error('Failed to estimate cost:', error)
-          setEstimate(null)
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsEstimating(false)
-      })
-
-    return () => {
-      cancelled = true
+    try {
+      const result = await window.api.glossaryRun.estimateCost(
+        projectId,
+        chaptersForRun,
+        providerConfigId,
+        modelId
+      )
+      setEstimate(result)
+    } catch (error) {
+      console.error('Failed to estimate cost:', error)
+      toast.error('Failed to estimate cost')
+    } finally {
+      setIsEstimating(false)
     }
-  }, [projectId, providerConfigId, modelId, chaptersForRun])
+  }
 
   useEffect(() => {
     const unsubscribe = window.api.on.glossaryRunProgress((event) => {
@@ -270,13 +268,22 @@ export function GlossaryRunPanel({
           {isLoadingChapters && <span className="text-xs text-muted-foreground">Loading chapters...</span>}
         </div>
 
-        {estimate ? (
-          <CostEstimateDisplay estimate={estimate} compact />
-        ) : (
-          <span className="text-xs text-muted-foreground">
-            {isEstimating ? 'Estimating cost...' : 'Choose chapters and model to estimate cost'}
-          </span>
-        )}
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEstimate}
+              disabled={isEstimating || !modelId || chaptersForRun.length === 0}
+            >
+              {isEstimating ? 'Estimating...' : 'Estimate cost'}
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Approximate, based on listed model prices
+            </span>
+          </div>
+          {estimate && <CostEstimateDisplay estimate={estimate} compact />}
+        </div>
 
         {runProgress && (
           <div className="space-y-2">

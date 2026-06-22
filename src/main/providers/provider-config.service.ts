@@ -21,118 +21,178 @@ import { hasValidKeys } from '../database/repositories/apikey.repository'
 // Built-in Provider Templates
 // ============================================================================
 
+// Model lists and prices reflect provider catalogs as of mid-2026. For the
+// OpenAI-compatible gateways (Groq, OpenRouter, Together) and local Ollama,
+// catalogs change frequently and are best refreshed via the live `/models`
+// endpoint (providerConfig.fetchModels); the entries below are sensible starting
+// points rather than an exhaustive list.
 const BUILTIN_TEMPLATES: BuiltinProviderTemplate[] = [
   {
     id: 'openai',
     name: 'OpenAI',
-    description: 'GPT-4o, GPT-4, GPT-3.5 Turbo models',
+    description: 'GPT-5.5 and the GPT-5.4 family (mini, nano)',
     defaultBaseUrl: 'https://api.openai.com/v1',
     supportsBaseUrlOverride: true,
     sdkType: 'openai',
     defaultModels: [
       {
-        id: 'gpt-4o',
-        name: 'GPT-4o',
-        contextWindow: 128000,
+        id: 'gpt-5.5',
+        name: 'GPT-5.5',
+        contextWindow: 1000000,
         inputPricePerMillion: 5,
-        outputPricePerMillion: 15
-      },
-      {
-        id: 'gpt-4o-mini',
-        name: 'GPT-4o Mini',
-        contextWindow: 128000,
-        inputPricePerMillion: 0.15,
-        outputPricePerMillion: 0.6
-      },
-      {
-        id: 'gpt-4-turbo',
-        name: 'GPT-4 Turbo',
-        contextWindow: 128000,
-        inputPricePerMillion: 10,
         outputPricePerMillion: 30
       },
       {
-        id: 'gpt-3.5-turbo',
-        name: 'GPT-3.5 Turbo',
-        contextWindow: 16385,
-        inputPricePerMillion: 0.5,
-        outputPricePerMillion: 1.5
+        id: 'gpt-5.4',
+        name: 'GPT-5.4',
+        contextWindow: 400000,
+        inputPricePerMillion: 2.5,
+        outputPricePerMillion: 15
+      },
+      {
+        id: 'gpt-5.4-mini',
+        name: 'GPT-5.4 Mini',
+        contextWindow: 128000,
+        inputPricePerMillion: 0.75,
+        outputPricePerMillion: 4.5
+      },
+      {
+        id: 'gpt-5.4-nano',
+        name: 'GPT-5.4 Nano',
+        contextWindow: 128000,
+        inputPricePerMillion: 0.2,
+        outputPricePerMillion: 1.25
       }
     ]
   },
   {
     id: 'anthropic',
     name: 'Anthropic',
-    description: 'Claude 3.5 Sonnet, Claude 3 Haiku, Claude 3 Opus',
+    description: 'Claude Sonnet 4.6, Haiku 4.5, and Opus 4.8',
     defaultBaseUrl: 'https://api.anthropic.com',
     supportsBaseUrlOverride: true,
     sdkType: 'anthropic',
     defaultModels: [
       {
-        id: 'claude-3-5-sonnet-20241022',
-        name: 'Claude 3.5 Sonnet',
-        contextWindow: 200000,
+        id: 'claude-sonnet-4-6',
+        name: 'Claude Sonnet 4.6',
+        contextWindow: 1000000,
         inputPricePerMillion: 3,
         outputPricePerMillion: 15
       },
       {
-        id: 'claude-3-5-haiku-20241022',
-        name: 'Claude 3.5 Haiku',
+        id: 'claude-haiku-4-5',
+        name: 'Claude Haiku 4.5',
         contextWindow: 200000,
         inputPricePerMillion: 1,
         outputPricePerMillion: 5
       },
       {
-        id: 'claude-3-haiku-20240307',
-        name: 'Claude 3 Haiku',
-        contextWindow: 200000,
-        inputPricePerMillion: 0.25,
-        outputPricePerMillion: 1.25
-      },
-      {
-        id: 'claude-3-opus-20240229',
-        name: 'Claude 3 Opus',
-        contextWindow: 200000,
-        inputPricePerMillion: 15,
-        outputPricePerMillion: 75
+        id: 'claude-opus-4-8',
+        name: 'Claude Opus 4.8',
+        contextWindow: 1000000,
+        inputPricePerMillion: 5,
+        outputPricePerMillion: 25
       }
     ]
   },
   {
     id: 'gemini',
     name: 'Google Gemini',
-    description: 'Gemini 2.0 Flash, Gemini 1.5 Pro, Gemini 1.5 Flash',
+    description: 'Gemini 3.5 Flash, 3.1 Flash-Lite, and the 2.5 family',
     defaultBaseUrl: 'https://generativelanguage.googleapis.com',
     supportsBaseUrlOverride: false,
     sdkType: 'gemini',
     defaultModels: [
       {
-        id: 'gemini-2.0-flash',
-        name: 'Gemini 2.0 Flash',
+        id: 'gemini-3.5-flash',
+        name: 'Gemini 3.5 Flash',
+        contextWindow: 1000000,
+        inputPricePerMillion: 1.5,
+        outputPricePerMillion: 9
+      },
+      {
+        id: 'gemini-3.1-flash-lite',
+        name: 'Gemini 3.1 Flash-Lite',
+        contextWindow: 1000000,
+        inputPricePerMillion: 0.25,
+        outputPricePerMillion: 1.5
+      },
+      {
+        id: 'gemini-2.5-pro',
+        name: 'Gemini 2.5 Pro',
+        contextWindow: 1000000,
+        inputPricePerMillion: 1.25,
+        outputPricePerMillion: 10
+      },
+      {
+        id: 'gemini-2.5-flash',
+        name: 'Gemini 2.5 Flash',
+        contextWindow: 1000000,
+        inputPricePerMillion: 0.3,
+        outputPricePerMillion: 2.5
+      },
+      {
+        id: 'gemini-2.5-flash-lite',
+        name: 'Gemini 2.5 Flash-Lite',
         contextWindow: 1000000,
         inputPricePerMillion: 0.1,
         outputPricePerMillion: 0.4
-      },
+      }
+    ]
+  },
+  {
+    id: 'xai',
+    name: 'xAI (Grok)',
+    description: 'Grok 4.20 and Grok 4.1 Fast',
+    defaultBaseUrl: 'https://api.x.ai/v1',
+    supportsBaseUrlOverride: false,
+    sdkType: 'openai_compatible',
+    defaultModels: [
       {
-        id: 'gemini-1.5-pro',
-        name: 'Gemini 1.5 Pro',
+        id: 'grok-4.20',
+        name: 'Grok 4.20',
         contextWindow: 2000000,
-        inputPricePerMillion: 3.5,
-        outputPricePerMillion: 10.5
+        inputPricePerMillion: 2,
+        outputPricePerMillion: 6
       },
       {
-        id: 'gemini-1.5-flash',
-        name: 'Gemini 1.5 Flash',
+        id: 'grok-4.1-fast',
+        name: 'Grok 4.1 Fast',
+        contextWindow: 2000000,
+        inputPricePerMillion: 0.2,
+        outputPricePerMillion: 0.5
+      }
+    ]
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    description: 'DeepSeek V4 Flash and V4 Pro - very low cost',
+    defaultBaseUrl: 'https://api.deepseek.com',
+    supportsBaseUrlOverride: false,
+    sdkType: 'openai_compatible',
+    defaultModels: [
+      {
+        id: 'deepseek-v4-flash',
+        name: 'DeepSeek V4 Flash',
         contextWindow: 1000000,
-        inputPricePerMillion: 0.075,
-        outputPricePerMillion: 0.3
+        inputPricePerMillion: 0.14,
+        outputPricePerMillion: 0.28
+      },
+      {
+        id: 'deepseek-v4-pro',
+        name: 'DeepSeek V4 Pro',
+        contextWindow: 1000000,
+        inputPricePerMillion: 0.44,
+        outputPricePerMillion: 0.87
       }
     ]
   },
   {
     id: 'groq',
     name: 'Groq',
-    description: 'Fast inference with Llama 3, Mixtral models',
+    description: 'Ultra-fast inference for open models (Llama, GPT-OSS)',
     defaultBaseUrl: 'https://api.groq.com/openai/v1',
     supportsBaseUrlOverride: false,
     sdkType: 'openai_compatible',
@@ -145,105 +205,104 @@ const BUILTIN_TEMPLATES: BuiltinProviderTemplate[] = [
         outputPricePerMillion: 0.79
       },
       {
-        id: 'llama-3.1-8b-instant',
-        name: 'Llama 3.1 8B',
-        contextWindow: 128000,
-        inputPricePerMillion: 0.05,
-        outputPricePerMillion: 0.08
+        id: 'openai/gpt-oss-120b',
+        name: 'GPT-OSS 120B',
+        contextWindow: 128000
       },
       {
-        id: 'mixtral-8x7b-32768',
-        name: 'Mixtral 8x7B',
-        contextWindow: 32768,
-        inputPricePerMillion: 0.24,
-        outputPricePerMillion: 0.24
+        id: 'openai/gpt-oss-20b',
+        name: 'GPT-OSS 20B',
+        contextWindow: 128000
       }
     ]
   },
   {
     id: 'openrouter',
     name: 'OpenRouter',
-    description: 'Multi-model gateway - access 100+ models',
+    description: 'Multi-model gateway - access hundreds of models',
     defaultBaseUrl: 'https://openrouter.ai/api/v1',
     supportsBaseUrlOverride: false,
     sdkType: 'openai_compatible',
     defaultModels: [
       {
-        id: 'openai/gpt-4o',
-        name: 'OpenAI GPT-4o',
-        contextWindow: 128000,
-        inputPricePerMillion: 5,
-        outputPricePerMillion: 15
+        id: 'anthropic/claude-sonnet-4.6',
+        name: 'Claude Sonnet 4.6',
+        contextWindow: 1000000
       },
       {
-        id: 'anthropic/claude-3.5-sonnet',
-        name: 'Claude 3.5 Sonnet',
-        contextWindow: 200000,
-        inputPricePerMillion: 3,
-        outputPricePerMillion: 15
+        id: 'openai/gpt-5.5',
+        name: 'GPT-5.5',
+        contextWindow: 1000000
       },
       {
-        id: 'meta-llama/llama-3.1-70b-instruct',
-        name: 'Llama 3.1 70B',
-        contextWindow: 131072,
-        inputPricePerMillion: 0.88,
-        outputPricePerMillion: 0.88
+        id: 'google/gemini-3.5-flash',
+        name: 'Gemini 3.5 Flash',
+        contextWindow: 1000000
+      },
+      {
+        id: 'deepseek/deepseek-v4',
+        name: 'DeepSeek V4',
+        contextWindow: 1000000
+      },
+      {
+        id: 'x-ai/grok-4.20',
+        name: 'Grok 4.20',
+        contextWindow: 2000000
       }
     ]
   },
   {
     id: 'together',
     name: 'Together AI',
-    description: 'Open-source models with competitive pricing',
+    description: 'Hosted open models (Llama, Qwen, DeepSeek)',
     defaultBaseUrl: 'https://api.together.xyz/v1',
     supportsBaseUrlOverride: false,
     sdkType: 'openai_compatible',
     defaultModels: [
       {
-        id: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
-        name: 'Llama 3.1 70B Turbo',
-        contextWindow: 131072,
-        inputPricePerMillion: 0.88,
-        outputPricePerMillion: 0.88
+        id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+        name: 'Llama 3.3 70B Turbo',
+        contextWindow: 131072
       },
       {
-        id: 'mistralai/Mixtral-8x7B-Instruct-v0.1',
-        name: 'Mixtral 8x7B',
-        contextWindow: 32768,
-        inputPricePerMillion: 0.6,
-        outputPricePerMillion: 0.6
+        id: 'Qwen/Qwen3-235B-A22B-Instruct',
+        name: 'Qwen3 235B',
+        contextWindow: 256000
       },
       {
-        id: 'Qwen/Qwen2.5-72B-Instruct-Turbo',
-        name: 'Qwen 2.5 72B',
-        contextWindow: 131072,
-        inputPricePerMillion: 1.2,
-        outputPricePerMillion: 1.2
+        id: 'deepseek-ai/DeepSeek-V3.1',
+        name: 'DeepSeek V3.1',
+        contextWindow: 131072
       }
     ]
   },
   {
     id: 'ollama',
     name: 'Ollama',
-    description: 'Local models - no API key required',
+    description: 'Run local models on your machine - no API key required',
     defaultBaseUrl: 'http://localhost:11434/v1',
     supportsBaseUrlOverride: true,
     sdkType: 'openai_compatible',
     defaultModels: [
       {
-        id: 'llama3.2',
-        name: 'Llama 3.2',
+        id: 'llama3.3',
+        name: 'Llama 3.3',
         contextWindow: 128000
       },
       {
-        id: 'mistral',
-        name: 'Mistral',
-        contextWindow: 32768
+        id: 'qwen3',
+        name: 'Qwen 3',
+        contextWindow: 128000
       },
       {
-        id: 'qwen2.5',
-        name: 'Qwen 2.5',
-        contextWindow: 32768
+        id: 'deepseek-r1',
+        name: 'DeepSeek-R1',
+        contextWindow: 128000
+      },
+      {
+        id: 'gemma3',
+        name: 'Gemma 3',
+        contextWindow: 128000
       }
     ]
   }

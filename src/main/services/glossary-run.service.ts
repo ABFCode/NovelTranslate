@@ -21,9 +21,10 @@ import { getChapterContent } from '../database/repositories/chapter.repository'
 
 // Recommended cheap models for extraction (builtin provider IDs)
 const CHEAP_MODEL_SPECS = [
-  { builtinId: 'openai' as BuiltinProviderId, modelId: 'gpt-4o-mini' },
-  { builtinId: 'anthropic' as BuiltinProviderId, modelId: 'claude-3-haiku-20240307' },
-  { builtinId: 'gemini' as BuiltinProviderId, modelId: 'gemini-1.5-flash' }
+  { builtinId: 'deepseek' as BuiltinProviderId, modelId: 'deepseek-v4-flash' },
+  { builtinId: 'gemini' as BuiltinProviderId, modelId: 'gemini-2.5-flash-lite' },
+  { builtinId: 'openai' as BuiltinProviderId, modelId: 'gpt-5.4-nano' },
+  { builtinId: 'anthropic' as BuiltinProviderId, modelId: 'claude-haiku-4-5' }
 ]
 
 interface ExtractionResult {

@@ -1,10 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type {
-  TranslationProvider,
-  ProviderTranslationRequest,
-  ProviderTranslationResult,
+import {
+  describeProviderError,
+  type TranslationProvider,
+  type ProviderTranslationRequest,
+  type ProviderTranslationResult,
 } from './types'
-import type { ProviderSettings } from '../../shared/types'
+import type { ModelInfo, ProviderSettings } from '../../shared/types'
 
 export class AnthropicProvider implements TranslationProvider {
   readonly id = 'anthropic'
@@ -74,15 +75,35 @@ export class AnthropicProvider implements TranslationProvider {
     })
 
     try {
-      // Make a minimal API call to validate
-      await client.messages.create({
-        model: 'claude-3-5-haiku-latest',
-        messages: [{ role: 'user', content: 'test' }],
-        max_tokens: 10,
-      })
+      // A lightweight, read-only call is enough to validate the key
+      await client.models.list({ limit: 1 })
       return true
     } catch {
       return false
+    }
+  }
+
+  async listModels(apiKey: string, baseUrl?: string): Promise<ModelInfo[]> {
+    const client = new Anthropic({
+      apiKey,
+      baseURL: baseUrl || this.baseUrl,
+      timeout: this.settings.timeout,
+      defaultHeaders: this.settings.customHeaders
+    })
+
+    try {
+      const models: ModelInfo[] = []
+      // The SDK paginates; iterate all pages.
+      for await (const model of client.models.list({ limit: 100 })) {
+        models.push({
+          id: model.id,
+          name: model.display_name ?? model.id,
+          contextWindow: 200000
+        })
+      }
+      return models
+    } catch (error) {
+      throw new Error(describeProviderError(error))
     }
   }
 }

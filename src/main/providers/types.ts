@@ -5,7 +5,7 @@
  */
 
 import { logger } from '../services/logger'
-import type { ProviderSettings } from '../../shared/types'
+import type { ProviderSettings, ModelInfo } from '../../shared/types'
 
 export interface TranslationProvider {
   readonly id: string
@@ -30,6 +30,25 @@ export interface TranslationProvider {
    * Validate an API key
    */
   validateKey(key: string, baseUrl?: string): Promise<boolean>
+
+  /**
+   * List the models available for this provider/key.
+   * Implementations should throw a descriptive error on failure (e.g. HTTP 500,
+   * changed response shape) so callers can surface it without crashing.
+   */
+  listModels?(apiKey: string, baseUrl?: string): Promise<ModelInfo[]>
+}
+
+/**
+ * Produce a concise, human-readable message from a provider/SDK error.
+ * Includes an HTTP status code when the SDK exposes one.
+ */
+export function describeProviderError(error: unknown): string {
+  if (error instanceof Error) {
+    const status = (error as { status?: number }).status
+    return status ? `HTTP ${status}: ${error.message}` : error.message
+  }
+  return String(error)
 }
 
 export interface ProviderTranslationRequest {

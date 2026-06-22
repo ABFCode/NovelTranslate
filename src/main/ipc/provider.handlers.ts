@@ -1,5 +1,6 @@
 import { handleIpc } from './utils'
 import { logger } from '../services/logger'
+import { keyManager } from '../services/key-manager'
 import { providerConfigService } from '../providers/provider-config.service'
 import {
   getProviderForConfig,
@@ -93,10 +94,11 @@ export function registerProviderConfigHandlers(): void {
     return providerConfigService.getModelsForProvider(config)
   })
 
-  // Fetch models from the provider API (for OpenAI-compatible providers)
+  // Fetch models from the provider API (for OpenAI-compatible providers).
+  // If no key is passed, fall back to a stored key for this provider config.
   handleIpc(
     'providerConfig:fetchModels',
-    async (configId: string, apiKey: string): Promise<ModelInfo[]> => {
+    async (configId: string, apiKey?: string): Promise<ModelInfo[]> => {
       const config = providerConfigService.getProviderConfig(configId)
       if (!config) {
         throw new Error(`Provider config not found: ${configId}`)
@@ -107,23 +109,36 @@ export function registerProviderConfigHandlers(): void {
         throw new Error(`Failed to create provider for config: ${configId}`)
       }
 
-      // Only OpenAI-compatible providers support listing models
-      if (provider instanceof OpenAICompatibleProvider) {
-        const baseUrl = providerConfigService.getBaseUrl(config)
-        return provider.listModels(apiKey, baseUrl)
+      // Every provider can list models live; fall back to the seed only if an
+      // implementation is somehow missing.
+      if (typeof provider.listModels !== 'function') {
+        return providerConfigService.getModelsForProvider(config)
       }
 
-      // For other providers, return their configured models
-      return providerConfigService.getModelsForProvider(config)
+      const key = apiKey || (await keyManager.getKey(configId))
+      if (!key) {
+        throw new Error('No API key available to fetch models. Add a key first.')
+      }
+
+      const baseUrl = providerConfigService.getBaseUrl(config)
+      try {
+        return await provider.listModels(key, baseUrl)
+      } catch (error) {
+        // Surface a clean, actionable message (e.g. HTTP 500, auth failure, or a
+        // changed response shape) instead of leaking a raw SDK stack trace.
+        const reason = error instanceof Error ? error.message : String(error)
+        throw new Error(`Could not fetch models from ${config.displayName}: ${reason}`)
+      }
     }
   )
 
-  // Validate connection to a provider
+  // Validate connection to a provider. If no key is passed, fall back to a
+  // stored key for this provider config.
   handleIpc(
     'providerConfig:validateConnection',
     async (
       configId: string,
-      apiKey: string
+      apiKey?: string
     ): Promise<{ valid: boolean; error?: string; models?: number }> => {
       const config = providerConfigService.getProviderConfig(configId)
       if (!config) {
@@ -135,16 +150,21 @@ export function registerProviderConfigHandlers(): void {
         return { valid: false, error: `Failed to create provider for config: ${configId}` }
       }
 
+      const key = apiKey || (await keyManager.getKey(configId))
+      if (!key) {
+        return { valid: false, error: 'No API key configured for this provider' }
+      }
+
       // For OpenAI-compatible providers, use testConnection
       if (provider instanceof OpenAICompatibleProvider) {
         const baseUrl = providerConfigService.getBaseUrl(config)
-        return provider.testConnection(apiKey, baseUrl)
+        return provider.testConnection(key, baseUrl)
       }
 
       // For other providers, just validate the key
       try {
         const baseUrl = providerConfigService.getBaseUrl(config)
-        const valid = await provider.validateKey(apiKey, baseUrl)
+        const valid = await provider.validateKey(key, baseUrl)
         return { valid, error: valid ? undefined : 'API key validation failed' }
       } catch (error) {
         return {

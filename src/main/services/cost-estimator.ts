@@ -13,22 +13,30 @@ import { checkBudget as checkProjectBudget } from '../database/repositories/budg
  */
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   // OpenAI
-  'gpt-4o': { input: 5, output: 15 },
-  'gpt-4o-mini': { input: 0.15, output: 0.6 },
-  'gpt-4-turbo': { input: 10, output: 30 },
-  'gpt-4-turbo-preview': { input: 10, output: 30 },
-  'gpt-3.5-turbo': { input: 0.5, output: 1.5 },
+  'gpt-5.5': { input: 5, output: 30 },
+  'gpt-5.4': { input: 2.5, output: 15 },
+  'gpt-5.4-mini': { input: 0.75, output: 4.5 },
+  'gpt-5.4-nano': { input: 0.2, output: 1.25 },
 
   // Anthropic
-  'claude-3-5-sonnet-20241022': { input: 3, output: 15 },
-  'claude-3-opus-20240229': { input: 15, output: 75 },
-  'claude-3-sonnet-20240229': { input: 3, output: 15 },
-  'claude-3-haiku-20240307': { input: 0.25, output: 1.25 },
+  'claude-opus-4-8': { input: 5, output: 25 },
+  'claude-sonnet-4-6': { input: 3, output: 15 },
+  'claude-haiku-4-5': { input: 1, output: 5 },
 
-  // Google
-  'gemini-1.5-pro': { input: 3.5, output: 10.5 },
-  'gemini-1.5-flash': { input: 0.075, output: 0.3 },
-  'gemini-1.0-pro': { input: 0.5, output: 1.5 }
+  // Google Gemini
+  'gemini-3.5-flash': { input: 1.5, output: 9 },
+  'gemini-3.1-flash-lite': { input: 0.25, output: 1.5 },
+  'gemini-2.5-pro': { input: 1.25, output: 10 },
+  'gemini-2.5-flash': { input: 0.3, output: 2.5 },
+  'gemini-2.5-flash-lite': { input: 0.1, output: 0.4 },
+
+  // xAI (Grok)
+  'grok-4.20': { input: 2, output: 6 },
+  'grok-4.1-fast': { input: 0.2, output: 0.5 },
+
+  // DeepSeek
+  'deepseek-v4-flash': { input: 0.14, output: 0.28 },
+  'deepseek-v4-pro': { input: 0.44, output: 0.87 }
 }
 
 /**

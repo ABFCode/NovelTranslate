@@ -260,7 +260,16 @@ export interface TokenUsage {
 
 export type ProviderType = 'builtin' | 'openai_compatible'
 
-export type BuiltinProviderId = 'openai' | 'anthropic' | 'gemini' | 'groq' | 'openrouter' | 'together' | 'ollama'
+export type BuiltinProviderId =
+  | 'openai'
+  | 'anthropic'
+  | 'gemini'
+  | 'xai'
+  | 'deepseek'
+  | 'groq'
+  | 'openrouter'
+  | 'together'
+  | 'ollama'
 
 export interface ProviderConfig {
   id: string

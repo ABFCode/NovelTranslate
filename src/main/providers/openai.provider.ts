@@ -1,10 +1,11 @@
 import OpenAI from 'openai'
-import type {
-  TranslationProvider,
-  ProviderTranslationRequest,
-  ProviderTranslationResult,
+import {
+  describeProviderError,
+  type TranslationProvider,
+  type ProviderTranslationRequest,
+  type ProviderTranslationResult,
 } from './types'
-import type { ProviderSettings } from '../../shared/types'
+import type { ModelInfo, ProviderSettings } from '../../shared/types'
 
 export class OpenAIProvider implements TranslationProvider {
   readonly id = 'openai'
@@ -86,4 +87,54 @@ export class OpenAIProvider implements TranslationProvider {
       return false
     }
   }
+
+  async listModels(apiKey: string, baseUrl?: string): Promise<ModelInfo[]> {
+    const client = new OpenAI({
+      apiKey,
+      baseURL: baseUrl || this.baseUrl,
+      timeout: this.settings.timeout,
+      organization: this.settings.organizationId,
+      defaultHeaders: this.settings.customHeaders
+    })
+
+    try {
+      const response = await client.models.list()
+      const models: ModelInfo[] = []
+      for await (const model of response) {
+        if (isChatModel(model.id)) {
+          models.push({ id: model.id, name: model.id, contextWindow: 0 })
+        }
+      }
+      return models.sort((a, b) => a.id.localeCompare(b.id))
+    } catch (error) {
+      throw new Error(describeProviderError(error))
+    }
+  }
+}
+
+/**
+ * Heuristic filter to keep chat/completion models and drop embeddings, audio,
+ * image, moderation, and other non-text endpoints from the models list.
+ */
+function isChatModel(modelId: string): boolean {
+  const id = modelId.toLowerCase()
+  const excluded = [
+    'embedding',
+    'whisper',
+    'tts',
+    'audio',
+    'transcribe',
+    'dall-e',
+    'image',
+    'moderation',
+    'realtime',
+    'search',
+    'codex',
+    'davinci',
+    'babbage'
+  ]
+  if (excluded.some((term) => id.includes(term))) {
+    return false
+  }
+  return id.startsWith('gpt') || id.startsWith('o1') || id.startsWith('o3') || id.startsWith('o4') || id.startsWith('chatgpt')
 }

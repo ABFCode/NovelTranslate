@@ -14,27 +14,33 @@ export * from './provider-config.service'
 // Cache of provider instances by provider config ID
 const providerInstances = new Map<string, TranslationProvider>()
 
-// Base provider instances (singletons for builtin types)
-const builtinProviders: Record<string, TranslationProvider> = {
-  openai: new OpenAIProvider(),
-  anthropic: new AnthropicProvider(),
-  gemini: new GeminiProvider()
+// Factories for the SDK-specific builtin providers. A fresh instance is created
+// per provider config so that per-config settings (timeout, headers, base URL)
+// never leak between configs that happen to share an SDK.
+const builtinFactories: Record<'openai' | 'anthropic' | 'gemini', () => TranslationProvider> = {
+  openai: () => new OpenAIProvider(),
+  anthropic: () => new AnthropicProvider(),
+  gemini: () => new GeminiProvider()
 }
 
 /**
  * Register all available translation providers (legacy support)
  */
 export function registerProviders(): void {
-  // Register base providers for backward compatibility
-  Object.values(builtinProviders).forEach((provider) => {
-    providerRegistry.register(provider)
-  })
+  // Register one instance of each SDK provider for backward compatibility.
+  for (const factory of Object.values(builtinFactories)) {
+    providerRegistry.register(factory())
+  }
 
   logger.info('[Providers] Base providers registered')
 }
 
 /**
- * Get a provider instance for a provider config
+ * Get a provider instance for a provider config.
+ *
+ * Resolution is driven by the config's SDK type (not its provider type) so that
+ * builtin templates whose SDK is OpenAI-compatible (Groq, OpenRouter, Together,
+ * Ollama, xAI, DeepSeek, …) are served by the generic OpenAI-compatible provider.
  */
 export function getProviderForConfig(config: ProviderConfig): TranslationProvider | null {
   // Check cache first
@@ -43,37 +49,23 @@ export function getProviderForConfig(config: ProviderConfig): TranslationProvide
     return cached
   }
 
+  const sdkType = providerConfigService.getSdkType(config)
+  const baseUrl = providerConfigService.getBaseUrl(config)
+
   let provider: TranslationProvider | null = null
 
-  if (config.providerType === 'builtin' && config.builtinId) {
-    // Get the builtin provider
-    provider = builtinProviders[config.builtinId] || null
-
-    if (provider && provider.configure) {
-      // Configure with any overrides
-      const baseUrl = providerConfigService.getBaseUrl(config)
-      provider.configure(baseUrl, config.settings)
-    }
-  } else if (config.providerType === 'openai_compatible') {
-    // Create a new OpenAI-compatible provider instance
-    const baseUrl = config.baseUrl
+  if (sdkType === 'openai_compatible') {
     if (!baseUrl) {
       logger.error(`[Providers] OpenAI-compatible provider ${config.id} missing base URL`)
       return null
     }
-
-    provider = new OpenAICompatibleProvider(
-      config.id,
-      config.displayName,
-      baseUrl,
-      config.settings
-    )
+    provider = new OpenAICompatibleProvider(config.id, config.displayName, baseUrl, config.settings)
+  } else {
+    provider = builtinFactories[sdkType]()
+    provider.configure?.(baseUrl, config.settings)
   }
 
-  if (provider) {
-    providerInstances.set(config.id, provider)
-  }
-
+  providerInstances.set(config.id, provider)
   return provider
 }
 

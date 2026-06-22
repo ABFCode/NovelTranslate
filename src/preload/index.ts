@@ -427,12 +427,12 @@ const api = {
     // Get models for a provider config
     getModels: (configId: string) => invoke<ModelInfo[]>('providerConfig:getModels', configId),
 
-    // Fetch models from provider API
-    fetchModels: (configId: string, apiKey: string) =>
+    // Fetch models from provider API (uses a stored key when apiKey is omitted)
+    fetchModels: (configId: string, apiKey?: string) =>
       invoke<ModelInfo[]>('providerConfig:fetchModels', configId, apiKey),
 
-    // Validate connection to a provider
-    validateConnection: (configId: string, apiKey: string) =>
+    // Validate connection to a provider (uses a stored key when apiKey is omitted)
+    validateConnection: (configId: string, apiKey?: string) =>
       invoke<{ valid: boolean; error?: string; models?: number }>(
         'providerConfig:validateConnection',
         configId,
