@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, RefreshCw, Pencil } from 'lucide-react'
+import { Plus, Trash2, RefreshCw, Pencil, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,7 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
   const [validatingId, setValidatingId] = useState<string | null>(null)
   const [editingKey, setEditingKey] = useState<ApiKeyEntry | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [encryptionAvailable, setEncryptionAvailable] = useState(true)
 
   const loadKeys = async () => {
     try {
@@ -34,6 +35,13 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
     loadKeys()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [providerConfigId])
+
+  useEffect(() => {
+    window.api.apiKey
+      .encryptionAvailable()
+      .then(setEncryptionAvailable)
+      .catch(() => setEncryptionAvailable(true))
+  }, [])
 
   const notifyChanged = () => {
     loadKeys()
@@ -82,6 +90,18 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
 
   return (
     <div className="space-y-4">
+      {!encryptionAvailable && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            OS secure storage isn&apos;t available, so API keys are stored with reversible
+            obfuscation rather than encryption. Anyone with access to this machine&apos;s app data
+            could recover them. On Linux, installing a keyring (e.g. gnome-keyring / libsecret)
+            enables encryption.
+          </span>
+        </div>
+      )}
+
       <div className="space-y-2">
         <AnimatePresence>
           {keys.map((key, index) => (

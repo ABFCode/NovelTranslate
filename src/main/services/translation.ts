@@ -11,6 +11,8 @@ import { getMainWindow } from '../window'
 import { executeChain, ChainExecutorOptions } from './chain-executor'
 import { keyManager } from './key-manager'
 import { getSettings } from '../database/repositories/settings.repository'
+import { estimateSingleCost } from './cost-estimator'
+import { checkBudget } from '../database/repositories/budget.repository'
 import { logger } from './logger'
 import type {
   TranslationProgressEvent,
@@ -26,13 +28,17 @@ interface TranslationJob {
   projectId: string
   chapterIds: string[]
   configId: string
+  /** Index of the next chapter to claim. Workers increment this atomically. */
   currentIndex: number
   isPaused: boolean
   isCancelled: boolean
   concurrency: number
   completedCount: number
   errorCount: number
+  skippedCount: number
   totalCost: number
+  /** Set when a hard budget limit halts the run, so remaining workers stop. */
+  budgetStopped: boolean
 }
 
 /**
@@ -82,7 +88,9 @@ export async function startTranslation(
     concurrency: effectiveConcurrency,
     completedCount: 0,
     errorCount: 0,
-    totalCost: 0
+    skippedCount: 0,
+    totalCost: 0,
+    budgetStopped: false
   }
 
   activeJobs.set(projectId, job)
@@ -152,10 +160,11 @@ export function getTranslationStatus(projectId: string): {
   const job = activeJobs.get(projectId)
   if (!job) return null
 
+  const processed = job.completedCount + job.errorCount + job.skippedCount
   return {
     isRunning: !job.isPaused && !job.isCancelled,
     isPaused: job.isPaused,
-    progress: (job.currentIndex / job.chapterIds.length) * 100,
+    progress: job.chapterIds.length > 0 ? (processed / job.chapterIds.length) * 100 : 0,
     completedCount: job.completedCount,
     errorCount: job.errorCount,
     totalCost: job.totalCost
@@ -175,39 +184,42 @@ async function processJob(
   const sourceLanguage = project?.sourceLanguage || 'auto'
   const targetLanguage = project?.targetLanguage || 'en'
 
-  // Process in batches based on concurrency
-  while (job.currentIndex < job.chapterIds.length) {
-    if (job.isPaused || job.isCancelled) {
-      break
-    }
+  // Worker pool: keep `concurrency` chapters in flight at all times. Each worker
+  // pulls the next unclaimed chapter and processes it until the queue drains or
+  // the job is paused/cancelled. This avoids the head-of-line blocking of the
+  // old fixed-batch approach, where a slow chapter stalled its whole batch.
+  const workerCount = Math.max(1, job.concurrency)
 
-    // Get batch of chapters to process
-    const batchIds = job.chapterIds.slice(job.currentIndex, job.currentIndex + job.concurrency)
+  const worker = async (): Promise<void> => {
+    while (true) {
+      if (job.isPaused || job.isCancelled || job.budgetStopped) return
+      // `i = job.currentIndex++` is atomic — no await between read and write.
+      const i = job.currentIndex++
+      if (i >= job.chapterIds.length) return
 
-    // Process batch in parallel
-    await Promise.all(
-      batchIds.map((chapterId) =>
-        translateChapter(
-          job,
-          chapterId,
-          config,
-          apiKey,
-          sourceLanguage,
-          targetLanguage,
-          settings.enableTranslationMemory,
-          settings.enableGlossaryInjection
-        )
+      await translateChapter(
+        job,
+        job.chapterIds[i],
+        config,
+        apiKey,
+        sourceLanguage,
+        targetLanguage,
+        settings.enableTranslationMemory,
+        settings.enableGlossaryInjection
       )
-    )
-
-    job.currentIndex += batchIds.length
+    }
   }
 
-  // Clean up if complete
-  if (job.currentIndex >= job.chapterIds.length && !job.isCancelled) {
+  await Promise.all(Array.from({ length: workerCount }, () => worker()))
+
+  // A paused job is kept alive so resumeTranslation can continue it. Anything
+  // else (complete, cancelled, budget-stopped) is finished — clean it up.
+  if (!job.isPaused) {
     activeJobs.delete(job.projectId)
     logger.info(
-      `[Translation] Completed for project ${job.projectId}: ${job.completedCount} succeeded, ${job.errorCount} failed, $${job.totalCost.toFixed(4)} total cost`
+      `[Translation] Finished for project ${job.projectId}: ${job.completedCount} succeeded, ` +
+        `${job.errorCount} failed, ${job.skippedCount} skipped, $${job.totalCost.toFixed(4)} total cost` +
+        (job.budgetStopped ? ' (stopped: budget limit reached)' : '')
     )
   }
 }
@@ -227,16 +239,33 @@ async function translateChapter(
 ): Promise<void> {
   const mainWindow = getMainWindow()
 
-  // Update status to translating
-  updateChapterStatus(chapterId, 'translating')
-  sendProgressEvent(job.projectId, chapterId, 'translating', 0, 'Translating...', config.id)
-
   try {
     // Get chapter content
     const content = getChapterContent(chapterId)
     if (!content) {
       throw new Error('Chapter content not found')
     }
+
+    // Budget pre-flight: estimate this chapter's cost and refuse to start if a
+    // hard limit would be exceeded. Without this, a "hard limit" budget could be
+    // overspent since spend is only recorded after each call completes.
+    const estimate = estimateSingleCost(content.sourceText, config)
+    const budgetCheck = checkBudget(job.projectId, estimate.costUsd)
+    if (!budgetCheck.allowed) {
+      const message = budgetCheck.warning || 'Budget limit reached'
+      updateChapterStatus(chapterId, 'skipped', message)
+      job.skippedCount++
+      // Halt the whole run — every remaining chapter would hit the same wall.
+      job.budgetStopped = true
+      sendProgressEvent(job.projectId, chapterId, 'skipped', 0, message, config.id)
+      logger.warn(`[Translation] Chapter ${chapterId} skipped: ${message}`)
+      return
+    }
+
+    // Update status to translating (after the budget gate so skipped chapters
+    // don't briefly flip to "translating")
+    updateChapterStatus(chapterId, 'translating')
+    sendProgressEvent(job.projectId, chapterId, 'translating', 0, 'Translating...', config.id)
 
     // Execute translation with chain support
     const options: ChainExecutorOptions = {

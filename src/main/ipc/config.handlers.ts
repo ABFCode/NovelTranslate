@@ -32,7 +32,12 @@ import {
 } from '../database/repositories/template.repository'
 import { listEnabledProviderConfigs } from '../database/repositories/provider-config.repository'
 import { providerConfigService } from '../providers/provider-config.service'
-import { handleIpc } from './utils'
+import { handleIpc, validateInput, assertNonEmptyString } from './utils'
+import {
+  translationConfigSchema,
+  promptTemplateSchema,
+  configImportSchema
+} from '../../shared/validation'
 import { logger } from '../services/logger'
 import type {
   TranslationConfig,
@@ -71,6 +76,7 @@ export function registerConfigHandlers(): void {
 
   // Save a config (create or update)
   handleIpc('config:save', (config: TranslationConfig): TranslationConfig => {
+    validateInput(translationConfigSchema, config, 'config')
     const existing = getConfig(config.id)
 
     if (existing) {
@@ -83,6 +89,7 @@ export function registerConfigHandlers(): void {
 
   // Delete a config
   handleIpc('config:delete', (id: string): void => {
+    assertNonEmptyString(id, 'config id')
     deleteConfig(id)
   })
 
@@ -221,6 +228,7 @@ export function registerConfigHandlers(): void {
     (
       template: Omit<PromptTemplate, 'id' | 'isBuiltIn' | 'usageCount' | 'createdAt'>
     ): PromptTemplate => {
+      validateInput(promptTemplateSchema, template, 'template')
       return createTemplate(template)
     }
   )
@@ -310,6 +318,7 @@ export function registerConfigHandlers(): void {
 
   // Import configs
   handleIpc('config:import', (exportData: ConfigExport): ImportResult => {
+    validateInput(configImportSchema, exportData, 'config import data')
     const result: ImportResult = {
       configsImported: 0,
       configsSkipped: 0,

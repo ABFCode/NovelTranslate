@@ -17,7 +17,8 @@ import {
   resetSpending,
   listProjectBudgets
 } from '../database/repositories/budget.repository'
-import { handleIpc } from './utils'
+import { handleIpc, validateInput, assertNonEmptyString } from './utils'
+import { apiKeySchema, projectBudgetSchema } from '../../shared/validation'
 import { logger } from '../services/logger'
 import type { AppSettings, ProviderInfo, ApiKeyEntry, ProjectBudget, KeyRotationStrategy, KeyValidationResult } from '../../shared/types'
 
@@ -167,6 +168,11 @@ export function registerApiKeyHandlers(): void {
     return keyManager.hasValidKeys(providerConfigId)
   })
 
+  // Whether OS secure storage is available for encrypting keys at rest
+  handleIpc('apikey:encryptionAvailable', (): boolean => {
+    return keyManager.isEncryptionAvailable()
+  })
+
   // Save/Add a new API key
   handleIpc(
     'apikey:save',
@@ -176,6 +182,7 @@ export function registerApiKeyHandlers(): void {
       label?: string,
       priority?: number
     ): Promise<ApiKeyEntry> => {
+      validateInput(apiKeySchema, { providerConfigId, keyValue, label, priority }, 'API key')
       return keyManager.addKey(providerConfigId, keyValue, label, priority)
     }
   )
@@ -273,6 +280,12 @@ export function registerBudgetHandlers(): void {
       alertThreshold?: number,
       hardLimit?: boolean
     ): ProjectBudget => {
+      assertNonEmptyString(projectId, 'project id')
+      validateInput(
+        projectBudgetSchema,
+        { budgetUsd, alertThreshold: alertThreshold ?? 0.8, hardLimit: hardLimit ?? false },
+        'budget'
+      )
       return setProjectBudget(projectId, budgetUsd, alertThreshold, hardLimit)
     }
   )

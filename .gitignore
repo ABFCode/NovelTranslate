@@ -6,6 +6,10 @@ node_modules
 dist
 out
 
+# Go sidecar binary (build artifact - produced by `pnpm sidecar:build`)
+go-sidecar/sidecar
+go-sidecar/sidecar.exe
+
 # Editor/OS
 .DS_Store
 *.swp

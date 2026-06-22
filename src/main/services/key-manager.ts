@@ -204,6 +204,15 @@ export class KeyManager {
   }
 
   /**
+   * Whether OS-level secure storage is available. When false, keys are only
+   * obfuscated (reversible base64) rather than encrypted — common on headless
+   * or keyring-less Linux/WSL setups. Surfaced to the UI so the user can be warned.
+   */
+  isEncryptionAvailable(): boolean {
+    return safeStorage.isEncryptionAvailable()
+  }
+
+  /**
    * Check if a provider has any valid keys
    */
   hasValidKeys(providerConfigId: string): boolean {
@@ -266,7 +275,11 @@ export class KeyManager {
       const encrypted = safeStorage.encryptString(keyValue)
       return encrypted.toString('base64')
     }
-    // Fallback: simple obfuscation (not secure, but better than plaintext)
+    // Fallback: simple obfuscation (not secure, but better than plaintext).
+    // The UI warns the user when this path is active (see apikey:encryptionAvailable).
+    logger.warn(
+      '[KeyManager] OS secure storage unavailable — storing API key with reversible obfuscation only'
+    )
     return Buffer.from(keyValue).toString('base64')
   }
 

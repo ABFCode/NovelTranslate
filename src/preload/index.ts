@@ -347,6 +347,7 @@ const api = {
     get: (keyId: string) => invoke<ApiKeyEntry | null>('apikey:get', keyId),
     getForProvider: (providerConfigId: string) => invoke<string | null>('apikey:getForProvider', providerConfigId),
     hasValidKeys: (providerConfigId: string) => invoke<boolean>('apikey:hasValidKeys', providerConfigId),
+    encryptionAvailable: () => invoke<boolean>('apikey:encryptionAvailable'),
     save: (providerConfigId: string, keyValue: string, label?: string, priority?: number) =>
       invoke<ApiKeyEntry>('apikey:save', providerConfigId, keyValue, label, priority),
     updateValue: (keyId: string, newKeyValue: string) =>

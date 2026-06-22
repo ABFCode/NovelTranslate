@@ -10,6 +10,7 @@ import { getProviderByConfigId } from '../providers'
 import { providerConfigService } from '../providers/provider-config.service'
 import { classifyError, ClassificationResult } from './error-classifier'
 import { executeWithRetry, DEFAULT_RETRY_CONFIG } from './retry-strategy'
+import { getModelPricing } from './cost-estimator'
 import { logger } from './logger'
 import {
   getConfig,
@@ -299,7 +300,7 @@ async function executeWithFallbacks(
 
   const { result, error, attempts, errorType } = await executeWithRetry(
     async () => {
-      return provider.translate({
+      const res = await provider.translate({
         modelId: config.modelId,
         systemPrompt,
         userPrompt,
@@ -308,6 +309,13 @@ async function executeWithFallbacks(
         apiKey,
         baseUrl
       })
+      // Providers report failures in-band (finishReason: 'error') rather than
+      // throwing. Re-throw here so the retry strategy can classify and retry
+      // transient errors (rate limits, timeouts) instead of giving up after one try.
+      if (res.error || res.finishReason === 'error') {
+        throw new Error(res.error || 'Provider returned an error')
+      }
+      return res
     },
     sdkType,
     effectiveRetryConfig,
@@ -323,30 +331,24 @@ async function executeWithFallbacks(
 
   // Handle provider result
   if (result) {
-    // Check for error in result (provider-specific error handling)
-    if (result.error || result.finishReason === 'error') {
-      lastError = result.error
-      lastClassification = classifyError(result.error, sdkType)
-    } else {
-      // Success!
-      const step: ChainExecutionStep = {
-        configId: currentConfigId,
-        configName: config.name,
-        providerConfigId: config.providerConfigId,
-        modelId: config.modelId,
-        attemptNumber: attempts,
-        durationMs,
-        costUsd: calculateCost(result.tokensUsed.input, result.tokensUsed.output, config),
-        retryCount: totalRetries
-      }
-      executionPath.push(step)
+    // Success! (in-band errors are thrown inside executeWithRetry above)
+    const step: ChainExecutionStep = {
+      configId: currentConfigId,
+      configName: config.name,
+      providerConfigId: config.providerConfigId,
+      modelId: config.modelId,
+      attemptNumber: attempts,
+      durationMs,
+      costUsd: calculateCost(result.tokensUsed.input, result.tokensUsed.output, config),
+      retryCount: totalRetries
+    }
+    executionPath.push(step)
 
-      return {
-        success: true,
-        translatedText: result.translatedText,
-        tokensUsed: result.tokensUsed,
-        finalConfigId: currentConfigId
-      }
+    return {
+      success: true,
+      translatedText: result.translatedText,
+      tokensUsed: result.tokensUsed,
+      finalConfigId: currentConfigId
     }
   } else if (error) {
     lastError = error
@@ -458,30 +460,19 @@ IMPORTANT: Always use these translations consistently. Pay attention to gender a
 }
 
 /**
- * Calculate cost based on token usage
- * This is a simplified calculation - actual costs depend on model pricing
+ * Calculate cost based on token usage.
+ * Uses the shared MODEL_PRICING table (via getModelPricing) so recorded spend,
+ * budgets, and pre-flight estimates all agree on a single source of truth.
  */
 function calculateCost(
   inputTokens: number,
   outputTokens: number,
   config: TranslationConfig
 ): number {
-  // Default pricing (very rough estimates - should be fetched from provider)
-  const pricing: Record<string, { input: number; output: number }> = {
-    'gpt-4o': { input: 5, output: 15 },
-    'gpt-4o-mini': { input: 0.15, output: 0.6 },
-    'gpt-4-turbo': { input: 10, output: 30 },
-    'claude-3-5-sonnet-20241022': { input: 3, output: 15 },
-    'claude-3-opus-20240229': { input: 15, output: 75 },
-    'claude-3-haiku-20240307': { input: 0.25, output: 1.25 },
-    'gemini-1.5-pro': { input: 3.5, output: 10.5 },
-    'gemini-1.5-flash': { input: 0.075, output: 0.3 }
-  }
+  const pricing = getModelPricing(config.modelId)
 
-  const modelPricing = pricing[config.modelId] || { input: 1, output: 3 }
-
-  const inputCost = (inputTokens / 1_000_000) * modelPricing.input
-  const outputCost = (outputTokens / 1_000_000) * modelPricing.output
+  const inputCost = (inputTokens / 1_000_000) * pricing.input
+  const outputCost = (outputTokens / 1_000_000) * pricing.output
 
   return inputCost + outputCost
 }

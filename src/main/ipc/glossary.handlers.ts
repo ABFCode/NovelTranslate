@@ -14,7 +14,8 @@ import {
   importGlossaryTerms,
   exportGlossaryTerms
 } from '../database/repositories/glossary.repository'
-import { handleIpc } from './utils'
+import { handleIpc, validateInput, assertNonEmptyString } from './utils'
+import { glossaryTermSchema } from '../../shared/validation'
 import { logger } from '../services/logger'
 import type { GlossaryTerm, GlossarySuggestion, TermType } from '../../shared/types'
 
@@ -56,6 +57,7 @@ export function registerGlossaryHandlers(): void {
   handleIpc(
     'glossary:create',
     (term: Omit<GlossaryTerm, 'id' | 'usageCount' | 'createdAt' | 'updatedAt'>): GlossaryTerm => {
+      validateInput(glossaryTermSchema, term, 'glossary term')
       return createGlossaryTerm(term)
     }
   )
@@ -73,6 +75,7 @@ export function registerGlossaryHandlers(): void {
 
   // Delete a term
   handleIpc('glossary:delete', (id: string): void => {
+    assertNonEmptyString(id, 'glossary term id')
     deleteGlossaryTerm(id)
   })
 

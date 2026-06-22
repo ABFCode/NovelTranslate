@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'child_process'
 import { join } from 'path'
+import { randomBytes } from 'crypto'
 import { app } from 'electron'
 import http from 'http'
 import { logger } from './logger'
@@ -8,6 +9,10 @@ import { logger } from './logger'
 let sidecarProcess: ChildProcess | null = null
 let sidecarPort: number | null = null
 let isConnected = false
+
+// Shared secret sent with every request and verified by the Go sidecar.
+// Regenerated each time the sidecar is (re)started.
+let sidecarToken: string | null = null
 
 // Get path to sidecar binary
 function getSidecarPath(): string {
@@ -33,17 +38,19 @@ function request<T>(path: string, body?: unknown): Promise<T> {
     }
 
     const postData = body ? JSON.stringify(body) : ''
+    const headers: Record<string, string | number> = {
+      ...(sidecarToken ? { 'X-Sidecar-Token': sidecarToken } : {}),
+    }
+    if (body) {
+      headers['Content-Type'] = 'application/json'
+      headers['Content-Length'] = Buffer.byteLength(postData)
+    }
     const options = {
-      hostname: 'localhost',
+      hostname: '127.0.0.1',
       port: sidecarPort,
       path,
       method: body ? 'POST' : 'GET',
-      headers: body
-        ? {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(postData),
-          }
-        : {},
+      headers,
     }
 
     const req = http.request(options, (res) => {
@@ -90,7 +97,7 @@ function streamRequest<T>(
 
     const postData = JSON.stringify(body)
     const options = {
-      hostname: 'localhost',
+      hostname: '127.0.0.1',
       port: sidecarPort,
       path,
       method: 'POST',
@@ -98,6 +105,7 @@ function streamRequest<T>(
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(postData),
         Accept: 'text/event-stream',
+        ...(sidecarToken ? { 'X-Sidecar-Token': sidecarToken } : {}),
       },
     }
 
@@ -158,8 +166,13 @@ export async function startSidecar(): Promise<void> {
     const sidecarPath = getSidecarPath()
     logger.info(`[Sidecar] Starting: ${sidecarPath}`)
 
+    // Fresh shared secret for this sidecar instance, passed via env so it is
+    // not visible in the process argument list.
+    sidecarToken = randomBytes(32).toString('hex')
+
     sidecarProcess = spawn(sidecarPath, ['--port', '0'], {
       stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env, SIDECAR_TOKEN: sidecarToken },
     })
 
     let portReceived = false
@@ -207,6 +220,7 @@ export async function startSidecar(): Promise<void> {
       logger.info(`[Sidecar] Process exited with code ${code}`)
       sidecarProcess = null
       sidecarPort = null
+      sidecarToken = null
       isConnected = false
     })
 
@@ -228,6 +242,7 @@ export function stopSidecar(): void {
     sidecarProcess.kill('SIGTERM')
     sidecarProcess = null
     sidecarPort = null
+    sidecarToken = null
     isConnected = false
   }
 }

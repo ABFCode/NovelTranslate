@@ -10,7 +10,8 @@ import {
   updateOverride,
   deleteOverride
 } from '../database/repositories/memory.repository'
-import { handleIpc } from './utils'
+import { handleIpc, validateInput } from './utils'
+import { translationOverrideSchema } from '../../shared/validation'
 import { logger } from '../services/logger'
 
 /**
@@ -63,6 +64,7 @@ export function registerMemoryHandlers(): void {
   handleIpc(
     'override:create',
     (override: Omit<TranslationOverride, 'id' | 'createdAt'>): TranslationOverride => {
+      validateInput(translationOverrideSchema, override, 'override')
       return createOverride(override)
     }
   )
