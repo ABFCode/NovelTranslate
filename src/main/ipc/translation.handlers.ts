@@ -3,7 +3,6 @@ import {
   pauseTranslation,
   resumeTranslation,
   cancelTranslation,
-  setApiKey,
   previewTranslation,
   type PreviewResult
 } from '../services/translation'
@@ -52,6 +51,3 @@ export function registerTranslationHandlers(): void {
 
   logger.info('[IPC] Translation handlers registered')
 }
-
-// Export setApiKey for use in settings handlers
-export { setApiKey }

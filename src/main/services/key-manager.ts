@@ -5,9 +5,6 @@
  */
 
 import { safeStorage } from 'electron'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { join } from 'path'
-import { app } from 'electron'
 import { logger } from './logger'
 import type { ApiKeyEntry, KeyRotationStrategy, KeyValidationResult } from '../../shared/types'
 import {
@@ -26,9 +23,6 @@ import {
   hasValidKeys
 } from '../database/repositories/apikey.repository'
 import { validateKeyForConfig } from '../providers'
-
-// Legacy key storage path (for migration)
-const LEGACY_KEYS_PATH = join(app.getPath('userData'), 'api-keys.enc')
 
 /**
  * Key Manager class for handling API key operations
@@ -226,46 +220,6 @@ export class KeyManager {
     return listApiKeys(providerConfigId)
   }
 
-  /**
-   * Migrate legacy API keys from file storage to database
-   */
-  async migrateLegacyKeys(): Promise<number> {
-    if (!existsSync(LEGACY_KEYS_PATH)) {
-      return 0
-    }
-
-    try {
-      const legacyKeys = this.loadLegacyKeys()
-      let migrated = 0
-
-      for (const [providerConfigId, keyValue] of legacyKeys) {
-        // Check if provider already has keys
-        const existingKeys = listApiKeys(providerConfigId)
-        if (existingKeys.length > 0) {
-          continue
-        }
-
-        // Add the legacy key
-        await this.addKey(providerConfigId, keyValue, 'Migrated from legacy storage', 0)
-        migrated++
-      }
-
-      // Delete the legacy file after successful migration
-      if (migrated > 0) {
-        try {
-          require('fs').unlinkSync(LEGACY_KEYS_PATH)
-        } catch {
-          // Ignore deletion errors
-        }
-      }
-
-      return migrated
-    } catch (error) {
-      logger.error('[KeyManager] Failed to migrate legacy keys:', error instanceof Error ? error : new Error(String(error)))
-      return 0
-    }
-  }
-
   // ============================================================================
   // Private Methods
   // ============================================================================
@@ -296,70 +250,7 @@ export class KeyManager {
       return null
     }
   }
-
-  private loadLegacyKeys(): Map<string, string> {
-    if (!existsSync(LEGACY_KEYS_PATH)) {
-      return new Map()
-    }
-
-    try {
-      if (!safeStorage.isEncryptionAvailable()) {
-        return new Map()
-      }
-
-      const encrypted = readFileSync(LEGACY_KEYS_PATH)
-      const decrypted = safeStorage.decryptString(encrypted)
-      return new Map(Object.entries(JSON.parse(decrypted)))
-    } catch {
-      return new Map()
-    }
-  }
 }
 
 // Singleton instance
 export const keyManager = new KeyManager()
-
-// ============================================================================
-// Legacy Support Functions
-// ============================================================================
-
-/**
- * Load API keys from legacy file storage
- * @deprecated Use keyManager.getKey() instead
- */
-export function loadApiKeysFromFile(): Map<string, string> {
-  if (!existsSync(LEGACY_KEYS_PATH)) return new Map()
-
-  try {
-    if (!safeStorage.isEncryptionAvailable()) {
-      logger.warn('[KeyManager] Encryption not available')
-      return new Map()
-    }
-
-    const encrypted = readFileSync(LEGACY_KEYS_PATH)
-    const decrypted = safeStorage.decryptString(encrypted)
-    return new Map(Object.entries(JSON.parse(decrypted)))
-  } catch (error) {
-    logger.error('[KeyManager] Failed to load legacy keys:', error instanceof Error ? error : new Error(String(error)))
-    return new Map()
-  }
-}
-
-/**
- * Save API keys to legacy file storage
- * @deprecated Use keyManager.addKey() instead
- */
-export function saveApiKeysToFile(keys: Map<string, string>): void {
-  if (!safeStorage.isEncryptionAvailable()) {
-    logger.warn('[KeyManager] Encryption not available, keys not saved')
-    return
-  }
-
-  try {
-    const json = JSON.stringify(Object.fromEntries(keys))
-    const encrypted = safeStorage.encryptString(json)
-    writeFileSync(LEGACY_KEYS_PATH, encrypted)
-  } catch (error) {
-    logger.error('[KeyManager] Failed to save keys:', error instanceof Error ? error : new Error(String(error)))
-  }
-}

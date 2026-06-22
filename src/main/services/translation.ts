@@ -478,25 +478,3 @@ export async function previewTranslation(
     }
   }
 }
-
-// ============================================================================
-// Legacy API Key Cache (for backward compatibility during migration)
-// ============================================================================
-
-const legacyApiKeyCache = new Map<string, string>()
-
-/**
- * @deprecated Use keyManager.addKey() instead
- */
-export function setApiKey(providerConfigId: string, key: string): void {
-  legacyApiKeyCache.set(providerConfigId, key)
-  // Also add to new key manager
-  keyManager.addKey(providerConfigId, key, 'Legacy key').catch((err) => logger.error('[Translation] Failed to add legacy key', err instanceof Error ? err : new Error(String(err))))
-}
-
-/**
- * @deprecated Use keyManager.getKey() instead
- */
-export function getApiKey(providerConfigId: string): string | null {
-  return legacyApiKeyCache.get(providerConfigId) || null
-}

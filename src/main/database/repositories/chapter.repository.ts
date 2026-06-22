@@ -280,26 +280,6 @@ export function clearChapterTranslationsBulk(chapterIds: string[]): number {
   return clearMany(chapterIds)
 }
 
-/**
- * Search chapters using FTS5
- */
-export function searchChapters(projectId: string, query: string): Chapter[] {
-  const db = getDatabase()
-  
-  // Search in FTS table and join with chapters
-  const stmt = db.prepare(`
-    SELECT c.id, c.project_id, c.spine_index, c.title, c.status, c.error_message, c.created_at
-    FROM chapters c
-    JOIN chapter_content cc ON cc.chapter_id = c.id
-    JOIN chapters_fts fts ON fts.rowid = cc.rowid
-    WHERE c.project_id = ? AND chapters_fts MATCH ?
-    ORDER BY rank
-  `)
-
-  const rows = stmt.all(projectId, query) as ChapterRow[]
-  return rows.map(rowToChapter)
-}
-
 // ============================================================================
 // Internal helpers
 // ============================================================================

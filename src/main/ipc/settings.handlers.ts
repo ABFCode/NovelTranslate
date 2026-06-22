@@ -20,7 +20,7 @@ import {
 import { handleIpc, validateInput, assertNonEmptyString } from './utils'
 import { apiKeySchema, projectBudgetSchema } from '../../shared/validation'
 import { logger } from '../services/logger'
-import type { AppSettings, ProviderInfo, ApiKeyEntry, ProjectBudget, KeyRotationStrategy, KeyValidationResult } from '../../shared/types'
+import type { AppSettings, ApiKeyEntry, ProjectBudget, KeyRotationStrategy, KeyValidationResult } from '../../shared/types'
 
 /**
  * Register settings-related IPC handlers
@@ -240,26 +240,6 @@ export function registerApiKeyHandlers(): void {
   })
 
   logger.info('[IPC] API Key handlers registered')
-}
-
-/**
- * Register provider handlers (legacy - returns extended provider info)
- */
-export function registerProviderHandlers(): void {
-  // List available providers - now returns from provider configs
-  handleIpc('provider:list', (): ProviderInfo[] => {
-    // Import dynamically to avoid circular dependencies
-    const { providerConfigService } = require('../providers/provider-config.service')
-    const providers = providerConfigService.listProvidersExtended()
-    // Convert to legacy ProviderInfo format
-    return providers.map((p: { id: string; name: string; models: Array<{ id: string; name: string; contextWindow: number; inputPricePerMillion?: number; outputPricePerMillion?: number }> }) => ({
-      id: p.id,
-      name: p.name,
-      models: p.models
-    }))
-  })
-
-  logger.info('[IPC] Provider handlers registered')
 }
 
 /**

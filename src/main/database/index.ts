@@ -1,8 +1,9 @@
 import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
+import { randomUUID } from 'crypto'
 import { existsSync, mkdirSync, unlinkSync } from 'fs'
-import { SCHEMA_SQL, SCHEMA_VERSION, SEED_PROMPT_TEMPLATES, DEFAULT_RETRY_CONFIG } from './schema'
+import { SCHEMA_SQL, SCHEMA_VERSION, SEED_PROMPT_TEMPLATES } from './schema'
 import { logger } from '../services/logger'
 
 let db: Database.Database | null = null
@@ -87,29 +88,6 @@ function seedDatabase(database: Database.Database): void {
     insertMany(SEED_PROMPT_TEMPLATES)
     logger.info(`[Database] Seeded ${SEED_PROMPT_TEMPLATES.length} prompt templates`)
   }
-
-  // Seed default retry config
-  const existingRetryConfig = database
-    .prepare('SELECT COUNT(*) as count FROM retry_configs WHERE config_id IS NULL')
-    .get() as { count: number }
-
-  if (existingRetryConfig.count === 0) {
-    logger.info('[Database] Seeding default retry config...')
-    database
-      .prepare(
-        `
-      INSERT INTO retry_configs (
-        id, config_id, strategy, max_attempts, base_delay_ms, max_delay_ms,
-        jitter_factor, retryable_errors_json, created_at
-      ) VALUES (
-        @id, @config_id, @strategy, @max_attempts, @base_delay_ms, @max_delay_ms,
-        @jitter_factor, @retryable_errors_json, datetime('now')
-      )
-    `
-      )
-      .run(DEFAULT_RETRY_CONFIG)
-    logger.info('[Database] Seeded default retry config')
-  }
 }
 
 /**
@@ -150,7 +128,7 @@ export function initDatabase(): Database.Database {
     INSERT OR IGNORE INTO migrations (version, name)
     VALUES (?, ?)
   `)
-  migrationStmt.run(SCHEMA_VERSION, 'config_chains_testing_center')
+  migrationStmt.run(SCHEMA_VERSION, 'drop_unused_tables')
 
   // Seed initial data
   seedDatabase(db)
@@ -182,14 +160,10 @@ export function closeDatabase(): void {
 }
 
 /**
- * Generate a unique ID (simple UUID v4 implementation)
+ * Generate a unique ID (RFC 4122 v4 UUID, cryptographically random)
  */
 export function generateId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
+  return randomUUID()
 }
 
 // ============================================================================

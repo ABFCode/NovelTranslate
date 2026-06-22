@@ -681,8 +681,6 @@ export type IpcChannel =
   | 'apikey:delete'
   | 'apikey:validate'
   | 'apikey:setRotationStrategy'
-  // Provider channels
-  | 'provider:list'
   // Provider Config channels
   | 'providerConfig:getTemplates'
   | 'providerConfig:list'

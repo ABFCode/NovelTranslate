@@ -11,7 +11,6 @@ import type {
   ProjectConfig,
   PromptTemplate,
   AppSettings,
-  ProviderInfo,
   ProviderInfoExtended,
   ProviderConfig,
   BuiltinProviderTemplate,
@@ -388,14 +387,7 @@ const api = {
   },
 
   // =========================================================================
-  // Provider APIs (Legacy)
-  // =========================================================================
-  provider: {
-    list: () => invoke<ProviderInfo[]>('provider:list')
-  },
-
-  // =========================================================================
-  // Provider Config APIs (New)
+  // Provider Config APIs
   // =========================================================================
   providerConfig: {
     // Get builtin provider templates

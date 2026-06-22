@@ -139,49 +139,6 @@ export const apiKeySchema = z.object({
 export type ApiKeyFormData = z.infer<typeof apiKeySchema>
 
 // ============================================================================
-// Retry Config Schemas
-// ============================================================================
-
-export const retryConfigSchema = z.object({
-  strategy: z.enum(['none', 'immediate', 'linear', 'exponential', 'exponential_jitter']),
-  maxAttempts: z
-    .number()
-    .int('Max attempts must be a whole number')
-    .min(1, 'Max attempts must be at least 1')
-    .max(10, 'Max attempts should not exceed 10'),
-  baseDelayMs: z
-    .number()
-    .int('Base delay must be a whole number')
-    .min(0, 'Base delay must be 0 or greater')
-    .max(60000, 'Base delay should not exceed 60 seconds'),
-  maxDelayMs: z
-    .number()
-    .int('Max delay must be a whole number')
-    .min(1000, 'Max delay must be at least 1 second')
-    .max(300000, 'Max delay should not exceed 5 minutes'),
-  jitterFactor: z
-    .number()
-    .min(0, 'Jitter factor must be between 0 and 1')
-    .max(1, 'Jitter factor must be between 0 and 1'),
-  retryableErrors: z
-    .array(
-      z.enum([
-        'content_block',
-        'rate_limit',
-        'timeout',
-        'auth_error',
-        'quota_exceeded',
-        'context_length',
-        'network_error',
-        'unknown'
-      ])
-    )
-    .min(1, 'Select at least one error type to retry')
-})
-
-export type RetryConfigFormData = z.infer<typeof retryConfigSchema>
-
-// ============================================================================
 // Settings Schemas
 // ============================================================================
 

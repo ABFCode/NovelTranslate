@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -15,6 +15,43 @@ if (isWSL) {
 }
 
 let mainWindow: BrowserWindow | null = null
+
+/**
+ * Apply a Content-Security-Policy to all renderer responses. The renderer never
+ * talks to the network directly (all provider/API calls go through the main
+ * process over IPC), so the policy can be tight. Dev needs the extra allowances
+ * for Vite's HMR (inline/eval scripts + websocket); production is locked down.
+ */
+function setupContentSecurityPolicy(): void {
+  const devCsp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self' ws: http://localhost:* http://127.0.0.1:*",
+  ].join('; ')
+
+  const prodCsp = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self'",
+  ].join('; ')
+
+  const csp = is.dev ? devCsp : prodCsp
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [csp],
+      },
+    })
+  })
+}
 
 function createWindow(): void {
   // Create the browser window with security settings
@@ -56,6 +93,19 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
+  // Block in-page navigation away from the app's own content. Any attempt to
+  // navigate elsewhere (e.g. an injected or mistyped link) is cancelled and
+  // opened in the user's real browser instead.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const rendererUrl = process.env['ELECTRON_RENDERER_URL']
+    const isInternal =
+      url.startsWith('file://') || (is.dev && rendererUrl ? url.startsWith(rendererUrl) : false)
+    if (!isInternal) {
+      event.preventDefault()
+      shell.openExternal(url)
+    }
+  })
+
   // HMR for renderer based on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -70,6 +120,9 @@ function createWindow(): void {
 app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.noveltranslate')
+
+  // Apply Content-Security-Policy to renderer responses
+  setupContentSecurityPolicy()
 
   // Initialize database
   try {
