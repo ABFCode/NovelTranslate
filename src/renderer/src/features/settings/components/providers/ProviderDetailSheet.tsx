@@ -36,7 +36,6 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
   const [displayName, setDisplayName] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
   const [isEnabled, setIsEnabled] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
   const [models, setModels] = useState<ModelInfo[]>([])
   const [newModelId, setNewModelId] = useState('')
   const [newModelName, setNewModelName] = useState('')
@@ -70,23 +69,42 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
       : null
   const baseUrlEditable = config?.providerType === 'openai_compatible' || (template?.supportsBaseUrlOverride ?? false)
 
-  const handleSave = async () => {
+  // Changes auto-save: toggles apply immediately, text fields save on blur.
+  const persistSettings = async (patch: Partial<ProviderConfig>) => {
     if (!config) return
-    setIsSaving(true)
     try {
-      await window.api.providerConfig.update(config.id, {
-        displayName: displayName.trim() || config.displayName,
-        baseUrl: baseUrl.trim() || undefined,
-        isEnabled
-      })
-      toast.success('Provider updated')
+      await window.api.providerConfig.update(config.id, patch)
       onChanged()
     } catch (error) {
       toast.error('Failed to update provider')
       console.error(error)
-    } finally {
-      setIsSaving(false)
     }
+  }
+
+  const handleNameBlur = () => {
+    if (!config) return
+    const next = displayName.trim()
+    if (!next) {
+      setDisplayName(config.displayName) // don't allow an empty name; revert
+      return
+    }
+    if (next !== config.displayName) {
+      persistSettings({ displayName: next })
+    }
+  }
+
+  const handleBaseUrlBlur = () => {
+    if (!config) return
+    const next = baseUrl.trim()
+    if (next !== (config.baseUrl ?? '')) {
+      // Empty string clears the override (builtins fall back to the template URL).
+      persistSettings({ baseUrl: next })
+    }
+  }
+
+  const handleToggleEnabled = (checked: boolean) => {
+    setIsEnabled(checked)
+    persistSettings({ isEnabled: checked })
   }
 
   const handleDelete = async () => {
@@ -170,7 +188,12 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
             <section className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="pd-name">Display Name</Label>
-                <Input id="pd-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+                <Input
+                  id="pd-name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  onBlur={handleNameBlur}
+                />
               </div>
 
               <div className="space-y-2">
@@ -181,6 +204,7 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
                   disabled={!baseUrlEditable}
                   placeholder={template?.defaultBaseUrl || 'https://api.example.com/v1'}
                   onChange={(e) => setBaseUrl(e.target.value)}
+                  onBlur={handleBaseUrlBlur}
                 />
                 {!baseUrlEditable && (
                   <p className="text-xs text-muted-foreground">
@@ -196,12 +220,8 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
                     Disabled providers can&apos;t be selected for new configs.
                   </p>
                 </div>
-                <Switch checked={isEnabled} onCheckedChange={setIsEnabled} />
+                <Switch checked={isEnabled} onCheckedChange={handleToggleEnabled} />
               </div>
-
-              <Button onClick={handleSave} disabled={isSaving || !config}>
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </Button>
             </section>
 
             <Separator />

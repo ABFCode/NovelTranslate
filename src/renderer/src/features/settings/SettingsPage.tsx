@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Settings, Cloud, Palette, Zap, Save } from 'lucide-react'
+import { Settings, Cloud, Palette, Zap, Check, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -24,12 +23,19 @@ export function SettingsPage() {
   const { isAdvanced } = useUIMode()
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [configs, setConfigs] = useState<TranslationConfig[]>([])
-  const [isSaving, setIsSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   useEffect(() => {
     loadSettings()
     loadConfigs()
   }, [])
+
+  // Briefly show the "Saved" confirmation, then fade back to idle.
+  useEffect(() => {
+    if (saveStatus !== 'saved') return
+    const timer = setTimeout(() => setSaveStatus('idle'), 2000)
+    return () => clearTimeout(timer)
+  }, [saveStatus])
 
   const loadSettings = async () => {
     if (!window.api) {
@@ -56,16 +62,20 @@ export function SettingsPage() {
     }
   }
 
-  const handleSaveSettings = async () => {
+  // Settings auto-save: each change is persisted immediately.
+  const updateSettings = async (patch: Partial<AppSettings>) => {
     if (!settings) return
-    setIsSaving(true)
+    setSettings({ ...settings, ...patch })
+    setSaveStatus('saving')
     try {
-      await window.api.settings.save(settings)
-      toast.success('Settings saved')
+      const saved = await window.api.settings.save(patch)
+      setSettings(saved)
+      setSaveStatus('saved')
     } catch (error) {
+      setSaveStatus('error')
       toast.error('Failed to save settings')
+      console.error('Failed to save settings:', error)
     }
-    setIsSaving(false)
   }
 
   if (!settings) {
@@ -87,10 +97,26 @@ export function SettingsPage() {
           </h1>
           <p className="page-subtitle">Configure your providers and app preferences</p>
         </div>
-        <Button onClick={handleSaveSettings} disabled={isSaving}>
-          <Save className="mr-2 h-4 w-4" />
-          {isSaving ? 'Saving...' : 'Save Changes'}
-        </Button>
+        <div className="h-5 text-sm text-muted-foreground" aria-live="polite">
+          {saveStatus === 'saving' && (
+            <span className="flex items-center gap-1.5">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Saving…
+            </span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="flex items-center gap-1.5">
+              <Check className="h-3.5 w-3.5 text-green-600" />
+              Saved
+            </span>
+          )}
+          {saveStatus === 'error' && (
+            <span className="flex items-center gap-1.5 text-destructive">
+              <AlertCircle className="h-3.5 w-3.5" />
+              Couldn&apos;t save
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -140,7 +166,7 @@ export function SettingsPage() {
                   <Select
                     value={settings.defaultConfigId || ''}
                     onValueChange={(value) =>
-                      setSettings({ ...settings, defaultConfigId: value || undefined })
+                      updateSettings({ defaultConfigId: value || undefined })
                     }
                   >
                     <SelectTrigger className="w-60">
@@ -169,7 +195,7 @@ export function SettingsPage() {
                   <Select
                     value={String(settings.translationConcurrency)}
                     onValueChange={(value) =>
-                      setSettings({ ...settings, translationConcurrency: Number(value) })
+                      updateSettings({ translationConcurrency: Number(value) })
                     }
                   >
                     <SelectTrigger className="w-24">
@@ -203,7 +229,7 @@ export function SettingsPage() {
                   <Switch
                     checked={settings.enableTranslationMemory}
                     onCheckedChange={(checked) =>
-                      setSettings({ ...settings, enableTranslationMemory: checked })
+                      updateSettings({ enableTranslationMemory: checked })
                     }
                   />
                 </div>
@@ -220,7 +246,7 @@ export function SettingsPage() {
                   <Switch
                     checked={settings.enableGlossaryInjection}
                     onCheckedChange={(checked) =>
-                      setSettings({ ...settings, enableGlossaryInjection: checked })
+                      updateSettings({ enableGlossaryInjection: checked })
                     }
                   />
                 </div>
@@ -237,7 +263,7 @@ export function SettingsPage() {
                   <Switch
                     checked={settings.showCostEstimates}
                     onCheckedChange={(checked) =>
-                      setSettings({ ...settings, showCostEstimates: checked })
+                      updateSettings({ showCostEstimates: checked })
                     }
                   />
                 </div>
@@ -258,7 +284,7 @@ export function SettingsPage() {
                   <Select
                     value={settings.theme}
                     onValueChange={(value: 'light' | 'dark' | 'system') =>
-                      setSettings({ ...settings, theme: value })
+                      updateSettings({ theme: value })
                     }
                   >
                     <SelectTrigger className="w-40">
@@ -312,7 +338,7 @@ export function SettingsPage() {
                     <Select
                       value={settings.keyRotationStrategy}
                       onValueChange={(value: 'priority' | 'round_robin' | 'least_recently_used') =>
-                        setSettings({ ...settings, keyRotationStrategy: value })
+                        updateSettings({ keyRotationStrategy: value })
                       }
                     >
                       <SelectTrigger className="w-48">
@@ -344,7 +370,7 @@ export function SettingsPage() {
                     <Select
                       value={String(settings.autoSaveInterval)}
                       onValueChange={(value) =>
-                        setSettings({ ...settings, autoSaveInterval: Number(value) })
+                        updateSettings({ autoSaveInterval: Number(value) })
                       }
                     >
                       <SelectTrigger className="w-40">
@@ -377,7 +403,7 @@ export function SettingsPage() {
                     <Select
                       value={settings.logLevel}
                       onValueChange={(value: 'debug' | 'info' | 'warn' | 'error') =>
-                        setSettings({ ...settings, logLevel: value })
+                        updateSettings({ logLevel: value })
                       }
                     >
                       <SelectTrigger className="w-32">
@@ -404,7 +430,7 @@ export function SettingsPage() {
                     <Switch
                       checked={settings.enableFileLogging}
                       onCheckedChange={(checked) =>
-                        setSettings({ ...settings, enableFileLogging: checked })
+                        updateSettings({ enableFileLogging: checked })
                       }
                     />
                   </div>
