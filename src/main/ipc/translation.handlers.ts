@@ -1,14 +1,13 @@
+import { logger } from '../services/logger'
 import {
-  startTranslation,
-  pauseTranslation,
-  resumeTranslation,
   cancelTranslation,
-  setApiKey,
+  type PreviewResult,
+  pauseTranslation,
   previewTranslation,
-  type PreviewResult
+  resumeTranslation,
+  startTranslation,
 } from '../services/translation'
 import { handleIpc } from './utils'
-import { logger } from '../services/logger'
 
 /**
  * Register translation-related IPC handlers
@@ -52,6 +51,3 @@ export function registerTranslationHandlers(): void {
 
   logger.info('[IPC] Translation handlers registered')
 }
-
-// Export setApiKey for use in settings handlers
-export { setApiKey }

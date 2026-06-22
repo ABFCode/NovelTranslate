@@ -1,13 +1,18 @@
-import { spawn, ChildProcess } from 'child_process'
-import { join } from 'path'
+import { type ChildProcess, spawn } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
+import http from 'node:http'
+import { join } from 'node:path'
 import { app } from 'electron'
-import http from 'http'
 import { logger } from './logger'
 
 // Sidecar state
 let sidecarProcess: ChildProcess | null = null
 let sidecarPort: number | null = null
 let isConnected = false
+
+// Shared secret sent with every request and verified by the Go sidecar.
+// Regenerated each time the sidecar is (re)started.
+let sidecarToken: string | null = null
 
 // Get path to sidecar binary
 function getSidecarPath(): string {
@@ -33,17 +38,19 @@ function request<T>(path: string, body?: unknown): Promise<T> {
     }
 
     const postData = body ? JSON.stringify(body) : ''
+    const headers: Record<string, string | number> = {
+      ...(sidecarToken ? { 'X-Sidecar-Token': sidecarToken } : {}),
+    }
+    if (body) {
+      headers['Content-Type'] = 'application/json'
+      headers['Content-Length'] = Buffer.byteLength(postData)
+    }
     const options = {
-      hostname: 'localhost',
+      hostname: '127.0.0.1',
       port: sidecarPort,
       path,
       method: body ? 'POST' : 'GET',
-      headers: body
-        ? {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(postData),
-          }
-        : {},
+      headers,
     }
 
     const req = http.request(options, (res) => {
@@ -57,7 +64,7 @@ function request<T>(path: string, body?: unknown): Promise<T> {
         try {
           const parsed = JSON.parse(data)
           resolve(parsed as T)
-        } catch (error) {
+        } catch (_error) {
           reject(new Error(`Invalid JSON response: ${data}`))
         }
       })
@@ -77,11 +84,7 @@ function request<T>(path: string, body?: unknown): Promise<T> {
 /**
  * Make an SSE streaming request to the sidecar
  */
-function streamRequest<T>(
-  path: string,
-  body: unknown,
-  onEvent: (event: T) => void
-): Promise<void> {
+function streamRequest<T>(path: string, body: unknown, onEvent: (event: T) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!sidecarPort) {
       reject(new Error('Sidecar not running'))
@@ -90,7 +93,7 @@ function streamRequest<T>(
 
     const postData = JSON.stringify(body)
     const options = {
-      hostname: 'localhost',
+      hostname: '127.0.0.1',
       port: sidecarPort,
       path,
       method: 'POST',
@@ -98,6 +101,7 @@ function streamRequest<T>(
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(postData),
         Accept: 'text/event-stream',
+        ...(sidecarToken ? { 'X-Sidecar-Token': sidecarToken } : {}),
       },
     }
 
@@ -116,7 +120,7 @@ function streamRequest<T>(
             try {
               const data = JSON.parse(eventStr.slice(6))
               onEvent(data as T)
-            } catch (e) {
+            } catch (_e) {
               logger.error(`[Sidecar] Failed to parse SSE event: ${eventStr}`)
             }
           }
@@ -129,7 +133,7 @@ function streamRequest<T>(
           try {
             const data = JSON.parse(buffer.slice(6))
             onEvent(data as T)
-          } catch (e) {
+          } catch (_e) {
             // Ignore incomplete final event
           }
         }
@@ -158,8 +162,13 @@ export async function startSidecar(): Promise<void> {
     const sidecarPath = getSidecarPath()
     logger.info(`[Sidecar] Starting: ${sidecarPath}`)
 
+    // Fresh shared secret for this sidecar instance, passed via env so it is
+    // not visible in the process argument list.
+    sidecarToken = randomBytes(32).toString('hex')
+
     sidecarProcess = spawn(sidecarPath, ['--port', '0'], {
       stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env, SIDECAR_TOKEN: sidecarToken },
     })
 
     let portReceived = false
@@ -207,6 +216,7 @@ export async function startSidecar(): Promise<void> {
       logger.info(`[Sidecar] Process exited with code ${code}`)
       sidecarProcess = null
       sidecarPort = null
+      sidecarToken = null
       isConnected = false
     })
 
@@ -228,6 +238,7 @@ export function stopSidecar(): void {
     sidecarProcess.kill('SIGTERM')
     sidecarProcess = null
     sidecarPort = null
+    sidecarToken = null
     isConnected = false
   }
 }
@@ -288,50 +299,44 @@ export async function parseEpub(
   let result: EpubResult | null = null
   let error: string | null = null
 
-  await streamRequest<SSEProgressEvent>(
-    '/epub/parse',
-    { file_path: filePath },
-    (event) => {
-      switch (event.type) {
-        case 'progress':
-          if (onProgress) {
-            onProgress({
-              current: event.current || 0,
-              total: event.total || 100,
-              message: event.message || '',
-            })
-          }
-          break
+  await streamRequest<SSEProgressEvent>('/epub/parse', { file_path: filePath }, (event) => {
+    switch (event.type) {
+      case 'progress':
+        if (onProgress) {
+          onProgress({
+            current: event.current || 0,
+            total: event.total || 100,
+            message: event.message || '',
+          })
+        }
+        break
 
-        case 'complete':
-          if (onProgress) {
-            onProgress({
-              current: 100,
-              total: 100,
-              message: 'Complete',
-            })
-          }
-          result = {
-            metadata: event.metadata!,
-            chapters: (event.chapters || []).map((ch) => ({
-              spineIndex: ch.spine_index,
-              title: ch.title,
-              content: ch.content,
-              wordCount: ch.word_count,
-            })),
-            coverImage: event.cover_image
-              ? Buffer.from(event.cover_image)
-              : undefined,
-            coverContentType: event.cover_content_type,
-          }
-          break
+      case 'complete':
+        if (onProgress) {
+          onProgress({
+            current: 100,
+            total: 100,
+            message: 'Complete',
+          })
+        }
+        result = {
+          metadata: event.metadata!,
+          chapters: (event.chapters || []).map((ch) => ({
+            spineIndex: ch.spine_index,
+            title: ch.title,
+            content: ch.content,
+            wordCount: ch.word_count,
+          })),
+          coverImage: event.cover_image ? Buffer.from(event.cover_image) : undefined,
+          coverContentType: event.cover_content_type,
+        }
+        break
 
-        case 'error':
-          error = event.error || 'Unknown error'
-          break
-      }
+      case 'error':
+        error = event.error || 'Unknown error'
+        break
     }
-  )
+  })
 
   if (error) {
     throw new Error(error)

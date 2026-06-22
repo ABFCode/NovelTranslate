@@ -1,50 +1,55 @@
-import {
-  getConfig,
-  getConfigWithFallbacks,
-  listConfigs,
-  createConfig,
-  updateConfig,
-  deleteConfig,
-  getDefaultConfig,
-  setDefaultConfig,
-  getFallbacksForConfig,
-  createFallback,
-  updateFallback,
-  deleteFallback,
-  getSnapshotsForConfig,
-  getSnapshot,
-  restoreFromSnapshot,
-  createConfigSnapshot,
-  getProjectConfigs,
-  getProjectDefaultConfig,
-  assignConfigToProject,
-  removeConfigFromProject,
-  wouldCreateCycle
-} from '../database'
-import {
-  listTemplates,
-  getTemplate,
-  createTemplate,
-  updateTemplate,
-  deleteTemplate,
-  cloneTemplate,
-  incrementTemplateUsage
-} from '../database/repositories/template.repository'
-import { listEnabledProviderConfigs } from '../database/repositories/provider-config.repository'
-import { providerConfigService } from '../providers/provider-config.service'
-import { handleIpc } from './utils'
-import { logger } from '../services/logger'
 import type {
-  TranslationConfig,
+  ConfigExport,
   ConfigFallback,
   ConfigSnapshot,
   ConfigWithFallbacks,
-  ProjectConfig,
   FallbackConditionType,
+  ImportResult,
+  ProjectConfig,
   PromptTemplate,
-  ConfigExport,
-  ImportResult
+  TranslationConfig,
 } from '../../shared/types'
+import {
+  configImportSchema,
+  promptTemplateSchema,
+  translationConfigSchema,
+} from '../../shared/validation'
+import {
+  assignConfigToProject,
+  createConfig,
+  createConfigSnapshot,
+  createFallback,
+  deleteConfig,
+  deleteFallback,
+  getConfig,
+  getConfigWithFallbacks,
+  getDefaultConfig,
+  getFallbacksForConfig,
+  getProjectConfigs,
+  getProjectDefaultConfig,
+  getSnapshot,
+  getSnapshotsForConfig,
+  listConfigs,
+  removeConfigFromProject,
+  restoreFromSnapshot,
+  setDefaultConfig,
+  updateConfig,
+  updateFallback,
+  wouldCreateCycle,
+} from '../database'
+import { listEnabledProviderConfigs } from '../database/repositories/provider-config.repository'
+import {
+  cloneTemplate,
+  createTemplate,
+  deleteTemplate,
+  getTemplate,
+  incrementTemplateUsage,
+  listTemplates,
+  updateTemplate,
+} from '../database/repositories/template.repository'
+import { providerConfigService } from '../providers/provider-config.service'
+import { logger } from '../services/logger'
+import { assertNonEmptyString, handleIpc, validateInput } from './utils'
 
 /**
  * Register config-related IPC handlers
@@ -71,6 +76,7 @@ export function registerConfigHandlers(): void {
 
   // Save a config (create or update)
   handleIpc('config:save', (config: TranslationConfig): TranslationConfig => {
+    validateInput(translationConfigSchema, config, 'config')
     const existing = getConfig(config.id)
 
     if (existing) {
@@ -83,6 +89,7 @@ export function registerConfigHandlers(): void {
 
   // Delete a config
   handleIpc('config:delete', (id: string): void => {
+    assertNonEmptyString(id, 'config id')
     deleteConfig(id)
   })
 
@@ -121,10 +128,7 @@ export function registerConfigHandlers(): void {
   // Update a fallback
   handleIpc(
     'config:updateFallback',
-    (
-      id: string,
-      updates: Partial<Omit<ConfigFallback, 'id' | 'configId' | 'createdAt'>>
-    ): void => {
+    (id: string, updates: Partial<Omit<ConfigFallback, 'id' | 'configId' | 'createdAt'>>): void => {
       updateFallback(id, updates)
     }
   )
@@ -186,12 +190,7 @@ export function registerConfigHandlers(): void {
   // Assign a config to a project
   handleIpc(
     'projectConfig:assign',
-    (
-      projectId: string,
-      configId: string,
-      isDefault: boolean,
-      priority: number
-    ): ProjectConfig => {
+    (projectId: string, configId: string, isDefault: boolean, priority: number): ProjectConfig => {
       return assignConfigToProject(projectId, configId, isDefault, priority)
     }
   )
@@ -221,6 +220,7 @@ export function registerConfigHandlers(): void {
     (
       template: Omit<PromptTemplate, 'id' | 'isBuiltIn' | 'usageCount' | 'createdAt'>
     ): PromptTemplate => {
+      validateInput(promptTemplateSchema, template, 'template')
       return createTemplate(template)
     }
   )
@@ -259,11 +259,12 @@ export function registerConfigHandlers(): void {
     // provider-agnostic, so default to the first enabled provider config.
     const providerConfigs = listEnabledProviderConfigs()
     if (providerConfigs.length === 0) {
-      throw new Error('No provider configured. Add a provider before creating a config from a template.')
+      throw new Error(
+        'No provider configured. Add a provider before creating a config from a template.'
+      )
     }
     const defaultProvider = providerConfigs[0]
-    const defaultModel =
-      providerConfigService.getModelsForProvider(defaultProvider)[0]?.id ?? ''
+    const defaultModel = providerConfigService.getModelsForProvider(defaultProvider)[0]?.id ?? ''
 
     // Create a config from the template
     return createConfig({
@@ -273,7 +274,7 @@ export function registerConfigHandlers(): void {
       systemPrompt: template.systemPrompt,
       userPromptTemplate: template.userPromptTemplate,
       temperature: template.suggestedTemperature,
-      maxTokens: template.suggestedMaxTokens
+      maxTokens: template.suggestedMaxTokens,
     })
   })
 
@@ -301,22 +302,23 @@ export function registerConfigHandlers(): void {
           return {
             fallbackConfigName: fbConfig?.name || 'Unknown',
             priority: fb.priority,
-            conditionType: fb.conditionType
+            conditionType: fb.conditionType,
           }
-        })
-      }))
+        }),
+      })),
     }
   })
 
   // Import configs
   handleIpc('config:import', (exportData: ConfigExport): ImportResult => {
+    validateInput(configImportSchema, exportData, 'config import data')
     const result: ImportResult = {
       configsImported: 0,
       configsSkipped: 0,
       templatesImported: 0,
       termsImported: 0,
       warnings: [],
-      errors: []
+      errors: [],
     }
 
     const configNameToId = new Map<string, string>()
@@ -331,7 +333,9 @@ export function registerConfigHandlers(): void {
         let configName = configData.name
         if (existing) {
           configName = `${configData.name} (imported)`
-          result.warnings.push(`Config "${configData.name}" already exists, importing as "${configName}"`)
+          result.warnings.push(
+            `Config "${configData.name}" already exists, importing as "${configName}"`
+          )
         }
 
         const newConfig = createConfig({
@@ -341,7 +345,7 @@ export function registerConfigHandlers(): void {
           systemPrompt: configData.systemPrompt,
           userPromptTemplate: configData.userPromptTemplate,
           temperature: configData.temperature,
-          maxTokens: configData.maxTokens
+          maxTokens: configData.maxTokens,
         })
 
         configNameToId.set(configData.name, newConfig.id)

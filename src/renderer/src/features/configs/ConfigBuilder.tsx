@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from '@tanstack/react-router'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { motion, AnimatePresence } from 'motion/react'
-import { useConfigsStore } from './configs.store'
-import { useFeatureMode } from '@/contexts/UIModeContext'
-import { ShowAdvancedToggle, AdvancedSection } from '@/components/ModeToggle'
+import { useNavigate, useParams } from '@tanstack/react-router'
+import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { AdvancedSection, ShowAdvancedToggle } from '@/components/ModeToggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,16 +12,21 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { translationConfigSchema, type TranslationConfigFormData } from '../../../../shared/validation'
+import { useFeatureMode } from '@/contexts/UIModeContext'
 import type {
-  TranslationConfig,
   ConfigFallback,
+  FallbackConditionType,
   ProviderInfoExtended,
-  FallbackConditionType
+  TranslationConfig,
 } from '../../../../shared/types'
+import {
+  type TranslationConfigFormData,
+  translationConfigSchema,
+} from '../../../../shared/validation'
+import { useConfigsStore } from './configs.store'
 
 const CONDITION_TYPES: { value: FallbackConditionType; label: string }[] = [
   { value: 'any', label: 'Any Error' },
@@ -33,7 +36,7 @@ const CONDITION_TYPES: { value: FallbackConditionType; label: string }[] = [
   { value: 'auth_error', label: 'Auth Error' },
   { value: 'quota_exceeded', label: 'Quota Exceeded' },
   { value: 'context_length', label: 'Context Too Long' },
-  { value: 'network_error', label: 'Network Error' }
+  { value: 'network_error', label: 'Network Error' },
 ]
 
 export function ConfigBuilder(): JSX.Element {
@@ -43,8 +46,15 @@ export function ConfigBuilder(): JSX.Element {
   const isNew = configId === 'new' || !configId
 
   const { isAdvanced } = useFeatureMode('configs')
-  const { configs, selectedConfig, isSaving, fetchConfigs, selectConfig, createConfig, updateConfig } =
-    useConfigsStore()
+  const {
+    configs,
+    selectedConfig,
+    isSaving,
+    fetchConfigs,
+    selectConfig,
+    createConfig,
+    updateConfig,
+  } = useConfigsStore()
 
   const [providers, setProviders] = useState<ProviderInfoExtended[]>([])
 
@@ -58,8 +68,8 @@ export function ConfigBuilder(): JSX.Element {
       userPromptTemplate:
         'Translate the following text from {{sourceLanguage}} to {{targetLanguage}}:\n\n{{text}}',
       temperature: 0.7,
-      maxTokens: undefined
-    }
+      maxTokens: undefined,
+    },
   })
 
   // Fetch providers on mount
@@ -99,7 +109,7 @@ export function ConfigBuilder(): JSX.Element {
         systemPrompt: selectedConfig.systemPrompt,
         userPromptTemplate: selectedConfig.userPromptTemplate,
         temperature: selectedConfig.temperature,
-        maxTokens: selectedConfig.maxTokens ?? undefined
+        maxTokens: selectedConfig.maxTokens ?? undefined,
       })
     }
   }, [selectedConfig, form])
@@ -116,7 +126,7 @@ export function ConfigBuilder(): JSX.Element {
           systemPrompt: data.systemPrompt,
           userPromptTemplate: data.userPromptTemplate,
           temperature: data.temperature,
-          maxTokens: data.maxTokens ?? undefined
+          maxTokens: data.maxTokens ?? undefined,
         })
         navigate({ to: '/configs/$id', params: { id: newConfig.id } })
       } else if (configId) {
@@ -127,7 +137,7 @@ export function ConfigBuilder(): JSX.Element {
           systemPrompt: data.systemPrompt,
           userPromptTemplate: data.userPromptTemplate,
           temperature: data.temperature,
-          maxTokens: data.maxTokens ?? undefined
+          maxTokens: data.maxTokens ?? undefined,
         })
       }
     } catch (error) {
@@ -327,7 +337,7 @@ interface BackupConfigSelectorProps {
 function BackupConfigSelector({
   currentConfigId,
   fallbacks,
-  configs
+  configs,
 }: BackupConfigSelectorProps): JSX.Element {
   const { addFallback, deleteFallback } = useConfigsStore()
   const availableConfigs = configs.filter((c) => c.id !== currentConfigId)
@@ -379,14 +389,17 @@ interface FallbackChainEditorProps {
 function FallbackChainEditor({
   configId,
   fallbacks,
-  availableConfigs
+  availableConfigs,
 }: FallbackChainEditorProps): JSX.Element {
   const { addFallback, updateFallback, deleteFallback } = useConfigsStore()
   const [isAdding, setIsAdding] = useState(false)
 
   const sortedFallbacks = [...fallbacks].sort((a, b) => a.priority - b.priority)
 
-  const handleAdd = async (fallbackConfigId: string, conditionType: FallbackConditionType): Promise<void> => {
+  const handleAdd = async (
+    fallbackConfigId: string,
+    conditionType: FallbackConditionType
+  ): Promise<void> => {
     const maxPriority = Math.max(...fallbacks.map((f) => f.priority), -1)
     await addFallback(configId, fallbackConfigId, maxPriority + 1, conditionType)
     setIsAdding(false)
@@ -396,7 +409,10 @@ function FallbackChainEditor({
     await deleteFallback(id)
   }
 
-  const handleUpdateCondition = async (id: string, conditionType: FallbackConditionType): Promise<void> => {
+  const handleUpdateCondition = async (
+    id: string,
+    conditionType: FallbackConditionType
+  ): Promise<void> => {
     await updateFallback(id, { conditionType })
   }
 
@@ -446,7 +462,9 @@ function FallbackChainEditor({
                 <span className="flex-1 font-medium">{config?.name || 'Unknown'}</span>
                 <Select
                   value={fb.conditionType}
-                  onValueChange={(value) => handleUpdateCondition(fb.id, value as FallbackConditionType)}
+                  onValueChange={(value) =>
+                    handleUpdateCondition(fb.id, value as FallbackConditionType)
+                  }
                 >
                   <SelectTrigger className="w-40">
                     <SelectValue />
@@ -497,7 +515,7 @@ function AddFallbackForm({
   availableConfigs,
   existingFallbackIds,
   onAdd,
-  onCancel
+  onCancel,
 }: AddFallbackFormProps): JSX.Element {
   const [selectedConfigId, setSelectedConfigId] = useState('')
   const [conditionType, setConditionType] = useState<FallbackConditionType>('any')
@@ -526,7 +544,10 @@ function AddFallbackForm({
           ))}
         </SelectContent>
       </Select>
-      <Select value={conditionType} onValueChange={(v) => setConditionType(v as FallbackConditionType)}>
+      <Select
+        value={conditionType}
+        onValueChange={(v) => setConditionType(v as FallbackConditionType)}
+      >
         <SelectTrigger className="w-40">
           <SelectValue />
         </SelectTrigger>
@@ -552,7 +573,12 @@ function AddFallbackForm({
 function ArrowIcon({ className }: { className?: string }): JSX.Element {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M13 7l5 5m0 0l-5 5m5-5H6"
+      />
     </svg>
   )
 }

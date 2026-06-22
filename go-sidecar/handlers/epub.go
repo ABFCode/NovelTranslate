@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/ABFCode/Spine"
@@ -65,11 +66,18 @@ func HandleParseEpub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Require an absolute, cleaned path. The host always supplies absolute paths
+	// chosen via a native file dialog; rejecting anything else avoids surprises
+	// from relative or traversal-style inputs.
+	if !filepath.IsAbs(req.FilePath) || filepath.Clean(req.FilePath) != req.FilePath {
+		http.Error(w, "file_path must be an absolute, normalized path", http.StatusBadRequest)
+		return
+	}
+
 	// Set up SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
@@ -228,6 +236,12 @@ func HandleExportEpub(w http.ResponseWriter, r *http.Request) {
 	var req ExportEpubRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondWithError(w, "Invalid request body: "+err.Error())
+		return
+	}
+
+	// Require an absolute, normalized destination path before any disk write.
+	if req.OutputPath == "" || !filepath.IsAbs(req.OutputPath) || filepath.Clean(req.OutputPath) != req.OutputPath {
+		respondWithError(w, "output_path must be an absolute, normalized path")
 		return
 	}
 

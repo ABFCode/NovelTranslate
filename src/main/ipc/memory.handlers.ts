@@ -1,17 +1,18 @@
-import type { TranslationOverride, TranslationMemoryEntry } from '../../shared/types'
+import type { TranslationMemoryEntry, TranslationOverride } from '../../shared/types'
+import { translationOverrideSchema } from '../../shared/validation'
 import {
-  listMemoryEntries,
-  getMemoryStats,
-  verifyMemoryEntry,
-  updateMemoryConfidence,
-  deleteMemoryEntry,
-  listOverrides,
   createOverride,
+  deleteMemoryEntry,
+  deleteOverride,
+  getMemoryStats,
+  listMemoryEntries,
+  listOverrides,
+  updateMemoryConfidence,
   updateOverride,
-  deleteOverride
+  verifyMemoryEntry,
 } from '../database/repositories/memory.repository'
-import { handleIpc } from './utils'
 import { logger } from '../services/logger'
+import { handleIpc, validateInput } from './utils'
 
 /**
  * Register translation memory and override IPC handlers
@@ -22,18 +23,16 @@ export function registerMemoryHandlers(): void {
   // ============================================================================
   handleIpc(
     'memory:list',
-    (
-      projectId?: string,
-      limit?: number,
-      offset?: number
-    ): TranslationMemoryEntry[] => {
+    (projectId?: string, limit?: number, offset?: number): TranslationMemoryEntry[] => {
       return listMemoryEntries(projectId, limit ?? 100, offset ?? 0)
     }
   )
 
   handleIpc(
     'memory:stats',
-    (projectId?: string): { totalEntries: number; verifiedEntries: number; totalUsageCount: number } => {
+    (
+      projectId?: string
+    ): { totalEntries: number; verifiedEntries: number; totalUsageCount: number } => {
       return getMemoryStats(projectId)
     }
   )
@@ -53,16 +52,14 @@ export function registerMemoryHandlers(): void {
   // ============================================================================
   // Overrides
   // ============================================================================
-  handleIpc(
-    'override:list',
-    (projectId: string, chapterId?: string): TranslationOverride[] => {
-      return listOverrides(projectId, chapterId)
-    }
-  )
+  handleIpc('override:list', (projectId: string, chapterId?: string): TranslationOverride[] => {
+    return listOverrides(projectId, chapterId)
+  })
 
   handleIpc(
     'override:create',
     (override: Omit<TranslationOverride, 'id' | 'createdAt'>): TranslationOverride => {
+      validateInput(translationOverrideSchema, override, 'override')
       return createOverride(override)
     }
   )

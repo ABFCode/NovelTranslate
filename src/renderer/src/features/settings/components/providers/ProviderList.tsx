@@ -1,12 +1,12 @@
+import type { KeyValidationResult, ProviderInfoExtended } from '@shared/types'
+import { Cloud, Plus, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Plus, RefreshCw, Cloud } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { ProviderCard } from './ProviderCard'
-import { AddProviderDialog } from './AddProviderDialog'
-import { ProviderDetailSheet } from './ProviderDetailSheet'
 import { ValidationResultsDialog } from '../ValidationResultsDialog'
-import type { ProviderInfoExtended, KeyValidationResult } from '@shared/types'
+import { AddProviderDialog } from './AddProviderDialog'
+import { ProviderCard } from './ProviderCard'
+import { ProviderDetailSheet } from './ProviderDetailSheet'
 
 export function ProviderList() {
   const [providers, setProviders] = useState<ProviderInfoExtended[]>([])
@@ -23,7 +23,9 @@ export function ProviderList() {
       const list = await window.api.providerConfig.list()
       setProviders(list)
       // Keep the open detail sheet in sync with refreshed data
-      setSelected((prev) => (prev ? list.find((p) => p.configId === prev.configId) ?? prev : prev))
+      setSelected((prev) =>
+        prev ? (list.find((p) => p.configId === prev.configId) ?? prev) : prev
+      )
     } catch (error) {
       console.error('Failed to load providers:', error)
     } finally {
@@ -84,9 +86,7 @@ export function ProviderList() {
           <Cloud className="h-8 w-8 text-muted-foreground" />
           <div>
             <p className="font-medium">No providers configured</p>
-            <p className="text-sm text-muted-foreground">
-              Add a provider to start translating.
-            </p>
+            <p className="text-sm text-muted-foreground">Add a provider to start translating.</p>
           </div>
           <Button onClick={() => setAddOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />

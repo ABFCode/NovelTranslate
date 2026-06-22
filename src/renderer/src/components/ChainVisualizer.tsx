@@ -26,17 +26,11 @@ export function ChainVisualizer({
   configs = [],
   executionPath,
   compact = false,
-  className
+  className,
 }: ChainVisualizerProps): JSX.Element {
   // If we have an execution path, show that instead
   if (executionPath && executionPath.length > 0) {
-    return (
-      <ExecutionPathVisualizer
-        steps={executionPath}
-        compact={compact}
-        className={className}
-      />
-    )
+    return <ExecutionPathVisualizer steps={executionPath} compact={compact} className={className} />
   }
 
   // Otherwise show the configured chain
@@ -68,7 +62,7 @@ export function ChainVisualizer({
       <div className="flex items-center gap-2">
         <ConfigCard config={primaryConfig} isPrimary />
       </div>
-      
+
       {sortedFallbacks.map((fb, i) => {
         const config = configs.find((c) => c.id === fb.fallbackConfigId)
         return (
@@ -93,11 +87,9 @@ export function ChainVisualizer({
           </motion.div>
         )
       })}
-      
+
       {sortedFallbacks.length === 0 && (
-        <div className="pl-4 text-xs text-muted-foreground">
-          No fallbacks configured
-        </div>
+        <div className="pl-4 text-xs text-muted-foreground">No fallbacks configured</div>
       )}
     </div>
   )
@@ -112,7 +104,7 @@ interface ExecutionPathVisualizerProps {
 function ExecutionPathVisualizer({
   steps,
   compact,
-  className
+  className,
 }: ExecutionPathVisualizerProps): JSX.Element {
   if (compact) {
     return (
@@ -146,7 +138,9 @@ function ExecutionPathVisualizer({
           transition={{ delay: i * 0.1 }}
           className={cn(
             'flex items-center gap-3 rounded-md border p-2',
-            !step.error ? 'border-green-500/30 bg-green-500/5' : 'border-destructive/30 bg-destructive/5'
+            !step.error
+              ? 'border-green-500/30 bg-green-500/5'
+              : 'border-destructive/30 bg-destructive/5'
           )}
         >
           <div className="flex-shrink-0">
@@ -202,12 +196,7 @@ interface ConfigCardProps {
 
 function ConfigCard({ config, isPrimary }: ConfigCardProps): JSX.Element {
   return (
-    <div
-      className={cn(
-        'rounded-md border px-3 py-2',
-        isPrimary && 'ring-2 ring-primary'
-      )}
-    >
+    <div className={cn('rounded-md border px-3 py-2', isPrimary && 'ring-2 ring-primary')}>
       <div className="flex items-center gap-2">
         <span className="font-medium">{config.name}</span>
         {isPrimary && (
@@ -216,9 +205,7 @@ function ConfigCard({ config, isPrimary }: ConfigCardProps): JSX.Element {
           </span>
         )}
       </div>
-      <div className="text-xs text-muted-foreground">
-        {config.modelId}
-      </div>
+      <div className="text-xs text-muted-foreground">{config.modelId}</div>
     </div>
   )
 }
@@ -233,7 +220,7 @@ function getConditionLabel(conditionType: string): string {
     auth_error: 'On auth error',
     quota_exceeded: 'On quota exceeded',
     context_length: 'On context too long',
-    network_error: 'On network error'
+    network_error: 'On network error',
   }
   return labels[conditionType] || conditionType
 }
@@ -242,7 +229,12 @@ function getConditionLabel(conditionType: string): string {
 function ArrowIcon({ className }: { className?: string }): JSX.Element {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M13 7l5 5m0 0l-5 5m5-5H6"
+      />
     </svg>
   )
 }

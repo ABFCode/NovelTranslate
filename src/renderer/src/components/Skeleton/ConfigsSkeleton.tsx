@@ -9,7 +9,7 @@ interface ConfigsSkeletonProps {
 export function ConfigsSkeleton({
   mode = 'grid',
   count = 6,
-  className
+  className,
 }: ConfigsSkeletonProps): JSX.Element {
   if (mode === 'table') {
     return (
@@ -40,11 +40,7 @@ export function ConfigsSkeleton({
   return (
     <div className={cn('grid gap-4 sm:grid-cols-2 lg:grid-cols-3', className)}>
       {Array.from({ length: count }).map((_, i) => (
-        <div
-          key={i}
-          className="rounded-lg border p-4"
-          style={{ animationDelay: `${i * 100}ms` }}
-        >
+        <div key={i} className="rounded-lg border p-4" style={{ animationDelay: `${i * 100}ms` }}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="h-5 w-32 animate-pulse rounded bg-muted" />

@@ -274,10 +274,10 @@ export type BuiltinProviderId =
 export interface ProviderConfig {
   id: string
   providerType: ProviderType
-  builtinId?: BuiltinProviderId        // e.g., 'openai', 'anthropic' - for builtin types
+  builtinId?: BuiltinProviderId // e.g., 'openai', 'anthropic' - for builtin types
   displayName: string
-  baseUrl?: string                     // Required for openai_compatible, optional override for builtin
-  customModels?: ModelInfo[]           // Custom/override model list
+  baseUrl?: string // Required for openai_compatible, optional override for builtin
+  customModels?: ModelInfo[] // Custom/override model list
   isEnabled: boolean
   sortOrder: number
   settings: ProviderSettings
@@ -681,8 +681,6 @@ export type IpcChannel =
   | 'apikey:delete'
   | 'apikey:validate'
   | 'apikey:setRotationStrategy'
-  // Provider channels
-  | 'provider:list'
   // Provider Config channels
   | 'providerConfig:getTemplates'
   | 'providerConfig:list'

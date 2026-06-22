@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import type React from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import type { UIMode } from '../../../shared/types'
 
 // Features that support mode switching
@@ -52,7 +53,7 @@ export function UIModeProvider({ children }: UIModeProviderProps): JSX.Element {
       testing: null,
       glossary: null,
       settings: null,
-      project: null
+      project: null,
     }
   })
 
@@ -83,7 +84,7 @@ export function UIModeProvider({ children }: UIModeProviderProps): JSX.Element {
   const setFeatureMode = useCallback((feature: Feature, mode: UIMode | null) => {
     setFeatureModes((prev) => ({
       ...prev,
-      [feature]: mode
+      [feature]: mode,
     }))
   }, [])
 
@@ -110,7 +111,7 @@ export function UIModeProvider({ children }: UIModeProviderProps): JSX.Element {
     featureModes,
     setFeatureMode,
     getEffectiveMode,
-    isAdvanced
+    isAdvanced,
   }
 
   return <UIModeContext.Provider value={value}>{children}</UIModeContext.Provider>

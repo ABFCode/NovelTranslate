@@ -1,11 +1,11 @@
+import type { ApiKeyEntry } from '@shared/types'
+import { Pencil, Plus, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, RefreshCw, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { EditKeyDialog } from '../EditKeyDialog'
-import type { ApiKeyEntry } from '@shared/types'
 
 interface KeyManagementProps {
   providerConfigId: string
@@ -20,6 +20,7 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
   const [validatingId, setValidatingId] = useState<string | null>(null)
   const [editingKey, setEditingKey] = useState<ApiKeyEntry | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [encryptionAvailable, setEncryptionAvailable] = useState(true)
 
   const loadKeys = async () => {
     try {
@@ -34,6 +35,13 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
     loadKeys()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [providerConfigId])
+
+  useEffect(() => {
+    window.api.apiKey
+      .encryptionAvailable()
+      .then(setEncryptionAvailable)
+      .catch(() => setEncryptionAvailable(true))
+  }, [])
 
   const notifyChanged = () => {
     loadKeys()
@@ -62,7 +70,7 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
       await window.api.apiKey.delete(keyId)
       toast.success('API key deleted')
       notifyChanged()
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete API key')
     }
   }
@@ -73,7 +81,7 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
       const isValid = await window.api.apiKey.validateStored(keyId)
       toast[isValid ? 'success' : 'error'](isValid ? 'API key is valid' : 'API key is invalid')
       notifyChanged()
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to validate API key')
     } finally {
       setValidatingId(null)
@@ -82,6 +90,18 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
 
   return (
     <div className="space-y-4">
+      {!encryptionAvailable && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            OS secure storage isn&apos;t available, so API keys are stored with reversible
+            obfuscation rather than encryption. Anyone with access to this machine&apos;s app data
+            could recover them. On Linux, installing a keyring (e.g. gnome-keyring / libsecret)
+            enables encryption.
+          </span>
+        </div>
+      )}
+
       <div className="space-y-2">
         <AnimatePresence>
           {keys.map((key, index) => (
@@ -112,7 +132,8 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {key.requestCount} requests
-                  {key.lastUsedAt && ` • Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`}
+                  {key.lastUsedAt &&
+                    ` • Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`}
                 </div>
               </div>
               <div className="flex gap-1">
@@ -134,7 +155,9 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
                   disabled={validatingId === key.id}
                   title="Validate"
                 >
-                  <RefreshCw className={`h-4 w-4 ${validatingId === key.id ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 ${validatingId === key.id ? 'animate-spin' : ''}`}
+                  />
                 </Button>
                 <Button
                   variant="ghost"

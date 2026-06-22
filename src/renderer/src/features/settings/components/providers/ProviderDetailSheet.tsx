@@ -1,5 +1,11 @@
+import type {
+  BuiltinProviderTemplate,
+  ModelInfo,
+  ProviderConfig,
+  ProviderInfoExtended,
+} from '@shared/types'
+import { Plus, RefreshCw, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Trash2, RefreshCw, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -7,20 +13,14 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import { KeyManagement } from './KeyManagement'
-import type {
-  ProviderConfig,
-  ProviderInfoExtended,
-  BuiltinProviderTemplate,
-  ModelInfo
-} from '@shared/types'
 
 interface ProviderDetailSheetProps {
   provider: ProviderInfoExtended | null
@@ -30,7 +30,12 @@ interface ProviderDetailSheetProps {
   onChanged: () => void
 }
 
-export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }: ProviderDetailSheetProps) {
+export function ProviderDetailSheet({
+  provider,
+  open,
+  onOpenChange,
+  onChanged,
+}: ProviderDetailSheetProps) {
   const [config, setConfig] = useState<ProviderConfig | null>(null)
   const [templates, setTemplates] = useState<BuiltinProviderTemplate[]>([])
   const [displayName, setDisplayName] = useState('')
@@ -46,7 +51,7 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
       setModels(provider.models)
       Promise.all([
         window.api.providerConfig.get(provider.configId),
-        window.api.providerConfig.getTemplates()
+        window.api.providerConfig.getTemplates(),
       ])
         .then(([cfg, tmpls]) => {
           setTemplates(tmpls)
@@ -67,7 +72,8 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
     config?.providerType === 'builtin' && config.builtinId
       ? templates.find((t) => t.id === config.builtinId)
       : null
-  const baseUrlEditable = config?.providerType === 'openai_compatible' || (template?.supportsBaseUrlOverride ?? false)
+  const baseUrlEditable =
+    config?.providerType === 'openai_compatible' || (template?.supportsBaseUrlOverride ?? false)
 
   // Changes auto-save: toggles apply immediately, text fields save on blur.
   const persistSettings = async (patch: Partial<ProviderConfig>) => {
@@ -109,7 +115,11 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
 
   const handleDelete = async () => {
     if (!config) return
-    if (!confirm(`Delete "${config.displayName}"? This removes its API keys. Translation configs using it will be blocked.`)) {
+    if (
+      !confirm(
+        `Delete "${config.displayName}"? This removes its API keys. Translation configs using it will be blocked.`
+      )
+    ) {
       return
     }
     try {
@@ -176,7 +186,9 @@ export function ProviderDetailSheet({ provider, open, onOpenChange, onChanged }:
         <DialogHeader>
           <DialogTitle>{provider.name}</DialogTitle>
           <DialogDescription>
-            {provider.providerType === 'openai_compatible' ? 'Custom OpenAI-compatible provider' : 'Built-in provider'}
+            {provider.providerType === 'openai_compatible'
+              ? 'Custom OpenAI-compatible provider'
+              : 'Built-in provider'}
             {' • '}
             {provider.totalRequests.toLocaleString()} requests
           </DialogDescription>

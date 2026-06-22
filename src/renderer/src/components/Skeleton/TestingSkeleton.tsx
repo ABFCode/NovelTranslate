@@ -54,7 +54,7 @@ export function TestingSkeleton({ className }: TestingSkeletonProps): JSX.Elemen
       {/* Right panel */}
       <div className="w-1/2 p-4 space-y-4">
         <div className="h-5 w-20 animate-pulse rounded bg-muted" />
-        
+
         {/* Empty results placeholder */}
         <div className="flex h-64 flex-col items-center justify-center">
           <div className="h-16 w-16 animate-pulse rounded-full bg-muted" />

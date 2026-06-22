@@ -1,4 +1,5 @@
-import { CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
+import type { KeyValidationResult, ProviderInfoExtended } from '@shared/types'
+import { AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -6,9 +7,8 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog'
-import type { KeyValidationResult, ProviderInfoExtended } from '@shared/types'
 
 interface ValidationResultsDialogProps {
   results: KeyValidationResult[]
@@ -21,7 +21,7 @@ export function ValidationResultsDialog({
   results,
   providers,
   open,
-  onOpenChange
+  onOpenChange,
 }: ValidationResultsDialogProps) {
   const validCount = results.filter((r) => r.isValid).length
   const invalidCount = results.filter((r) => !r.isValid).length
@@ -57,16 +57,12 @@ export function ValidationResultsDialog({
           <div className="mb-4 flex gap-4">
             <div className="flex items-center gap-2 rounded-lg bg-green-500/10 px-3 py-2">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium text-green-600">
-                {validCount} valid
-              </span>
+              <span className="text-sm font-medium text-green-600">{validCount} valid</span>
             </div>
             {invalidCount > 0 && (
               <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2">
                 <XCircle className="h-4 w-4 text-destructive" />
-                <span className="text-sm font-medium text-destructive">
-                  {invalidCount} invalid
-                </span>
+                <span className="text-sm font-medium text-destructive">{invalidCount} invalid</span>
               </div>
             )}
           </div>
@@ -88,12 +84,13 @@ export function ValidationResultsDialog({
                         ) : (
                           <XCircle className="h-4 w-4 text-destructive" />
                         )}
-                        <span className="text-sm">
-                          {result.label || 'Unnamed Key'}
-                        </span>
+                        <span className="text-sm">{result.label || 'Unnamed Key'}</span>
                       </div>
                       {result.error && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={result.error}>
+                        <span
+                          className="text-xs text-muted-foreground truncate max-w-[200px]"
+                          title={result.error}
+                        >
                           {result.error}
                         </span>
                       )}

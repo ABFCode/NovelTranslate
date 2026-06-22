@@ -4,26 +4,23 @@
  * Manages cached translations and manual overrides for efficiency.
  */
 
-import { createHash } from 'crypto'
-import type {
-  TranslationMemoryEntry,
-  TranslationOverride
-} from '../../shared/types'
+import { createHash } from 'node:crypto'
+import type { TranslationMemoryEntry, TranslationOverride } from '../../shared/types'
 import {
-  getMemoryEntry,
   cacheTranslation,
-  incrementMemoryUsage,
-  verifyMemoryEntry,
-  updateMemoryConfidence,
-  deleteMemoryEntry,
-  listMemoryEntries,
-  searchMemory,
-  getMemoryStats,
   createOverride,
+  deleteMemoryEntry,
+  deleteOverride,
+  getMemoryEntry,
+  getMemoryStats,
   getOverride,
   getOverrideById,
+  incrementMemoryUsage,
+  listMemoryEntries,
   listOverrides,
-  deleteOverride
+  searchMemory,
+  updateMemoryConfidence,
+  verifyMemoryEntry,
 } from '../database/repositories/memory.repository'
 
 /**
@@ -151,9 +148,7 @@ export class TranslationMemoryService {
   /**
    * Create a translation override
    */
-  createOverride(
-    override: Omit<TranslationOverride, 'id' | 'createdAt'>
-  ): TranslationOverride {
+  createOverride(override: Omit<TranslationOverride, 'id' | 'createdAt'>): TranslationOverride {
     return createOverride(override)
   }
 

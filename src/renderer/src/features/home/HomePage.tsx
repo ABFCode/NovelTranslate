@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { BookOpen, FolderOpen, Settings, Upload, Clock, Sparkles, ArrowRight } from 'lucide-react'
-import { toast } from 'sonner'
+import { ArrowRight, BookOpen, Clock, FolderOpen, Settings, Sparkles, Upload } from 'lucide-react'
 import { motion } from 'motion/react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -67,7 +67,11 @@ export function HomePage() {
               <Upload className="h-4 w-4" />
               Import EPUB
             </Button>
-            <Button variant="outline" onClick={() => navigate({ to: '/configs' })} className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate({ to: '/configs' })}
+              className="gap-2"
+            >
               <Sparkles className="h-4 w-4" />
               Configs
             </Button>
@@ -150,7 +154,9 @@ export function HomePage() {
                 <ProjectCard
                   key={project.id}
                   project={project}
-                  onClick={() => navigate({ to: '/project/$projectId', params: { projectId: project.id } })}
+                  onClick={() =>
+                    navigate({ to: '/project/$projectId', params: { projectId: project.id } })
+                  }
                 />
               ))}
             </div>
@@ -166,7 +172,9 @@ export function HomePage() {
         >
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">System Status</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                System Status
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex gap-6">
               <StatusIndicator
@@ -204,12 +212,14 @@ function QuickActionCard({ icon, title, description, onClick, accent }: QuickAct
     >
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-3 text-base">
-          <span className={cn(
-            'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
-            accent
-              ? 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground'
-              : 'bg-muted text-muted-foreground group-hover:bg-secondary'
-          )}>
+          <span
+            className={cn(
+              'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+              accent
+                ? 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground'
+                : 'bg-muted text-muted-foreground group-hover:bg-secondary'
+            )}
+          >
             {icon}
           </span>
           <span className="font-medium">{title}</span>
@@ -234,9 +244,10 @@ interface ProjectCardProps {
 }
 
 function ProjectCard({ project, onClick }: ProjectCardProps) {
-  const progress = project.metadata.totalChapters > 0
-    ? (project.metadata.translatedChapters / project.metadata.totalChapters) * 100
-    : 0
+  const progress =
+    project.metadata.totalChapters > 0
+      ? (project.metadata.translatedChapters / project.metadata.totalChapters) * 100
+      : 0
 
   return (
     <Card
@@ -285,10 +296,12 @@ function StatusIndicator({ label, status }: { label: string; status: string }) {
         )}
       />
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span className={cn(
-        'text-xs font-medium',
-        isConnected ? 'text-success' : 'text-muted-foreground'
-      )}>
+      <span
+        className={cn(
+          'text-xs font-medium',
+          isConnected ? 'text-success' : 'text-muted-foreground'
+        )}
+      >
         {status}
       </span>
     </div>

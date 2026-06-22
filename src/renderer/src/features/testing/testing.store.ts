@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { TestRun, TranslationConfig, CostEstimate } from '../../../../shared/types'
+import type { CostEstimate, TestRun, TranslationConfig } from '../../../../shared/types'
 
 interface TestingState {
   // Data
@@ -161,5 +161,5 @@ export const useTestingStore = create<TestingState>((set, get) => ({
     } catch (error) {
       console.error('Failed to delete test run:', error)
     }
-  }
+  },
 }))

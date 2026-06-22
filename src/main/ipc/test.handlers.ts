@@ -1,22 +1,22 @@
 import { BrowserWindow } from 'electron'
+import type { CostEstimate, TestRun } from '../../shared/types'
+import { createConfigSnapshot, getConfig } from '../database'
 import {
+  addChapterToBatchTest,
+  createTestResult,
   createTestRun,
+  deleteTestRun,
+  getConfigTestStats,
   getTestRun,
   getTestRunWithResults,
-  listTestRuns,
-  deleteTestRun,
-  createTestResult,
-  addChapterToBatchTest,
   linkResultToBatchChapter,
-  getConfigTestStats
+  listTestRuns,
 } from '../database/repositories/test.repository'
-import { getConfig, createConfigSnapshot } from '../database'
 import { executeChain } from '../services/chain-executor'
-import { estimateSingleCost, estimateChainCost, formatCost } from '../services/cost-estimator'
+import { estimateChainCost, estimateSingleCost, formatCost } from '../services/cost-estimator'
 import { keyManager } from '../services/key-manager'
-import { handleIpc, handleIpcWithEvent } from './utils'
 import { logger } from '../services/logger'
-import type { TestRun, CostEstimate } from '../../shared/types'
+import { handleIpc, handleIpcWithEvent } from './utils'
 
 /**
  * Register test-related IPC handlers (Testing Center)
@@ -49,7 +49,9 @@ export function registerTestHandlers(): void {
   // Get test statistics for a config
   handleIpc(
     'test:getConfigStats',
-    (configId: string): {
+    (
+      configId: string
+    ): {
       totalTests: number
       successRate: number
       avgDurationMs: number
@@ -111,7 +113,7 @@ export function registerTestHandlers(): void {
           useMemory: false,
           useGlossary: false,
           createSnapshot: false,
-          window
+          window,
         })
 
         // Create test result
@@ -237,7 +239,7 @@ export function registerTestHandlers(): void {
             apiKey,
             useMemory: false,
             useGlossary: false,
-            window
+            window,
           })
 
           createTestResult(
@@ -334,7 +336,7 @@ export function registerTestHandlers(): void {
           testRunId: testRun.id,
           current: i + 1,
           total: chapters.length,
-          chapterId: chapter.chapterId
+          chapterId: chapter.chapterId,
         })
 
         const startTime = Date.now()
@@ -348,7 +350,7 @@ export function registerTestHandlers(): void {
             apiKey,
             useMemory: false,
             useGlossary: false,
-            window
+            window,
           })
 
           const testResult = createTestResult(
@@ -417,7 +419,7 @@ export function registerTestHandlers(): void {
       const estimate = estimateSingleCost(text, config)
       return {
         ...estimate,
-        formatted: formatCost(estimate.costUsd)
+        formatted: formatCost(estimate.costUsd),
       }
     }
   )

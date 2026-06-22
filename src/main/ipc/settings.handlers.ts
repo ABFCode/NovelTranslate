@@ -1,25 +1,35 @@
-import { getSettings, saveSettings } from '../database'
-import { listGlossaryTerms, importGlossaryTerms } from '../database/repositories/glossary.repository'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { dialog } from 'electron'
-import { writeFileSync, readFileSync } from 'fs'
-import { keyManager } from '../services/key-manager'
+import type {
+  ApiKeyEntry,
+  AppSettings,
+  KeyRotationStrategy,
+  KeyValidationResult,
+  ProjectBudget,
+} from '../../shared/types'
+import { apiKeySchema, projectBudgetSchema } from '../../shared/validation'
+import { getSettings, saveSettings } from '../database'
 import {
-  listApiKeys,
-  listAllApiKeys,
   getApiKey,
-  updateApiKey
+  listAllApiKeys,
+  listApiKeys,
+  updateApiKey,
 } from '../database/repositories/apikey.repository'
 import {
-  getProjectBudget,
-  setProjectBudget,
   checkBudget,
+  getProjectBudget,
+  listProjectBudgets,
   recordSpending,
   resetSpending,
-  listProjectBudgets
+  setProjectBudget,
 } from '../database/repositories/budget.repository'
-import { handleIpc } from './utils'
+import {
+  importGlossaryTerms,
+  listGlossaryTerms,
+} from '../database/repositories/glossary.repository'
+import { keyManager } from '../services/key-manager'
 import { logger } from '../services/logger'
-import type { AppSettings, ProviderInfo, ApiKeyEntry, ProjectBudget, KeyRotationStrategy, KeyValidationResult } from '../../shared/types'
+import { assertNonEmptyString, handleIpc, validateInput } from './utils'
 
 /**
  * Register settings-related IPC handlers
@@ -47,95 +57,111 @@ export function registerSettingsHandlers(): void {
   })
 
   // Export settings and data to JSON file
-  handleIpc('settings:export', async (): Promise<{ success: boolean; filePath?: string; error?: string }> => {
-    try {
-      const result = await dialog.showSaveDialog({
-        title: 'Export Settings',
-        defaultPath: `noveltranslate-backup-${new Date().toISOString().split('T')[0]}.json`,
-        filters: [{ name: 'JSON', extensions: ['json'] }]
-      })
+  handleIpc(
+    'settings:export',
+    async (): Promise<{ success: boolean; filePath?: string; error?: string }> => {
+      try {
+        const result = await dialog.showSaveDialog({
+          title: 'Export Settings',
+          defaultPath: `noveltranslate-backup-${new Date().toISOString().split('T')[0]}.json`,
+          filters: [{ name: 'JSON', extensions: ['json'] }],
+        })
 
-      if (result.canceled || !result.filePath) {
-        return { success: false, error: 'Export cancelled' }
+        if (result.canceled || !result.filePath) {
+          return { success: false, error: 'Export cancelled' }
+        }
+
+        const settings = getSettings()
+        const glossaryTerms = listGlossaryTerms(null) // Global terms only
+
+        const exportData = {
+          version: '1.0',
+          exportedAt: new Date().toISOString(),
+          settings,
+          glossaryTerms: glossaryTerms.map((term) => ({
+            sourceTerm: term.sourceTerm,
+            targetTerm: term.targetTerm,
+            termType: term.termType,
+            gender: term.gender,
+            pronouns: term.pronouns,
+            aliases: term.aliases,
+            context: term.context,
+            notes: term.notes,
+          })),
+        }
+
+        writeFileSync(result.filePath, JSON.stringify(exportData, null, 2))
+        return { success: true, filePath: result.filePath }
+      } catch (error) {
+        logger.error(
+          '[Settings] Export failed:',
+          error instanceof Error ? error : new Error(String(error))
+        )
+        return { success: false, error: error instanceof Error ? error.message : String(error) }
       }
-
-      const settings = getSettings()
-      const glossaryTerms = listGlossaryTerms(null) // Global terms only
-
-      const exportData = {
-        version: '1.0',
-        exportedAt: new Date().toISOString(),
-        settings,
-        glossaryTerms: glossaryTerms.map(term => ({
-          sourceTerm: term.sourceTerm,
-          targetTerm: term.targetTerm,
-          termType: term.termType,
-          gender: term.gender,
-          pronouns: term.pronouns,
-          aliases: term.aliases,
-          context: term.context,
-          notes: term.notes
-        }))
-      }
-
-      writeFileSync(result.filePath, JSON.stringify(exportData, null, 2))
-      return { success: true, filePath: result.filePath }
-    } catch (error) {
-      logger.error('[Settings] Export failed:', error instanceof Error ? error : new Error(String(error)))
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
     }
-  })
+  )
 
   // Import settings and data from JSON file
-  handleIpc('settings:import', async (): Promise<{ success: boolean; imported?: { settings: boolean; glossaryTerms: number }; error?: string }> => {
-    try {
-      const result = await dialog.showOpenDialog({
-        title: 'Import Settings',
-        filters: [{ name: 'JSON', extensions: ['json'] }],
-        properties: ['openFile']
-      })
+  handleIpc(
+    'settings:import',
+    async (): Promise<{
+      success: boolean
+      imported?: { settings: boolean; glossaryTerms: number }
+      error?: string
+    }> => {
+      try {
+        const result = await dialog.showOpenDialog({
+          title: 'Import Settings',
+          filters: [{ name: 'JSON', extensions: ['json'] }],
+          properties: ['openFile'],
+        })
 
-      if (result.canceled || result.filePaths.length === 0) {
-        return { success: false, error: 'Import cancelled' }
-      }
-
-      const content = readFileSync(result.filePaths[0], 'utf-8')
-      const importData = JSON.parse(content)
-
-      if (!importData.version) {
-        return { success: false, error: 'Invalid backup file format' }
-      }
-
-      const imported = { settings: false, glossaryTerms: 0 }
-
-      // Import settings
-      if (importData.settings) {
-        saveSettings(importData.settings)
-        // Apply settings to services
-        if (importData.settings.keyRotationStrategy) {
-          keyManager.setRotationStrategy(importData.settings.keyRotationStrategy)
+        if (result.canceled || result.filePaths.length === 0) {
+          return { success: false, error: 'Import cancelled' }
         }
-        if (importData.settings.logLevel) {
-          logger.setLevel(importData.settings.logLevel)
-        }
-        if (importData.settings.enableFileLogging !== undefined) {
-          logger.setFileLogging(importData.settings.enableFileLogging)
-        }
-        imported.settings = true
-      }
 
-      // Import glossary terms
-      if (importData.glossaryTerms && Array.isArray(importData.glossaryTerms)) {
-        const result = importGlossaryTerms(importData.glossaryTerms, true)
-        imported.glossaryTerms = result.imported
-      }
+        const content = readFileSync(result.filePaths[0], 'utf-8')
+        const importData = JSON.parse(content)
 
-      return { success: true, imported }
-    } catch (error) {
-      logger.error('[Settings] Import failed:', error instanceof Error ? error : new Error(String(error)))
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
+        if (!importData.version) {
+          return { success: false, error: 'Invalid backup file format' }
+        }
+
+        const imported = { settings: false, glossaryTerms: 0 }
+
+        // Import settings
+        if (importData.settings) {
+          saveSettings(importData.settings)
+          // Apply settings to services
+          if (importData.settings.keyRotationStrategy) {
+            keyManager.setRotationStrategy(importData.settings.keyRotationStrategy)
+          }
+          if (importData.settings.logLevel) {
+            logger.setLevel(importData.settings.logLevel)
+          }
+          if (importData.settings.enableFileLogging !== undefined) {
+            logger.setFileLogging(importData.settings.enableFileLogging)
+          }
+          imported.settings = true
+        }
+
+        // Import glossary terms
+        if (importData.glossaryTerms && Array.isArray(importData.glossaryTerms)) {
+          const result = importGlossaryTerms(importData.glossaryTerms, true)
+          imported.glossaryTerms = result.imported
+        }
+
+        return { success: true, imported }
+      } catch (error) {
+        logger.error(
+          '[Settings] Import failed:',
+          error instanceof Error ? error : new Error(String(error))
+        )
+        return { success: false, error: error instanceof Error ? error.message : String(error) }
+      }
     }
-  })
+  )
 
   logger.info('[IPC] Settings handlers registered')
 }
@@ -167,6 +193,11 @@ export function registerApiKeyHandlers(): void {
     return keyManager.hasValidKeys(providerConfigId)
   })
 
+  // Whether OS secure storage is available for encrypting keys at rest
+  handleIpc('apikey:encryptionAvailable', (): boolean => {
+    return keyManager.isEncryptionAvailable()
+  })
+
   // Save/Add a new API key
   handleIpc(
     'apikey:save',
@@ -176,6 +207,7 @@ export function registerApiKeyHandlers(): void {
       label?: string,
       priority?: number
     ): Promise<ApiKeyEntry> => {
+      validateInput(apiKeySchema, { providerConfigId, keyValue, label, priority }, 'API key')
       return keyManager.addKey(providerConfigId, keyValue, label, priority)
     }
   )
@@ -236,26 +268,6 @@ export function registerApiKeyHandlers(): void {
 }
 
 /**
- * Register provider handlers (legacy - returns extended provider info)
- */
-export function registerProviderHandlers(): void {
-  // List available providers - now returns from provider configs
-  handleIpc('provider:list', (): ProviderInfo[] => {
-    // Import dynamically to avoid circular dependencies
-    const { providerConfigService } = require('../providers/provider-config.service')
-    const providers = providerConfigService.listProvidersExtended()
-    // Convert to legacy ProviderInfo format
-    return providers.map((p: { id: string; name: string; models: Array<{ id: string; name: string; contextWindow: number; inputPricePerMillion?: number; outputPricePerMillion?: number }> }) => ({
-      id: p.id,
-      name: p.name,
-      models: p.models
-    }))
-  })
-
-  logger.info('[IPC] Provider handlers registered')
-}
-
-/**
  * Register budget handlers
  */
 export function registerBudgetHandlers(): void {
@@ -273,6 +285,12 @@ export function registerBudgetHandlers(): void {
       alertThreshold?: number,
       hardLimit?: boolean
     ): ProjectBudget => {
+      assertNonEmptyString(projectId, 'project id')
+      validateInput(
+        projectBudgetSchema,
+        { budgetUsd, alertThreshold: alertThreshold ?? 0.8, hardLimit: hardLimit ?? false },
+        'budget'
+      )
       return setProjectBudget(projectId, budgetUsd, alertThreshold, hardLimit)
     }
   )

@@ -4,27 +4,22 @@
  * Batch extraction of glossary terms from chapters using cheap models.
  */
 
-import type {
-  CostEstimate,
-  TermType,
-  GlossaryGender,
-  BuiltinProviderId
-} from '../../shared/types'
-import { glossaryService } from './glossary.service'
-import { estimateTokens, estimateCostForTokens } from './cost-estimator'
-import { keyManager } from './key-manager'
+import type { BuiltinProviderId, CostEstimate, GlossaryGender, TermType } from '../../shared/types'
+import { getChapterContent } from '../database/repositories/chapter.repository'
+import { findProviderConfigByBuiltinId } from '../database/repositories/provider-config.repository'
 import { getProviderByConfigId } from '../providers'
 import { providerConfigService } from '../providers/provider-config.service'
-import { findProviderConfigByBuiltinId } from '../database/repositories/provider-config.repository'
-import { logger, generateCorrelationId } from './logger'
-import { getChapterContent } from '../database/repositories/chapter.repository'
+import { estimateCostForTokens, estimateTokens } from './cost-estimator'
+import { glossaryService } from './glossary.service'
+import { keyManager } from './key-manager'
+import { generateCorrelationId, logger } from './logger'
 
 // Recommended cheap models for extraction (builtin provider IDs)
 const CHEAP_MODEL_SPECS = [
   { builtinId: 'deepseek' as BuiltinProviderId, modelId: 'deepseek-v4-flash' },
   { builtinId: 'gemini' as BuiltinProviderId, modelId: 'gemini-2.5-flash-lite' },
   { builtinId: 'openai' as BuiltinProviderId, modelId: 'gpt-5.4-nano' },
-  { builtinId: 'anthropic' as BuiltinProviderId, modelId: 'claude-haiku-4-5' }
+  { builtinId: 'anthropic' as BuiltinProviderId, modelId: 'claude-haiku-4-5' },
 ]
 
 interface ExtractionResult {
@@ -106,7 +101,7 @@ export class GlossaryRunService {
       projectId,
       chapterCount: chapterIds.length,
       providerConfigId,
-      modelId
+      modelId,
     })
 
     const result: GlossaryRunResult = {
@@ -117,7 +112,7 @@ export class GlossaryRunService {
       totalCostUsd: 0,
       totalTokens: 0,
       results: [],
-      errors: []
+      errors: [],
     }
 
     // Get API key
@@ -134,14 +129,7 @@ export class GlossaryRunService {
 
     for (const chunk of chunks) {
       const promises = chunk.map((chapterId) =>
-        this.extractFromChapter(
-          projectId,
-          chapterId,
-          providerConfigId,
-          modelId,
-          apiKey,
-          log
-        )
+        this.extractFromChapter(projectId, chapterId, providerConfigId, modelId, apiKey, log)
       )
 
       const chunkResults = await Promise.allSettled(promises)
@@ -167,7 +155,7 @@ export class GlossaryRunService {
             suggestionsCreated: 0,
             tokensUsed: 0,
             costUsd: 0,
-            error: promiseResult.reason?.message || 'Unknown error'
+            error: promiseResult.reason?.message || 'Unknown error',
           })
           result.errors.push(`Chapter ${chapterId}: ${promiseResult.reason?.message}`)
         }
@@ -182,7 +170,7 @@ export class GlossaryRunService {
     log.info('Glossary extraction completed', {
       processedChapters: result.processedChapters,
       totalSuggestions: result.totalSuggestions,
-      totalCostUsd: result.totalCostUsd
+      totalCostUsd: result.totalCostUsd,
     })
 
     return result
@@ -191,7 +179,11 @@ export class GlossaryRunService {
   /**
    * Get recommended cheap models for extraction
    */
-  getRecommendedModels(): Array<{ providerConfigId: string; modelId: string; displayName: string }> {
+  getRecommendedModels(): Array<{
+    providerConfigId: string
+    modelId: string
+    displayName: string
+  }> {
     const results: Array<{ providerConfigId: string; modelId: string; displayName: string }> = []
 
     for (const spec of CHEAP_MODEL_SPECS) {
@@ -200,7 +192,7 @@ export class GlossaryRunService {
         results.push({
           providerConfigId: config.id,
           modelId: spec.modelId,
-          displayName: config.displayName
+          displayName: config.displayName,
         })
       }
     }
@@ -227,7 +219,7 @@ export class GlossaryRunService {
         suggestionsCreated: 0,
         tokensUsed: 0,
         costUsd: 0,
-        error: 'No source text'
+        error: 'No source text',
       }
     }
 
@@ -254,7 +246,7 @@ export class GlossaryRunService {
         modelId,
         apiKey,
         temperature: 0.3,
-        baseUrl
+        baseUrl,
       })
 
       const durationMs = Date.now() - startTime
@@ -280,7 +272,7 @@ export class GlossaryRunService {
           termType: term.termType,
           gender: term.gender,
           confidence: term.confidence,
-          sourceContext: term.sourceContext
+          sourceContext: term.sourceContext,
         })
         suggestionsCreated++
       }
@@ -297,14 +289,14 @@ export class GlossaryRunService {
         chapterId,
         termsFound: terms.length,
         suggestionsCreated,
-        durationMs
+        durationMs,
       })
 
       return {
         chapterId,
         suggestionsCreated,
         tokensUsed: response.tokensUsed.total,
-        costUsd: cost.totalCostUsd
+        costUsd: cost.totalCostUsd,
       }
     } catch (error) {
       log.error('Chapter extraction failed', error as Error, { chapterId })
@@ -313,7 +305,7 @@ export class GlossaryRunService {
         suggestionsCreated: 0,
         tokensUsed: 0,
         costUsd: 0,
-        error: (error as Error).message
+        error: (error as Error).message,
       }
     }
   }
@@ -343,7 +335,7 @@ Output your findings in JSON format.`
   private buildExtractionPrompt(text: string): string {
     // Truncate very long texts
     const maxLength = 10000
-    const truncatedText = text.length > maxLength ? text.slice(0, maxLength) + '...' : text
+    const truncatedText = text.length > maxLength ? `${text.slice(0, maxLength)}...` : text
 
     return `Extract glossary terms from the following text. Return a JSON array of objects with these fields:
 - sourceTerm: the original term
@@ -388,9 +380,7 @@ Respond with only the JSON array, no additional text.`
       return parsed
         .filter(
           (item) =>
-            item.sourceTerm &&
-            item.suggestedTarget &&
-            originalText.includes(item.sourceTerm)
+            item.sourceTerm && item.suggestedTarget && originalText.includes(item.sourceTerm)
         )
         .map((item) => ({
           sourceTerm: item.sourceTerm!,
@@ -401,10 +391,9 @@ Respond with only the JSON array, no additional text.`
           gender: validGenders.includes(item.gender as GlossaryGender)
             ? (item.gender as GlossaryGender)
             : undefined,
-          confidence: typeof item.confidence === 'number'
-            ? Math.max(0, Math.min(1, item.confidence))
-            : 0.5,
-          sourceContext: item.sourceContext || this.findContext(item.sourceTerm!, originalText)
+          confidence:
+            typeof item.confidence === 'number' ? Math.max(0, Math.min(1, item.confidence)) : 0.5,
+          sourceContext: item.sourceContext || this.findContext(item.sourceTerm!, originalText),
         }))
     } catch (error) {
       logger.warn('Failed to parse extraction response', { error: (error as Error).message })
@@ -418,7 +407,7 @@ Respond with only the JSON array, no additional text.`
 
     const start = Math.max(0, index - 30)
     const end = Math.min(text.length, index + term.length + 30)
-    return '...' + text.slice(start, end).replace(/\n/g, ' ') + '...'
+    return `...${text.slice(start, end).replace(/\n/g, ' ')}...`
   }
 }
 

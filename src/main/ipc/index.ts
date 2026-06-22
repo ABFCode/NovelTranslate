@@ -1,23 +1,21 @@
-import { registerProjectHandlers } from './project.handlers'
+import { registerProviders } from '../providers'
+import { logger } from '../services/logger'
+import { healthCheck } from '../services/sidecar'
 import { registerChapterHandlers } from './chapter.handlers'
 import { registerConfigHandlers } from './config.handlers'
-import { registerTranslationHandlers } from './translation.handlers'
-import {
-  registerSettingsHandlers,
-  registerApiKeyHandlers,
-  registerProviderHandlers,
-  registerBudgetHandlers
-} from './settings.handlers'
-import { registerProviderConfigHandlers } from './provider.handlers'
-import { registerTestHandlers } from './test.handlers'
 import { registerGlossaryHandlers } from './glossary.handlers'
 import { registerGlossaryRunHandlers } from './glossary-run.handlers'
 import { registerMemoryHandlers } from './memory.handlers'
-import { healthCheck } from '../services/sidecar'
-import { registerProviders } from '../providers'
-import { keyManager } from '../services/key-manager'
+import { registerProjectHandlers } from './project.handlers'
+import { registerProviderConfigHandlers } from './provider.handlers'
+import {
+  registerApiKeyHandlers,
+  registerBudgetHandlers,
+  registerSettingsHandlers,
+} from './settings.handlers'
+import { registerTestHandlers } from './test.handlers'
+import { registerTranslationHandlers } from './translation.handlers'
 import { handleIpc } from './utils'
-import { logger } from '../services/logger'
 
 /**
  * Register all IPC handlers for main process
@@ -25,13 +23,6 @@ import { logger } from '../services/logger'
 export function registerIpcHandlers(): void {
   // Register translation providers
   registerProviders()
-
-  // Migrate legacy API keys
-  keyManager.migrateLegacyKeys().then((count) => {
-    if (count > 0) {
-      logger.info(`[IPC] Migrated ${count} legacy API keys`)
-    }
-  })
 
   // Ping handler for testing connectivity
   handleIpc('ping', () => 'pong')
@@ -66,10 +57,7 @@ export function registerIpcHandlers(): void {
   // API Key handlers
   registerApiKeyHandlers()
 
-  // Provider handlers (legacy)
-  registerProviderHandlers()
-
-  // Provider config handlers (new)
+  // Provider config handlers
   registerProviderConfigHandlers()
 
   // Budget handlers

@@ -1,20 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { useMemoryStore } from './memory.store'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import type { Project, TranslationMemoryEntry, TranslationOverride } from '../../../../shared/types'
+import { useMemoryStore } from './memory.store'
 
 const CONFIDENCE_OPTIONS = [
   { label: '1.0', value: 1 },
   { label: '0.8', value: 0.8 },
   { label: '0.5', value: 0.5 },
-  { label: '0.2', value: 0.2 }
+  { label: '0.2', value: 0.2 },
 ]
 
 export function TranslationMemoryPage(): JSX.Element {
@@ -31,7 +37,7 @@ export function TranslationMemoryPage(): JSX.Element {
     updateConfidence,
     deleteEntry,
     deleteOverride,
-    setSelectedProjectId
+    setSelectedProjectId,
   } = useMemoryStore()
 
   const [projects, setProjects] = useState<Project[]>([])
@@ -61,8 +67,7 @@ export function TranslationMemoryPage(): JSX.Element {
     const q = query.toLowerCase()
     return entries.filter(
       (entry) =>
-        entry.sourceText.toLowerCase().includes(q) ||
-        entry.targetText.toLowerCase().includes(q)
+        entry.sourceText.toLowerCase().includes(q) || entry.targetText.toLowerCase().includes(q)
     )
   }, [entries, query])
 
@@ -80,7 +85,7 @@ export function TranslationMemoryPage(): JSX.Element {
     try {
       await verifyEntry(id)
       toast.success('Marked as verified')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to verify entry')
     }
   }
@@ -89,7 +94,7 @@ export function TranslationMemoryPage(): JSX.Element {
     try {
       await updateConfidence(id, confidence)
       toast.success('Confidence updated')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update confidence')
     }
   }
@@ -99,7 +104,7 @@ export function TranslationMemoryPage(): JSX.Element {
     try {
       await deleteEntry(id)
       toast.success('Memory entry deleted')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete entry')
     }
   }
@@ -109,7 +114,7 @@ export function TranslationMemoryPage(): JSX.Element {
     try {
       await deleteOverride(id)
       toast.success('Override deleted')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete override')
     }
   }
@@ -267,7 +272,7 @@ function MemoryRow({
   entry,
   onVerify,
   onUpdateConfidence,
-  onDelete
+  onDelete,
 }: {
   entry: TranslationMemoryEntry
   onVerify: (id: string) => void
@@ -304,14 +309,10 @@ function MemoryRow({
             ))}
           </SelectContent>
         </Select>
-        {entry.manuallyVerified && (
-          <div className="mt-1 text-xs text-emerald-600">Verified</div>
-        )}
+        {entry.manuallyVerified && <div className="mt-1 text-xs text-emerald-600">Verified</div>}
       </td>
       <td className="py-3 pr-4 align-top text-muted-foreground">{entry.usageCount}</td>
-      <td className="py-3 pr-4 align-top text-xs text-muted-foreground">
-        {entry.modelId}
-      </td>
+      <td className="py-3 pr-4 align-top text-xs text-muted-foreground">{entry.modelId}</td>
       <td className="py-3 text-right align-top">
         <div className="flex justify-end gap-2">
           {!entry.manuallyVerified && (
@@ -335,7 +336,7 @@ function MemoryRow({
 
 function OverrideRow({
   override,
-  onDelete
+  onDelete,
 }: {
   override: TranslationOverride
   onDelete: (id: string) => void

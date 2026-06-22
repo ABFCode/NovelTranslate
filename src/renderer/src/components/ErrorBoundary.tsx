@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface Props {
   children: ReactNode
@@ -51,24 +51,17 @@ export class ErrorBoundary extends Component<Props, State> {
                 <ErrorIcon className="h-5 w-5" />
                 Something went wrong
               </CardTitle>
-              <CardDescription>
-                An unexpected error occurred. Please try again.
-              </CardDescription>
+              <CardDescription>An unexpected error occurred. Please try again.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {this.state.error && (
                 <div className="rounded-md bg-destructive/10 p-3">
-                  <p className="text-sm font-medium text-destructive">
-                    {this.state.error.message}
-                  </p>
+                  <p className="text-sm font-medium text-destructive">{this.state.error.message}</p>
                 </div>
               )}
               <div className="flex gap-2">
                 <Button onClick={this.handleReset}>Try Again</Button>
-                <Button
-                  variant="outline"
-                  onClick={() => window.location.reload()}
-                >
+                <Button variant="outline" onClick={() => window.location.reload()}>
                   Reload App
                 </Button>
               </div>

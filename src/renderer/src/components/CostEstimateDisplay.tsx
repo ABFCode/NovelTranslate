@@ -19,7 +19,7 @@ export function CostEstimateDisplay({
   estimate,
   showBreakdown = false,
   compact = false,
-  className
+  className,
 }: CostEstimateDisplayProps): JSX.Element {
   if (compact) {
     return (
@@ -105,7 +105,7 @@ export function CostEstimateDisplay({
  */
 export function CostBadge({
   costUsd,
-  className
+  className,
 }: {
   costUsd: number
   className?: string
@@ -130,7 +130,7 @@ export function CostBadge({
 export function TokenCount({
   inputTokens,
   outputTokens,
-  className
+  className,
 }: {
   inputTokens: number
   outputTokens: number

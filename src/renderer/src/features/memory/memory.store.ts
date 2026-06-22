@@ -80,7 +80,7 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
         entries: entries.map((entry) =>
           entry.id === id ? { ...entry, manuallyVerified: true } : entry
         ),
-        isUpdating: false
+        isUpdating: false,
       })
     } catch (error) {
       console.error('Failed to verify entry:', error)
@@ -96,7 +96,7 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
       const { entries } = get()
       set({
         entries: entries.map((entry) => (entry.id === id ? { ...entry, confidence } : entry)),
-        isUpdating: false
+        isUpdating: false,
       })
     } catch (error) {
       console.error('Failed to update confidence:', error)
@@ -131,5 +131,5 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
     }
   },
 
-  setSelectedProjectId: (projectId) => set({ selectedProjectId: projectId })
+  setSelectedProjectId: (projectId) => set({ selectedProjectId: projectId }),
 }))

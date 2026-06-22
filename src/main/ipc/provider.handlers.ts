@@ -1,20 +1,17 @@
-import { handleIpc } from './utils'
-import { logger } from '../services/logger'
-import { keyManager } from '../services/key-manager'
-import { providerConfigService } from '../providers/provider-config.service'
-import {
-  getProviderForConfig,
-  clearProviderCache
-} from '../providers'
-import { OpenAICompatibleProvider } from '../providers/openai-compatible.provider'
 import type {
+  BuiltinProviderId,
+  BuiltinProviderTemplate,
+  ModelInfo,
   ProviderConfig,
   ProviderInfoExtended,
-  ModelInfo,
-  BuiltinProviderTemplate,
-  BuiltinProviderId,
-  ProviderSettings
+  ProviderSettings,
 } from '../../shared/types'
+import { clearProviderCache, getProviderForConfig } from '../providers'
+import { OpenAICompatibleProvider } from '../providers/openai-compatible.provider'
+import { providerConfigService } from '../providers/provider-config.service'
+import { keyManager } from '../services/key-manager'
+import { logger } from '../services/logger'
+import { handleIpc } from './utils'
 
 /**
  * Register provider config IPC handlers
@@ -169,7 +166,7 @@ export function registerProviderConfigHandlers(): void {
       } catch (error) {
         return {
           valid: false,
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         }
       }
     }

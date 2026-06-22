@@ -1,11 +1,11 @@
 import OpenAI from 'openai'
+import type { ModelInfo, ProviderSettings } from '../../shared/types'
 import {
   describeProviderError,
-  type TranslationProvider,
   type ProviderTranslationRequest,
-  type ProviderTranslationResult
+  type ProviderTranslationResult,
+  type TranslationProvider,
 } from './types'
-import type { ModelInfo, ProviderSettings } from '../../shared/types'
 
 /**
  * Generic OpenAI-compatible provider that works with any OpenAI API-compatible endpoint.
@@ -42,7 +42,7 @@ export class OpenAICompatibleProvider implements TranslationProvider {
       baseURL: this.baseUrl,
       timeout: this.settings.timeout || 60000,
       defaultHeaders: this.settings.customHeaders,
-      organization: this.settings.organizationId
+      organization: this.settings.organizationId,
     })
 
     try {
@@ -50,10 +50,10 @@ export class OpenAICompatibleProvider implements TranslationProvider {
         model: request.modelId,
         messages: [
           { role: 'system', content: request.systemPrompt },
-          { role: 'user', content: request.userPrompt }
+          { role: 'user', content: request.userPrompt },
         ],
         temperature: request.temperature,
-        max_tokens: request.maxTokens
+        max_tokens: request.maxTokens,
       })
 
       const choice = response.choices[0]
@@ -64,16 +64,16 @@ export class OpenAICompatibleProvider implements TranslationProvider {
         tokensUsed: {
           input: usage?.prompt_tokens || 0,
           output: usage?.completion_tokens || 0,
-          total: usage?.total_tokens || 0
+          total: usage?.total_tokens || 0,
         },
-        finishReason: choice.finish_reason === 'stop' ? 'stop' : 'length'
+        finishReason: choice.finish_reason === 'stop' ? 'stop' : 'length',
       }
     } catch (error) {
       return {
         translatedText: '',
         tokensUsed: { input: 0, output: 0, total: 0 },
         finishReason: 'error',
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       }
     }
   }
@@ -89,7 +89,7 @@ export class OpenAICompatibleProvider implements TranslationProvider {
       baseURL: baseUrl || this.baseUrl,
       timeout: this.settings.timeout || 30000,
       defaultHeaders: this.settings.customHeaders,
-      organization: this.settings.organizationId
+      organization: this.settings.organizationId,
     })
 
     try {
@@ -102,7 +102,7 @@ export class OpenAICompatibleProvider implements TranslationProvider {
         await client.chat.completions.create({
           model: 'gpt-3.5-turbo', // Fallback model - may not work for all providers
           messages: [{ role: 'user', content: 'test' }],
-          max_tokens: 1
+          max_tokens: 1,
         })
         return true
       } catch {
@@ -119,7 +119,7 @@ export class OpenAICompatibleProvider implements TranslationProvider {
       apiKey,
       baseURL: baseUrl || this.baseUrl,
       timeout: this.settings.timeout || 30000,
-      defaultHeaders: this.settings.customHeaders
+      defaultHeaders: this.settings.customHeaders,
     })
 
     try {
@@ -132,7 +132,7 @@ export class OpenAICompatibleProvider implements TranslationProvider {
           models.push({
             id: model.id,
             name: this.formatModelName(model.id),
-            contextWindow: this.estimateContextWindow(model.id)
+            contextWindow: this.estimateContextWindow(model.id),
           })
         }
       }
@@ -154,7 +154,7 @@ export class OpenAICompatibleProvider implements TranslationProvider {
       apiKey,
       baseURL: baseUrl || this.baseUrl,
       timeout: this.settings.timeout || 30000,
-      defaultHeaders: this.settings.customHeaders
+      defaultHeaders: this.settings.customHeaders,
     })
 
     try {
@@ -167,7 +167,7 @@ export class OpenAICompatibleProvider implements TranslationProvider {
     } catch (error) {
       return {
         valid: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       }
     }
   }

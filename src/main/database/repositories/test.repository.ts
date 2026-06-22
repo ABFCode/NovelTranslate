@@ -1,11 +1,11 @@
-import { getDatabase, generateId } from '../index'
 import type {
-  TestRun,
-  TestResult,
-  TestType,
   ChainExecutionStep,
-  ErrorType
+  ErrorType,
+  TestResult,
+  TestRun,
+  TestType,
 } from '../../../shared/types'
+import { generateId, getDatabase } from '../index'
 
 // ============================================================================
 // Test Run CRUD
@@ -39,7 +39,7 @@ export function createTestRun(
     sourceLanguage,
     targetLanguage,
     testType,
-    createdAt: now
+    createdAt: now,
   }
 }
 
@@ -164,7 +164,7 @@ export function createTestResult(
     error: error || undefined,
     errorType: errorType || undefined,
     executionPath,
-    createdAt: now
+    createdAt: now,
   }
 }
 
@@ -223,7 +223,11 @@ export function addChapterToBatchTest(testRunId: string, chapterId: string): voi
 /**
  * Link a result to a batch test chapter
  */
-export function linkResultToBatchChapter(testRunId: string, chapterId: string, resultId: string): void {
+export function linkResultToBatchChapter(
+  testRunId: string,
+  chapterId: string,
+  resultId: string
+): void {
   const db = getDatabase()
   db.prepare(`
     UPDATE batch_test_chapters 
@@ -235,17 +239,21 @@ export function linkResultToBatchChapter(testRunId: string, chapterId: string, r
 /**
  * Get chapters for a batch test
  */
-export function getBatchTestChapters(testRunId: string): Array<{ chapterId: string; resultId?: string }> {
+export function getBatchTestChapters(
+  testRunId: string
+): Array<{ chapterId: string; resultId?: string }> {
   const db = getDatabase()
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(`
     SELECT chapter_id, result_id
     FROM batch_test_chapters
     WHERE test_run_id = ?
-  `).all(testRunId) as Array<{ chapter_id: string; result_id: string | null }>
+  `)
+    .all(testRunId) as Array<{ chapter_id: string; result_id: string | null }>
 
   return rows.map((r) => ({
     chapterId: r.chapter_id,
-    resultId: r.result_id || undefined
+    resultId: r.result_id || undefined,
   }))
 }
 
@@ -263,7 +271,8 @@ export function getConfigTestStats(configId: string): {
   avgCostUsd: number
 } {
   const db = getDatabase()
-  const row = db.prepare(`
+  const row = db
+    .prepare(`
     SELECT 
       COUNT(*) as total_tests,
       AVG(CASE WHEN error IS NULL THEN 1.0 ELSE 0.0 END) as success_rate,
@@ -271,7 +280,8 @@ export function getConfigTestStats(configId: string): {
       AVG(cost_usd) as avg_cost_usd
     FROM test_results
     WHERE config_id = ?
-  `).get(configId) as {
+  `)
+    .get(configId) as {
     total_tests: number
     success_rate: number | null
     avg_duration_ms: number | null
@@ -282,7 +292,7 @@ export function getConfigTestStats(configId: string): {
     totalTests: row.total_tests,
     successRate: row.success_rate ?? 0,
     avgDurationMs: row.avg_duration_ms ?? 0,
-    avgCostUsd: row.avg_cost_usd ?? 0
+    avgCostUsd: row.avg_cost_usd ?? 0,
   }
 }
 
@@ -327,7 +337,7 @@ function rowToTestRun(row: TestRunRow): TestRun {
     sourceLanguage: row.source_language,
     targetLanguage: row.target_language,
     testType: row.test_type as TestType,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   }
 }
 
@@ -348,6 +358,6 @@ function rowToTestResult(row: TestResultRow): TestResult {
     error: row.error || undefined,
     errorType: (row.error_type as ErrorType) || undefined,
     executionPath: JSON.parse(row.execution_path_json),
-    createdAt: row.created_at
+    createdAt: row.created_at,
   }
 }

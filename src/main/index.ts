@@ -1,12 +1,12 @@
-import { app, shell, BrowserWindow } from 'electron'
-import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { join } from 'node:path'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import { app, BrowserWindow, session, shell } from 'electron'
 import icon from '../../resources/icon.png?asset'
+import { closeDatabase, initDatabase } from './database'
 import { registerIpcHandlers } from './ipc'
-import { initDatabase, closeDatabase } from './database'
+import { logger } from './services/logger'
 import { startSidecar, stopSidecar } from './services/sidecar'
 import { setMainWindow } from './window'
-import { logger } from './services/logger'
 
 // Disable GPU for WSL compatibility (check for WSL environment)
 const isWSL = process.platform === 'linux' && process.env.WSL_DISTRO_NAME
@@ -15,6 +15,43 @@ if (isWSL) {
 }
 
 let mainWindow: BrowserWindow | null = null
+
+/**
+ * Apply a Content-Security-Policy to all renderer responses. The renderer never
+ * talks to the network directly (all provider/API calls go through the main
+ * process over IPC), so the policy can be tight. Dev needs the extra allowances
+ * for Vite's HMR (inline/eval scripts + websocket); production is locked down.
+ */
+function setupContentSecurityPolicy(): void {
+  const devCsp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self' ws: http://localhost:* http://127.0.0.1:*",
+  ].join('; ')
+
+  const prodCsp = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self'",
+  ].join('; ')
+
+  const csp = is.dev ? devCsp : prodCsp
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [csp],
+      },
+    })
+  })
+}
 
 function createWindow(): void {
   // Create the browser window with security settings
@@ -56,10 +93,23 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
+  // Block in-page navigation away from the app's own content. Any attempt to
+  // navigate elsewhere (e.g. an injected or mistyped link) is cancelled and
+  // opened in the user's real browser instead.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const rendererUrl = process.env.ELECTRON_RENDERER_URL
+    const isInternal =
+      url.startsWith('file://') || (is.dev && rendererUrl ? url.startsWith(rendererUrl) : false)
+    if (!isInternal) {
+      event.preventDefault()
+      shell.openExternal(url)
+    }
+  })
+
   // HMR for renderer based on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (is.dev && process.env.ELECTRON_RENDERER_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -71,17 +121,26 @@ app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.noveltranslate')
 
+  // Apply Content-Security-Policy to renderer responses
+  setupContentSecurityPolicy()
+
   // Initialize database
   try {
     initDatabase()
     logger.info('[Main] Database initialized')
   } catch (error) {
-    logger.error('[Main] Failed to initialize database:', error instanceof Error ? error : new Error(String(error)))
+    logger.error(
+      '[Main] Failed to initialize database:',
+      error instanceof Error ? error : new Error(String(error))
+    )
   }
 
   // Start Go sidecar (don't await - let it start in background)
   startSidecar().catch((error) => {
-    logger.error('[Main] Failed to start sidecar:', error instanceof Error ? error : new Error(String(error)))
+    logger.error(
+      '[Main] Failed to start sidecar:',
+      error instanceof Error ? error : new Error(String(error))
+    )
   })
 
   // Default open or close DevTools by F12 in development

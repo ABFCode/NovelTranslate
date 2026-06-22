@@ -1,5 +1,5 @@
-import { getDatabase, generateId } from '../index'
 import type { TranslationVersion } from '../../../shared/types'
+import { generateId, getDatabase } from '../index'
 
 /**
  * Archive the current translation before overwriting
@@ -17,11 +17,13 @@ export function archiveTranslation(
   const now = new Date().toISOString()
 
   // Get the next version number
-  const maxVersion = db.prepare(`
+  const maxVersion = db
+    .prepare(`
     SELECT MAX(version_number) as max_version
     FROM translation_versions
     WHERE chapter_id = ?
-  `).get(chapterId) as { max_version: number | null }
+  `)
+    .get(chapterId) as { max_version: number | null }
 
   const versionNumber = (maxVersion?.max_version || 0) + 1
 
@@ -33,7 +35,17 @@ export function archiveTranslation(
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
-  stmt.run(id, chapterId, translatedText, configId || null, configName || null, providerConfigId || null, modelId || null, versionNumber, now)
+  stmt.run(
+    id,
+    chapterId,
+    translatedText,
+    configId || null,
+    configName || null,
+    providerConfigId || null,
+    modelId || null,
+    versionNumber,
+    now
+  )
 
   return {
     id,
@@ -44,7 +56,7 @@ export function archiveTranslation(
     providerConfigId,
     modelId,
     versionNumber,
-    createdAt: now
+    createdAt: now,
   }
 }
 
@@ -106,12 +118,14 @@ export function pruneVersions(chapterId: string, keepCount: number = 10): number
   const db = getDatabase()
 
   // Get IDs to delete
-  const toDelete = db.prepare(`
+  const toDelete = db
+    .prepare(`
     SELECT id FROM translation_versions
     WHERE chapter_id = ?
     ORDER BY version_number DESC
     LIMIT -1 OFFSET ?
-  `).all(chapterId, keepCount) as { id: string }[]
+  `)
+    .all(chapterId, keepCount) as { id: string }[]
 
   if (toDelete.length === 0) return 0
 
@@ -123,7 +137,7 @@ export function pruneVersions(chapterId: string, keepCount: number = 10): number
     return ids.length
   })
 
-  return deleteMany(toDelete.map(r => r.id))
+  return deleteMany(toDelete.map((r) => r.id))
 }
 
 /**
@@ -131,11 +145,13 @@ export function pruneVersions(chapterId: string, keepCount: number = 10): number
  */
 export function getVersionCount(chapterId: string): number {
   const db = getDatabase()
-  const result = db.prepare(`
+  const result = db
+    .prepare(`
     SELECT COUNT(*) as count
     FROM translation_versions
     WHERE chapter_id = ?
-  `).get(chapterId) as { count: number }
+  `)
+    .get(chapterId) as { count: number }
 
   return result.count
 }
@@ -166,6 +182,6 @@ function rowToVersion(row: VersionRow): TranslationVersion {
     providerConfigId: row.provider_config_id || undefined,
     modelId: row.model_id || undefined,
     versionNumber: row.version_number,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   }
 }

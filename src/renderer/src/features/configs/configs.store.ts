@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import type {
-  TranslationConfig,
   ConfigFallback,
   ConfigSnapshot,
-  PromptTemplate,
   ConfigWithFallbacks,
-  FallbackConditionType
+  FallbackConditionType,
+  PromptTemplate,
+  TranslationConfig,
 } from '../../../../shared/types'
 
 interface ConfigsState {
@@ -24,7 +24,9 @@ interface ConfigsState {
   fetchConfigs: () => Promise<void>
   fetchTemplates: () => Promise<void>
   selectConfig: (id: string | null) => Promise<void>
-  createConfig: (config: Omit<TranslationConfig, 'id' | 'createdAt' | 'updatedAt'>) => Promise<TranslationConfig>
+  createConfig: (
+    config: Omit<TranslationConfig, 'id' | 'createdAt' | 'updatedAt'>
+  ) => Promise<TranslationConfig>
   updateConfig: (id: string, updates: Partial<TranslationConfig>) => Promise<void>
   deleteConfig: (id: string) => Promise<void>
   setDefaultConfig: (id: string) => Promise<void>
@@ -235,5 +237,5 @@ export const useConfigsStore = create<ConfigsState>((set, get) => ({
       console.error('Failed to create from template:', error)
       throw error
     }
-  }
+  },
 }))

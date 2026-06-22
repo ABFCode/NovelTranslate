@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react'
-import { useTestingStore } from './testing.store'
-import { useFeatureMode } from '@/contexts/UIModeContext'
-import { FeatureModeToggle, AdvancedSection, ShowAdvancedToggle } from '@/components/ModeToggle'
+import { AdvancedSection, FeatureModeToggle, ShowAdvancedToggle } from '@/components/ModeToggle'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { useFeatureMode } from '@/contexts/UIModeContext'
 import { cn } from '@/lib/utils'
-import type { TestRun, TestResult, TranslationConfig } from '../../../../shared/types'
+import type { TestResult, TestRun, TranslationConfig } from '../../../../shared/types'
+import { useTestingStore } from './testing.store'
 
 const LANGUAGES = [
   { value: 'auto', label: 'Auto-detect' },
@@ -26,7 +26,7 @@ const LANGUAGES = [
   { value: 'en', label: 'English' },
   { value: 'es', label: 'Spanish' },
   { value: 'fr', label: 'French' },
-  { value: 'de', label: 'German' }
+  { value: 'de', label: 'German' },
 ]
 
 export function TestingCenter(): JSX.Element {
@@ -50,7 +50,7 @@ export function TestingCenter(): JSX.Element {
     clearConfigSelection,
     runSingleTest,
     runComparisonTest,
-    loadTestRun
+    loadTestRun,
   } = useTestingStore()
 
   const [testName, setTestName] = useState('')
@@ -83,9 +83,7 @@ export function TestingCenter(): JSX.Element {
       <div className="page-header flex items-center justify-between">
         <div>
           <h1 className="page-title">Testing Lab</h1>
-          <p className="page-subtitle">
-            Test and compare translation configurations
-          </p>
+          <p className="page-subtitle">Test and compare translation configurations</p>
         </div>
         <div className="flex items-center gap-2">
           <FeatureModeToggle feature="testing" />
@@ -110,7 +108,10 @@ export function TestingCenter(): JSX.Element {
         {/* Left panel - Input */}
         <div className="flex w-1/2 flex-col border-r">
           <div className="border-b p-4">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'single' | 'comparison')}>
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as 'single' | 'comparison')}
+            >
               <TabsList className="w-full">
                 <TabsTrigger value="single" className="flex-1">
                   Single Config
@@ -229,11 +230,7 @@ export function TestingCenter(): JSX.Element {
           </div>
 
           <ScrollArea className="flex-1 p-4">
-            {currentRun ? (
-              <TestResults run={currentRun} />
-            ) : (
-              <EmptyResults />
-            )}
+            {currentRun ? <TestResults run={currentRun} /> : <EmptyResults />}
           </ScrollArea>
 
           {/* History */}
@@ -280,7 +277,7 @@ function ConfigSelectionItem({
   config,
   isSelected,
   onToggle,
-  isSingleMode
+  isSingleMode,
 }: ConfigSelectionItemProps): JSX.Element {
   return (
     <button
@@ -301,9 +298,7 @@ function ConfigSelectionItem({
       </div>
       <div className="flex-1">
         <div className="font-medium">{config.name}</div>
-        <div className="text-xs text-muted-foreground">
-          {config.modelId}
-        </div>
+        <div className="text-xs text-muted-foreground">{config.modelId}</div>
       </div>
       {config.isDefault && (
         <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">Default</span>
@@ -327,9 +322,7 @@ function TestResults({ run }: TestResultsProps): JSX.Element {
   if (isComparison) {
     return (
       <div className="space-y-4">
-        <div className="text-sm font-medium">
-          Comparing {results.length} configs
-        </div>
+        <div className="text-sm font-medium">Comparing {results.length} configs</div>
         <div className="grid gap-4">
           {results.map((result) => (
             <ResultCard key={result.id} result={result} />
@@ -364,9 +357,7 @@ function ResultCard({ result, showFull }: ResultCardProps): JSX.Element {
                 Error
               </span>
             ) : (
-              <span className="rounded bg-green-500/10 px-1.5 py-0.5 text-green-600">
-                Success
-              </span>
+              <span className="rounded bg-green-500/10 px-1.5 py-0.5 text-green-600">Success</span>
             )}
           </div>
         </div>
@@ -433,14 +424,7 @@ function PlayIcon({ className }: { className?: string }): JSX.Element {
 function LoadingIcon({ className }: { className?: string }): JSX.Element {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24">
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path
         className="opacity-75"
         fill="currentColor"

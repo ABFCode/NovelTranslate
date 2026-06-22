@@ -1,5 +1,6 @@
+import type { PreviewResult } from '@shared/types'
+import { CheckCircle2, Eye, Loader2, XCircle } from 'lucide-react'
 import { useState } from 'react'
-import { Eye, Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,11 +9,10 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { PreviewResult } from '@shared/types'
 
 interface PreviewDialogProps {
   open: boolean
@@ -31,7 +31,7 @@ export function PreviewDialog({
   configId,
   sourceLanguage,
   targetLanguage,
-  onTranslateChapter
+  onTranslateChapter,
 }: PreviewDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<PreviewResult | null>(null)
@@ -74,8 +74,8 @@ export function PreviewDialog({
             Translation Preview
           </DialogTitle>
           <DialogDescription>
-            Preview how the translation will look before processing the full chapter.
-            This translates the first ~1000 characters.
+            Preview how the translation will look before processing the full chapter. This
+            translates the first ~1000 characters.
           </DialogDescription>
         </DialogHeader>
 
@@ -119,15 +119,13 @@ export function PreviewDialog({
                 </span>
                 {result.success && (
                   <span className="ml-auto text-xs">
-                    Cost: ${result.costUsd.toFixed(4)} |
-                    Tokens: {result.tokensUsed.input} in, {result.tokensUsed.output} out
+                    Cost: ${result.costUsd.toFixed(4)} | Tokens: {result.tokensUsed.input} in,{' '}
+                    {result.tokensUsed.output} out
                   </span>
                 )}
               </div>
 
-              {result.error && (
-                <p className="text-sm text-destructive">{result.error}</p>
-              )}
+              {result.error && <p className="text-sm text-destructive">{result.error}</p>}
 
               {/* Side-by-side comparison */}
               <Tabs defaultValue="side-by-side" className="flex-1">

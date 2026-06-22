@@ -1,12 +1,12 @@
-import { getDatabase, generateId } from '../index'
 import type {
-  TranslationConfig,
   ConfigFallback,
   ConfigSnapshot,
-  ProjectConfig,
   ConfigWithFallbacks,
-  FallbackConditionType
+  FallbackConditionType,
+  ProjectConfig,
+  TranslationConfig,
 } from '../../../shared/types'
+import { generateId, getDatabase } from '../index'
 
 // ============================================================================
 // Translation Config CRUD
@@ -203,7 +203,7 @@ export function ensureDefaultConfig(): TranslationConfig {
 {{text}}`,
     temperature: 0.3,
     maxTokens: undefined,
-    isDefault: true
+    isDefault: true,
   })
 }
 
@@ -264,7 +264,7 @@ export function createFallback(
     priority,
     conditionType,
     conditionValue,
-    createdAt: now
+    createdAt: now,
   }
 }
 
@@ -279,9 +279,9 @@ export function updateFallback(
 
   // If changing fallbackConfigId, check for cycles
   if (updates.fallbackConfigId) {
-    const existing = db
-      .prepare('SELECT config_id FROM config_fallbacks WHERE id = ?')
-      .get(id) as { config_id: string } | undefined
+    const existing = db.prepare('SELECT config_id FROM config_fallbacks WHERE id = ?').get(id) as
+      | { config_id: string }
+      | undefined
 
     if (existing && wouldCreateCycle(existing.config_id, updates.fallbackConfigId)) {
       throw new Error('Cannot update fallback: would create a cycle in the chain')
@@ -375,7 +375,9 @@ export function createConfigSnapshot(
 
   // Get the next version number
   const versionResult = db
-    .prepare('SELECT COALESCE(MAX(version), 0) + 1 as next_version FROM config_snapshots WHERE config_id = ?')
+    .prepare(
+      'SELECT COALESCE(MAX(version), 0) + 1 as next_version FROM config_snapshots WHERE config_id = ?'
+    )
     .get(configId) as { next_version: number }
 
   const id = generateId()
@@ -416,7 +418,7 @@ export function createConfigSnapshot(
     temperature: config.temperature,
     maxTokens: config.maxTokens,
     reason,
-    createdAt: now
+    createdAt: now,
   }
 }
 
@@ -471,7 +473,7 @@ export function restoreFromSnapshot(snapshotId: string): void {
       systemPrompt: snapshot.systemPrompt,
       userPromptTemplate: snapshot.userPromptTemplate,
       temperature: snapshot.temperature,
-      maxTokens: snapshot.maxTokens
+      maxTokens: snapshot.maxTokens,
     },
     true // Create a new snapshot before restoring
   )
@@ -623,7 +625,7 @@ function rowToConfig(row: ConfigRow): TranslationConfig {
     maxTokens: row.max_tokens || undefined,
     isDefault: row.is_default === 1,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
   }
 }
 
@@ -635,7 +637,7 @@ function rowToFallback(row: FallbackRow): ConfigFallback {
     priority: row.priority,
     conditionType: row.condition_type as FallbackConditionType,
     conditionValue: row.condition_value || undefined,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   }
 }
 
@@ -652,7 +654,7 @@ function rowToSnapshot(row: SnapshotRow): ConfigSnapshot {
     temperature: row.temperature,
     maxTokens: row.max_tokens || undefined,
     reason: row.reason as 'edit' | 'test' | 'translation',
-    createdAt: row.created_at
+    createdAt: row.created_at,
   }
 }
 
@@ -662,6 +664,6 @@ function rowToProjectConfig(row: ProjectConfigRow): ProjectConfig {
     configId: row.config_id,
     isDefault: row.is_default === 1,
     priority: row.priority,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   }
 }

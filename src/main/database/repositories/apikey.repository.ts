@@ -1,5 +1,5 @@
-import { getDatabase, generateId } from '../index'
 import type { ApiKeyEntry } from '../../../shared/types'
+import { generateId, getDatabase } from '../index'
 
 // ============================================================================
 // API Key CRUD
@@ -96,7 +96,7 @@ export function createApiKey(
     requestCount: 0,
     priority,
     isEnabled: true,
-    createdAt: now
+    createdAt: now,
   }
 }
 
@@ -309,6 +309,6 @@ function rowToApiKey(row: ApiKeyRow): ApiKeyEntry {
     lastUsedAt: row.last_used_at || undefined,
     priority: row.priority,
     isEnabled: row.is_enabled === 1,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   }
 }

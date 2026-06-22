@@ -1,21 +1,21 @@
 import type {
+  BuiltinProviderId,
+  BuiltinProviderTemplate,
+  ModelInfo,
   ProviderConfig,
   ProviderInfoExtended,
-  ModelInfo,
-  BuiltinProviderTemplate,
-  BuiltinProviderId,
-  ProviderSettings
+  ProviderSettings,
 } from '../../shared/types'
-import {
-  listProviderConfigs,
-  getProviderConfig,
-  createProviderConfig,
-  updateProviderConfig,
-  deleteProviderConfig,
-  getProviderConfigStats,
-  findProviderConfigByBuiltinId
-} from '../database/repositories/provider-config.repository'
 import { hasValidKeys } from '../database/repositories/apikey.repository'
+import {
+  createProviderConfig,
+  deleteProviderConfig,
+  findProviderConfigByBuiltinId,
+  getProviderConfig,
+  getProviderConfigStats,
+  listProviderConfigs,
+  updateProviderConfig,
+} from '../database/repositories/provider-config.repository'
 
 // ============================================================================
 // Built-in Provider Templates
@@ -40,30 +40,30 @@ const BUILTIN_TEMPLATES: BuiltinProviderTemplate[] = [
         name: 'GPT-5.5',
         contextWindow: 1000000,
         inputPricePerMillion: 5,
-        outputPricePerMillion: 30
+        outputPricePerMillion: 30,
       },
       {
         id: 'gpt-5.4',
         name: 'GPT-5.4',
         contextWindow: 400000,
         inputPricePerMillion: 2.5,
-        outputPricePerMillion: 15
+        outputPricePerMillion: 15,
       },
       {
         id: 'gpt-5.4-mini',
         name: 'GPT-5.4 Mini',
         contextWindow: 128000,
         inputPricePerMillion: 0.75,
-        outputPricePerMillion: 4.5
+        outputPricePerMillion: 4.5,
       },
       {
         id: 'gpt-5.4-nano',
         name: 'GPT-5.4 Nano',
         contextWindow: 128000,
         inputPricePerMillion: 0.2,
-        outputPricePerMillion: 1.25
-      }
-    ]
+        outputPricePerMillion: 1.25,
+      },
+    ],
   },
   {
     id: 'anthropic',
@@ -78,23 +78,23 @@ const BUILTIN_TEMPLATES: BuiltinProviderTemplate[] = [
         name: 'Claude Sonnet 4.6',
         contextWindow: 1000000,
         inputPricePerMillion: 3,
-        outputPricePerMillion: 15
+        outputPricePerMillion: 15,
       },
       {
         id: 'claude-haiku-4-5',
         name: 'Claude Haiku 4.5',
         contextWindow: 200000,
         inputPricePerMillion: 1,
-        outputPricePerMillion: 5
+        outputPricePerMillion: 5,
       },
       {
         id: 'claude-opus-4-8',
         name: 'Claude Opus 4.8',
         contextWindow: 1000000,
         inputPricePerMillion: 5,
-        outputPricePerMillion: 25
-      }
-    ]
+        outputPricePerMillion: 25,
+      },
+    ],
   },
   {
     id: 'gemini',
@@ -109,37 +109,37 @@ const BUILTIN_TEMPLATES: BuiltinProviderTemplate[] = [
         name: 'Gemini 3.5 Flash',
         contextWindow: 1000000,
         inputPricePerMillion: 1.5,
-        outputPricePerMillion: 9
+        outputPricePerMillion: 9,
       },
       {
         id: 'gemini-3.1-flash-lite',
         name: 'Gemini 3.1 Flash-Lite',
         contextWindow: 1000000,
         inputPricePerMillion: 0.25,
-        outputPricePerMillion: 1.5
+        outputPricePerMillion: 1.5,
       },
       {
         id: 'gemini-2.5-pro',
         name: 'Gemini 2.5 Pro',
         contextWindow: 1000000,
         inputPricePerMillion: 1.25,
-        outputPricePerMillion: 10
+        outputPricePerMillion: 10,
       },
       {
         id: 'gemini-2.5-flash',
         name: 'Gemini 2.5 Flash',
         contextWindow: 1000000,
         inputPricePerMillion: 0.3,
-        outputPricePerMillion: 2.5
+        outputPricePerMillion: 2.5,
       },
       {
         id: 'gemini-2.5-flash-lite',
         name: 'Gemini 2.5 Flash-Lite',
         contextWindow: 1000000,
         inputPricePerMillion: 0.1,
-        outputPricePerMillion: 0.4
-      }
-    ]
+        outputPricePerMillion: 0.4,
+      },
+    ],
   },
   {
     id: 'xai',
@@ -154,16 +154,16 @@ const BUILTIN_TEMPLATES: BuiltinProviderTemplate[] = [
         name: 'Grok 4.20',
         contextWindow: 2000000,
         inputPricePerMillion: 2,
-        outputPricePerMillion: 6
+        outputPricePerMillion: 6,
       },
       {
         id: 'grok-4.1-fast',
         name: 'Grok 4.1 Fast',
         contextWindow: 2000000,
         inputPricePerMillion: 0.2,
-        outputPricePerMillion: 0.5
-      }
-    ]
+        outputPricePerMillion: 0.5,
+      },
+    ],
   },
   {
     id: 'deepseek',
@@ -178,16 +178,16 @@ const BUILTIN_TEMPLATES: BuiltinProviderTemplate[] = [
         name: 'DeepSeek V4 Flash',
         contextWindow: 1000000,
         inputPricePerMillion: 0.14,
-        outputPricePerMillion: 0.28
+        outputPricePerMillion: 0.28,
       },
       {
         id: 'deepseek-v4-pro',
         name: 'DeepSeek V4 Pro',
         contextWindow: 1000000,
         inputPricePerMillion: 0.44,
-        outputPricePerMillion: 0.87
-      }
-    ]
+        outputPricePerMillion: 0.87,
+      },
+    ],
   },
   {
     id: 'groq',
@@ -202,19 +202,19 @@ const BUILTIN_TEMPLATES: BuiltinProviderTemplate[] = [
         name: 'Llama 3.3 70B',
         contextWindow: 128000,
         inputPricePerMillion: 0.59,
-        outputPricePerMillion: 0.79
+        outputPricePerMillion: 0.79,
       },
       {
         id: 'openai/gpt-oss-120b',
         name: 'GPT-OSS 120B',
-        contextWindow: 128000
+        contextWindow: 128000,
       },
       {
         id: 'openai/gpt-oss-20b',
         name: 'GPT-OSS 20B',
-        contextWindow: 128000
-      }
-    ]
+        contextWindow: 128000,
+      },
+    ],
   },
   {
     id: 'openrouter',
@@ -227,29 +227,29 @@ const BUILTIN_TEMPLATES: BuiltinProviderTemplate[] = [
       {
         id: 'anthropic/claude-sonnet-4.6',
         name: 'Claude Sonnet 4.6',
-        contextWindow: 1000000
+        contextWindow: 1000000,
       },
       {
         id: 'openai/gpt-5.5',
         name: 'GPT-5.5',
-        contextWindow: 1000000
+        contextWindow: 1000000,
       },
       {
         id: 'google/gemini-3.5-flash',
         name: 'Gemini 3.5 Flash',
-        contextWindow: 1000000
+        contextWindow: 1000000,
       },
       {
         id: 'deepseek/deepseek-v4',
         name: 'DeepSeek V4',
-        contextWindow: 1000000
+        contextWindow: 1000000,
       },
       {
         id: 'x-ai/grok-4.20',
         name: 'Grok 4.20',
-        contextWindow: 2000000
-      }
-    ]
+        contextWindow: 2000000,
+      },
+    ],
   },
   {
     id: 'together',
@@ -262,19 +262,19 @@ const BUILTIN_TEMPLATES: BuiltinProviderTemplate[] = [
       {
         id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
         name: 'Llama 3.3 70B Turbo',
-        contextWindow: 131072
+        contextWindow: 131072,
       },
       {
         id: 'Qwen/Qwen3-235B-A22B-Instruct',
         name: 'Qwen3 235B',
-        contextWindow: 256000
+        contextWindow: 256000,
       },
       {
         id: 'deepseek-ai/DeepSeek-V3.1',
         name: 'DeepSeek V3.1',
-        contextWindow: 131072
-      }
-    ]
+        contextWindow: 131072,
+      },
+    ],
   },
   {
     id: 'ollama',
@@ -287,25 +287,25 @@ const BUILTIN_TEMPLATES: BuiltinProviderTemplate[] = [
       {
         id: 'llama3.3',
         name: 'Llama 3.3',
-        contextWindow: 128000
+        contextWindow: 128000,
       },
       {
         id: 'qwen3',
         name: 'Qwen 3',
-        contextWindow: 128000
+        contextWindow: 128000,
       },
       {
         id: 'deepseek-r1',
         name: 'DeepSeek-R1',
-        contextWindow: 128000
+        contextWindow: 128000,
       },
       {
         id: 'gemma3',
         name: 'Gemma 3',
-        contextWindow: 128000
-      }
-    ]
-  }
+        contextWindow: 128000,
+      },
+    ],
+  },
 ]
 
 // ============================================================================
@@ -373,7 +373,7 @@ class ProviderConfigService {
       customModels: undefined, // Use default models from template
       isEnabled: true,
       sortOrder: maxSortOrder + 1,
-      settings: {}
+      settings: {},
     })
   }
 
@@ -398,7 +398,7 @@ class ProviderConfigService {
       customModels,
       isEnabled: true,
       sortOrder: maxSortOrder + 1,
-      settings: settings || {}
+      settings: settings || {},
     })
   }
 
@@ -445,7 +445,7 @@ class ProviderConfigService {
       isEnabled: config.isEnabled,
       hasValidKey: hasValidKeys(config.id),
       keyCount: stats.keyCount,
-      totalRequests: stats.totalRequests
+      totalRequests: stats.totalRequests,
     }
   }
 
