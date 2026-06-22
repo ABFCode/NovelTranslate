@@ -81,9 +81,9 @@ export function registerTestHandlers(): void {
       }
 
       // Get API key
-      const apiKey = await keyManager.getKey(config.providerId)
+      const apiKey = await keyManager.getKey(config.providerConfigId)
       if (!apiKey) {
-        throw new Error(`No API key for provider: ${config.providerId}`)
+        throw new Error(`No API key for provider: ${config.providerConfigId}`)
       }
 
       // Create the test run
@@ -120,7 +120,7 @@ export function registerTestHandlers(): void {
           configId as string,
           snapshot.id,
           config.name,
-          config.providerId,
+          config.providerConfigId,
           config.modelId,
           result.translatedText || null,
           result.tokensUsed.input,
@@ -137,7 +137,7 @@ export function registerTestHandlers(): void {
           configId as string,
           snapshot.id,
           config.name,
-          config.providerId,
+          config.providerConfigId,
           config.modelId,
           null,
           0,
@@ -202,21 +202,21 @@ export function registerTestHandlers(): void {
           continue
         }
 
-        const apiKey = await keyManager.getKey(config.providerId)
+        const apiKey = await keyManager.getKey(config.providerConfigId)
         if (!apiKey) {
           createTestResult(
             testRun.id,
             cfgId,
             null,
             config.name,
-            config.providerId,
+            config.providerConfigId,
             config.modelId,
             null,
             0,
             0,
             0,
             0,
-            `No API key for provider: ${config.providerId}`,
+            `No API key for provider: ${config.providerConfigId}`,
             'auth_error',
             []
           )
@@ -245,7 +245,7 @@ export function registerTestHandlers(): void {
             cfgId,
             snapshot.id,
             config.name,
-            config.providerId,
+            config.providerConfigId,
             config.modelId,
             result.translatedText || null,
             result.tokensUsed.input,
@@ -262,7 +262,7 @@ export function registerTestHandlers(): void {
             cfgId,
             snapshot.id,
             config.name,
-            config.providerId,
+            config.providerConfigId,
             config.modelId,
             null,
             0,
@@ -301,9 +301,9 @@ export function registerTestHandlers(): void {
         throw new Error(`Config not found: ${configId}`)
       }
 
-      const apiKey = await keyManager.getKey(config.providerId)
+      const apiKey = await keyManager.getKey(config.providerConfigId)
       if (!apiKey) {
-        throw new Error(`No API key for provider: ${config.providerId}`)
+        throw new Error(`No API key for provider: ${config.providerConfigId}`)
       }
 
       const chapters = chapterTexts as Array<{ chapterId: string; text: string }>
@@ -356,7 +356,7 @@ export function registerTestHandlers(): void {
             configId as string,
             snapshot.id,
             config.name,
-            config.providerId,
+            config.providerConfigId,
             config.modelId,
             result.translatedText || null,
             result.tokensUsed.input,
@@ -375,7 +375,7 @@ export function registerTestHandlers(): void {
             configId as string,
             snapshot.id,
             config.name,
-            config.providerId,
+            config.providerConfigId,
             config.modelId,
             null,
             0,

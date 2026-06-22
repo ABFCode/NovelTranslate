@@ -66,24 +66,24 @@ export function calculateDelay(
  */
 export function shouldRetry(
   error: unknown,
-  providerId: string,
+  sdkType: string,
   attempt: number,
   config: Pick<RetryConfig, 'strategy' | 'maxAttempts' | 'retryableErrors'>
 ): { shouldRetry: boolean; errorType: ErrorType; retryAfterMs?: number } {
   // No retries if strategy is none
   if (config.strategy === 'none') {
-    const classification = classifyError(error, providerId)
+    const classification = classifyError(error, sdkType)
     return { shouldRetry: false, errorType: classification.errorType }
   }
 
   // Max attempts reached
   if (attempt >= config.maxAttempts) {
-    const classification = classifyError(error, providerId)
+    const classification = classifyError(error, sdkType)
     return { shouldRetry: false, errorType: classification.errorType }
   }
 
   // Classify the error
-  const classification = classifyError(error, providerId)
+  const classification = classifyError(error, sdkType)
 
   // Check if this error type is retryable
   const canRetry = isRetryableError(classification.errorType, config.retryableErrors)
@@ -100,7 +100,7 @@ export function shouldRetry(
  */
 export async function executeWithRetry<T>(
   fn: () => Promise<T>,
-  providerId: string,
+  sdkType: string,
   config: RetryConfig,
   onRetry?: (attempt: number, error: unknown, delayMs: number) => void
 ): Promise<{ result?: T; error?: unknown; attempts: number; errorType?: ErrorType }> {
@@ -116,7 +116,7 @@ export async function executeWithRetry<T>(
 
       const { shouldRetry: retry, errorType, retryAfterMs } = shouldRetry(
         error,
-        providerId,
+        sdkType,
         attempt,
         config
       )
@@ -151,9 +151,9 @@ export async function executeWithRetry<T>(
 export function createRetryExecutor(config: RetryConfig) {
   return async <T>(
     fn: () => Promise<T>,
-    providerId: string,
+    sdkType: string,
     onRetry?: (attempt: number, error: unknown, delayMs: number) => void
-  ) => executeWithRetry(fn, providerId, config, onRetry)
+  ) => executeWithRetry(fn, sdkType, config, onRetry)
 }
 
 /**

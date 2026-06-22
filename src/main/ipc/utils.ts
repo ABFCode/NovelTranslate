@@ -6,13 +6,13 @@ import { logger } from '../services/logger'
  * Logs errors with the channel name for debugging, then re-throws
  * so the renderer receives the error.
  */
-export function handleIpc<T>(
+export function handleIpc<TArgs extends unknown[], T>(
   channel: string,
-  handler: (...args: unknown[]) => Promise<T> | T
+  handler: (...args: TArgs) => Promise<T> | T
 ): void {
   ipcMain.handle(channel, async (_event, ...args) => {
     try {
-      return await handler(...args)
+      return await handler(...(args as TArgs))
     } catch (error) {
       logger.error(
         `IPC ${channel} failed`,
@@ -27,13 +27,13 @@ export function handleIpc<T>(
  * Wrapper for ipcMain.handle that passes the event to the handler.
  * Use this when you need access to event.sender (e.g., for BrowserWindow.fromWebContents).
  */
-export function handleIpcWithEvent<T>(
+export function handleIpcWithEvent<TArgs extends unknown[], T>(
   channel: string,
-  handler: (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<T> | T
+  handler: (event: IpcMainInvokeEvent, ...args: TArgs) => Promise<T> | T
 ): void {
   ipcMain.handle(channel, async (event, ...args) => {
     try {
-      return await handler(event, ...args)
+      return await handler(event, ...(args as TArgs))
     } catch (error) {
       logger.error(
         `IPC ${channel} failed`,

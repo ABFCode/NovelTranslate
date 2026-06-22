@@ -24,7 +24,7 @@ export function createConfig(
 
   const stmt = db.prepare(`
     INSERT INTO translation_configs (
-      id, name, provider_id, model_id, system_prompt, user_prompt_template,
+      id, name, provider_config_id, model_id, system_prompt, user_prompt_template,
       temperature, max_tokens, is_default, created_at, updated_at
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -33,7 +33,7 @@ export function createConfig(
   stmt.run(
     id,
     config.name,
-    config.providerId,
+    config.providerConfigId,
     config.modelId,
     config.systemPrompt,
     config.userPromptTemplate,
@@ -53,7 +53,7 @@ export function createConfig(
 export function getConfig(id: string): TranslationConfig | null {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, name, provider_id, model_id, system_prompt, user_prompt_template,
+    SELECT id, name, provider_config_id, model_id, system_prompt, user_prompt_template,
            temperature, max_tokens, is_default, created_at, updated_at
     FROM translation_configs
     WHERE id = ?
@@ -80,7 +80,7 @@ export function getConfigWithFallbacks(id: string): ConfigWithFallbacks | null {
 export function listConfigs(): TranslationConfig[] {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, name, provider_id, model_id, system_prompt, user_prompt_template,
+    SELECT id, name, provider_config_id, model_id, system_prompt, user_prompt_template,
            temperature, max_tokens, is_default, created_at, updated_at
     FROM translation_configs
     ORDER BY name ASC
@@ -96,7 +96,7 @@ export function listConfigs(): TranslationConfig[] {
 export function getDefaultConfig(): TranslationConfig | null {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, name, provider_id, model_id, system_prompt, user_prompt_template,
+    SELECT id, name, provider_config_id, model_id, system_prompt, user_prompt_template,
            temperature, max_tokens, is_default, created_at, updated_at
     FROM translation_configs
     WHERE is_default = 1
@@ -148,7 +148,7 @@ export function updateConfig(
 
   const stmt = db.prepare(`
     UPDATE translation_configs
-    SET name = ?, provider_id = ?, model_id = ?, system_prompt = ?,
+    SET name = ?, provider_config_id = ?, model_id = ?, system_prompt = ?,
         user_prompt_template = ?, temperature = ?, max_tokens = ?,
         is_default = ?, updated_at = ?
     WHERE id = ?
@@ -156,7 +156,7 @@ export function updateConfig(
 
   stmt.run(
     updated.name,
-    updated.providerId,
+    updated.providerConfigId,
     updated.modelId,
     updated.systemPrompt,
     updated.userPromptTemplate,
@@ -195,7 +195,7 @@ export function ensureDefaultConfig(): TranslationConfig {
   // Create a sensible default config
   return createConfig({
     name: 'Default',
-    providerId: 'openai',
+    providerConfigId: 'openai',
     modelId: 'gpt-4o-mini',
     systemPrompt: `You are a professional translator. Translate the following text accurately while preserving the original meaning, tone, and style. Maintain any formatting present in the original text.`,
     userPromptTemplate: `Translate the following text from {{sourceLanguage}} to {{targetLanguage}}:
@@ -383,7 +383,7 @@ export function createConfigSnapshot(
 
   const stmt = db.prepare(`
     INSERT INTO config_snapshots (
-      id, config_id, version, name, provider_id, model_id, system_prompt,
+      id, config_id, version, name, provider_config_id, model_id, system_prompt,
       user_prompt_template, temperature, max_tokens, reason, created_at
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -394,7 +394,7 @@ export function createConfigSnapshot(
     configId,
     versionResult.next_version,
     config.name,
-    config.providerId,
+    config.providerConfigId,
     config.modelId,
     config.systemPrompt,
     config.userPromptTemplate,
@@ -409,7 +409,7 @@ export function createConfigSnapshot(
     configId,
     version: versionResult.next_version,
     name: config.name,
-    providerId: config.providerId,
+    providerConfigId: config.providerConfigId,
     modelId: config.modelId,
     systemPrompt: config.systemPrompt,
     userPromptTemplate: config.userPromptTemplate,
@@ -426,7 +426,7 @@ export function createConfigSnapshot(
 export function getSnapshotsForConfig(configId: string): ConfigSnapshot[] {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, config_id, version, name, provider_id, model_id, system_prompt,
+    SELECT id, config_id, version, name, provider_config_id, model_id, system_prompt,
            user_prompt_template, temperature, max_tokens, reason, created_at
     FROM config_snapshots
     WHERE config_id = ?
@@ -443,7 +443,7 @@ export function getSnapshotsForConfig(configId: string): ConfigSnapshot[] {
 export function getSnapshot(id: string): ConfigSnapshot | null {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, config_id, version, name, provider_id, model_id, system_prompt,
+    SELECT id, config_id, version, name, provider_config_id, model_id, system_prompt,
            user_prompt_template, temperature, max_tokens, reason, created_at
     FROM config_snapshots
     WHERE id = ?
@@ -466,7 +466,7 @@ export function restoreFromSnapshot(snapshotId: string): void {
     snapshot.configId,
     {
       name: snapshot.name,
-      providerId: snapshot.providerId,
+      providerConfigId: snapshot.providerConfigId,
       modelId: snapshot.modelId,
       systemPrompt: snapshot.systemPrompt,
       userPromptTemplate: snapshot.userPromptTemplate,
@@ -567,7 +567,7 @@ export function removeConfigFromProject(projectId: string, configId: string): vo
 interface ConfigRow {
   id: string
   name: string
-  provider_id: string
+  provider_config_id: string
   model_id: string
   system_prompt: string
   user_prompt_template: string
@@ -593,7 +593,7 @@ interface SnapshotRow {
   config_id: string
   version: number
   name: string
-  provider_id: string
+  provider_config_id: string
   model_id: string
   system_prompt: string
   user_prompt_template: string
@@ -615,7 +615,7 @@ function rowToConfig(row: ConfigRow): TranslationConfig {
   return {
     id: row.id,
     name: row.name,
-    providerId: row.provider_id,
+    providerConfigId: row.provider_config_id,
     modelId: row.model_id,
     systemPrompt: row.system_prompt,
     userPromptTemplate: row.user_prompt_template,
@@ -645,7 +645,7 @@ function rowToSnapshot(row: SnapshotRow): ConfigSnapshot {
     configId: row.config_id,
     version: row.version,
     name: row.name,
-    providerId: row.provider_id,
+    providerConfigId: row.provider_config_id,
     modelId: row.model_id,
     systemPrompt: row.system_prompt,
     userPromptTemplate: row.user_prompt_template,

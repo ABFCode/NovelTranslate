@@ -30,6 +30,8 @@ import {
   cloneTemplate,
   incrementTemplateUsage
 } from '../database/repositories/template.repository'
+import { listEnabledProviderConfigs } from '../database/repositories/provider-config.repository'
+import { providerConfigService } from '../providers/provider-config.service'
 import { handleIpc } from './utils'
 import { logger } from '../services/logger'
 import type {
@@ -253,11 +255,21 @@ export function registerConfigHandlers(): void {
 
     incrementTemplateUsage(templateId)
 
+    // Pick a provider config to attach the new config to. Templates are
+    // provider-agnostic, so default to the first enabled provider config.
+    const providerConfigs = listEnabledProviderConfigs()
+    if (providerConfigs.length === 0) {
+      throw new Error('No provider configured. Add a provider before creating a config from a template.')
+    }
+    const defaultProvider = providerConfigs[0]
+    const defaultModel =
+      providerConfigService.getModelsForProvider(defaultProvider)[0]?.id ?? ''
+
     // Create a config from the template
     return createConfig({
       name: configName,
-      providerId: 'openai', // Default provider
-      modelId: 'gpt-4o-mini', // Default model
+      providerConfigId: defaultProvider.id,
+      modelId: defaultModel,
       systemPrompt: template.systemPrompt,
       userPromptTemplate: template.userPromptTemplate,
       temperature: template.suggestedTemperature,
@@ -278,7 +290,7 @@ export function registerConfigHandlers(): void {
       exportedAt: new Date().toISOString(),
       configs: configs.map((config) => ({
         name: config!.name,
-        providerId: config!.providerId,
+        providerConfigId: config!.providerConfigId,
         modelId: config!.modelId,
         systemPrompt: config!.systemPrompt,
         userPromptTemplate: config!.userPromptTemplate,
@@ -324,7 +336,7 @@ export function registerConfigHandlers(): void {
 
         const newConfig = createConfig({
           name: configName,
-          providerId: configData.providerId,
+          providerConfigId: configData.providerConfigId,
           modelId: configData.modelId,
           systemPrompt: configData.systemPrompt,
           userPromptTemplate: configData.userPromptTemplate,

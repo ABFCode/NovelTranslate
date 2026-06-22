@@ -66,9 +66,9 @@ export async function startTranslation(
   }
 
   // Get API key
-  const apiKey = await keyManager.getKey(config.providerId)
+  const apiKey = await keyManager.getKey(config.providerConfigId)
   if (!apiKey) {
-    throw new Error(`No API key configured for ${config.providerId}`)
+    throw new Error(`No API key configured for provider config ${config.providerConfigId}`)
   }
 
   // Create job
@@ -118,7 +118,7 @@ export async function resumeTranslation(projectId: string): Promise<void> {
     // Get config and API key to continue
     const config = getConfig(job.configId)
     if (config) {
-      const apiKey = await keyManager.getKey(config.providerId)
+      const apiKey = await keyManager.getKey(config.providerConfigId)
       if (apiKey) {
         processJob(job, config, apiKey)
       }
@@ -262,7 +262,7 @@ async function translateChapter(
           content.translatedText,
           config.id,
           config.name,
-          config.providerId,
+          config.providerConfigId,
           config.modelId
         )
       }
@@ -356,7 +356,7 @@ export interface PreviewResult {
   originalText: string
   costUsd: number
   tokensUsed: { input: number; output: number }
-  providerId: string
+  providerConfigId: string
   modelId: string
   error?: string
 }
@@ -391,22 +391,22 @@ export async function previewTranslation(
       originalText: previewText,
       costUsd: 0,
       tokensUsed: { input: 0, output: 0 },
-      providerId: '',
+      providerConfigId: '',
       modelId: '',
       error: 'Config not found'
     }
   }
 
-  const apiKey = await keyManager.getKey(config.providerId)
+  const apiKey = await keyManager.getKey(config.providerConfigId)
   if (!apiKey) {
     return {
       success: false,
       originalText: previewText,
       costUsd: 0,
       tokensUsed: { input: 0, output: 0 },
-      providerId: config.providerId,
+      providerConfigId: config.providerConfigId,
       modelId: config.modelId,
-      error: `No API key for ${config.providerId}`
+      error: `No API key for provider config ${config.providerConfigId}`
     }
   }
 
@@ -433,7 +433,7 @@ export async function previewTranslation(
         input: result.tokensUsed.input,
         output: result.tokensUsed.output
       },
-      providerId: config.providerId,
+      providerConfigId: config.providerConfigId,
       modelId: config.modelId,
       error: result.finalError
     }
@@ -443,7 +443,7 @@ export async function previewTranslation(
       originalText: previewText,
       costUsd: 0,
       tokensUsed: { input: 0, output: 0 },
-      providerId: config.providerId,
+      providerConfigId: config.providerConfigId,
       modelId: config.modelId,
       error: error instanceof Error ? error.message : String(error)
     }
@@ -459,15 +459,15 @@ const legacyApiKeyCache = new Map<string, string>()
 /**
  * @deprecated Use keyManager.addKey() instead
  */
-export function setApiKey(providerId: string, key: string): void {
-  legacyApiKeyCache.set(providerId, key)
+export function setApiKey(providerConfigId: string, key: string): void {
+  legacyApiKeyCache.set(providerConfigId, key)
   // Also add to new key manager
-  keyManager.addKey(providerId, key, 'Legacy key').catch((err) => logger.error('[Translation] Failed to add legacy key', err instanceof Error ? err : new Error(String(err))))
+  keyManager.addKey(providerConfigId, key, 'Legacy key').catch((err) => logger.error('[Translation] Failed to add legacy key', err instanceof Error ? err : new Error(String(err))))
 }
 
 /**
  * @deprecated Use keyManager.getKey() instead
  */
-export function getApiKey(providerId: string): string | null {
-  return legacyApiKeyCache.get(providerId) || null
+export function getApiKey(providerConfigId: string): string | null {
+  return legacyApiKeyCache.get(providerConfigId) || null
 }

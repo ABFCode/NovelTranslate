@@ -5,10 +5,16 @@
  */
 
 import { logger } from '../services/logger'
+import type { ProviderSettings } from '../../shared/types'
 
 export interface TranslationProvider {
   readonly id: string
   readonly name: string
+
+  /**
+   * Configure the provider with custom base URL and settings
+   */
+  configure?(baseUrl?: string, settings?: ProviderSettings): void
 
   /**
    * Translate text using this provider
@@ -23,7 +29,7 @@ export interface TranslationProvider {
   /**
    * Validate an API key
    */
-  validateKey(key: string): Promise<boolean>
+  validateKey(key: string, baseUrl?: string): Promise<boolean>
 }
 
 export interface ProviderTranslationRequest {
@@ -33,6 +39,8 @@ export interface ProviderTranslationRequest {
   temperature: number
   maxTokens?: number
   apiKey: string
+  /** Optional base URL override for this request (custom/compatible endpoints) */
+  baseUrl?: string
 }
 
 export interface ProviderTranslationResult {

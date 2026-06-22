@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,7 +26,7 @@ import type {
   Chapter,
   CostEstimate,
   GlossaryRunResult,
-  ProviderInfo
+  ProviderInfoExtended
 } from '../../../../../shared/types'
 
 interface GlossaryRunPanelProps {
@@ -42,9 +42,11 @@ export function GlossaryRunPanel({
   isLoadingChapters,
   onRunComplete
 }: GlossaryRunPanelProps): JSX.Element {
-  const [providers, setProviders] = useState<ProviderInfo[]>([])
-  const [recommended, setRecommended] = useState<Array<{ providerId: string; modelId: string }>>([])
-  const [providerId, setProviderId] = useState('')
+  const [providers, setProviders] = useState<ProviderInfoExtended[]>([])
+  const [recommended, setRecommended] = useState<
+    Array<{ providerConfigId: string; modelId: string; displayName: string }>
+  >([])
+  const [providerConfigId, setProviderConfigId] = useState('')
   const [modelId, setModelId] = useState('')
   const [concurrency, setConcurrency] = useState(3)
   const [scope, setScope] = useState<'all' | 'selected'>('all')
@@ -72,17 +74,17 @@ export function GlossaryRunPanel({
     const loadProviders = async (): Promise<void> => {
       try {
         const [providerList, recommendedModels] = await Promise.all([
-          window.api.provider.list(),
+          window.api.providerConfig.list(),
           window.api.glossaryRun.getRecommendedModels()
         ])
         setProviders(providerList)
         setRecommended(recommendedModels)
 
         if (recommendedModels.length > 0) {
-          setProviderId(recommendedModels[0].providerId)
+          setProviderConfigId(recommendedModels[0].providerConfigId)
           setModelId(recommendedModels[0].modelId)
         } else if (providerList.length > 0) {
-          setProviderId(providerList[0].id)
+          setProviderConfigId(providerList[0].id)
           setModelId(providerList[0].models[0]?.id || '')
         }
       } catch (error) {
@@ -94,8 +96,8 @@ export function GlossaryRunPanel({
   }, [])
 
   useEffect(() => {
-    if (!providerId) return
-    const models = providers.find((provider) => provider.id === providerId)?.models || []
+    if (!providerConfigId) return
+    const models = providers.find((provider) => provider.id === providerConfigId)?.models || []
     if (models.length === 0) {
       setModelId('')
       return
@@ -103,10 +105,10 @@ export function GlossaryRunPanel({
     if (!models.some((model) => model.id === modelId)) {
       setModelId(models[0].id)
     }
-  }, [providerId, providers, modelId])
+  }, [providerConfigId, providers, modelId])
 
   useEffect(() => {
-    if (!projectId || !providerId || !modelId || chaptersForRun.length === 0) {
+    if (!projectId || !providerConfigId || !modelId || chaptersForRun.length === 0) {
       setEstimate(null)
       return
     }
@@ -114,7 +116,7 @@ export function GlossaryRunPanel({
     let cancelled = false
     setIsEstimating(true)
     window.api.glossaryRun
-      .estimateCost(projectId, chaptersForRun, providerId, modelId)
+      .estimateCost(projectId, chaptersForRun, providerConfigId, modelId)
       .then((result) => {
         if (cancelled) return
         setEstimate(result)
@@ -132,7 +134,7 @@ export function GlossaryRunPanel({
     return () => {
       cancelled = true
     }
-  }, [projectId, providerId, modelId, chaptersForRun])
+  }, [projectId, providerConfigId, modelId, chaptersForRun])
 
   useEffect(() => {
     const unsubscribe = window.api.on.glossaryRunProgress((event) => {
@@ -142,10 +144,10 @@ export function GlossaryRunPanel({
     return () => { unsubscribe() }
   }, [projectId])
 
-  const availableModels = providers.find((p) => p.id === providerId)?.models || []
+  const availableModels = providers.find((p) => p.id === providerConfigId)?.models || []
 
   const handleRun = async (): Promise<void> => {
-    if (!projectId || !providerId || !modelId || chaptersForRun.length === 0) {
+    if (!projectId || !providerConfigId || !modelId || chaptersForRun.length === 0) {
       toast.error('Select a project, model, and at least one chapter')
       return
     }
@@ -157,7 +159,7 @@ export function GlossaryRunPanel({
       const result = await window.api.glossaryRun.run(
         projectId,
         chaptersForRun,
-        providerId,
+        providerConfigId,
         modelId,
         concurrency
       )
@@ -191,7 +193,7 @@ export function GlossaryRunPanel({
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-2">
             <Label>Provider</Label>
-            <Select value={providerId} onValueChange={setProviderId}>
+            <Select value={providerConfigId} onValueChange={setProviderConfigId}>
               <SelectTrigger>
                 <SelectValue placeholder="Select provider" />
               </SelectTrigger>
@@ -218,7 +220,7 @@ export function GlossaryRunPanel({
                 ))}
               </SelectContent>
             </Select>
-            {recommended.some((r) => r.providerId === providerId && r.modelId === modelId) && (
+            {recommended.some((r) => r.providerConfigId === providerConfigId && r.modelId === modelId) && (
               <span className="text-xs text-emerald-600">Recommended</span>
             )}
           </div>

@@ -105,7 +105,7 @@ export function createTestResult(
   configId: string | null,
   configSnapshotId: string | null,
   configName: string,
-  providerId: string,
+  providerConfigId: string,
   modelId: string,
   resultText: string | null,
   tokensIn: number,
@@ -122,7 +122,7 @@ export function createTestResult(
 
   const stmt = db.prepare(`
     INSERT INTO test_results (
-      id, test_run_id, config_id, config_snapshot_id, config_name, provider_id, model_id,
+      id, test_run_id, config_id, config_snapshot_id, config_name, provider_config_id, model_id,
       result_text, tokens_in, tokens_out, cost_usd, duration_ms, error, error_type,
       execution_path_json, created_at
     )
@@ -135,7 +135,7 @@ export function createTestResult(
     configId,
     configSnapshotId,
     configName,
-    providerId,
+    providerConfigId,
     modelId,
     resultText,
     tokensIn,
@@ -154,7 +154,7 @@ export function createTestResult(
     configId: configId || undefined,
     configSnapshotId: configSnapshotId || undefined,
     configName,
-    providerId,
+    providerConfigId,
     modelId,
     resultText: resultText || undefined,
     tokensIn,
@@ -174,7 +174,7 @@ export function createTestResult(
 export function getResultsForTestRun(testRunId: string): TestResult[] {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, test_run_id, config_id, config_snapshot_id, config_name, provider_id, model_id,
+    SELECT id, test_run_id, config_id, config_snapshot_id, config_name, provider_config_id, model_id,
            result_text, tokens_in, tokens_out, cost_usd, duration_ms, error, error_type,
            execution_path_json, created_at
     FROM test_results
@@ -192,7 +192,7 @@ export function getResultsForTestRun(testRunId: string): TestResult[] {
 export function getTestResult(id: string): TestResult | null {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, test_run_id, config_id, config_snapshot_id, config_name, provider_id, model_id,
+    SELECT id, test_run_id, config_id, config_snapshot_id, config_name, provider_config_id, model_id,
            result_text, tokens_in, tokens_out, cost_usd, duration_ms, error, error_type,
            execution_path_json, created_at
     FROM test_results
@@ -306,7 +306,7 @@ interface TestResultRow {
   config_id: string | null
   config_snapshot_id: string | null
   config_name: string
-  provider_id: string
+  provider_config_id: string
   model_id: string
   result_text: string | null
   tokens_in: number
@@ -338,7 +338,7 @@ function rowToTestResult(row: TestResultRow): TestResult {
     configId: row.config_id || undefined,
     configSnapshotId: row.config_snapshot_id || undefined,
     configName: row.config_name,
-    providerId: row.provider_id,
+    providerConfigId: row.provider_config_id,
     modelId: row.model_id,
     resultText: row.result_text || undefined,
     tokensIn: row.tokens_in,

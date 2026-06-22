@@ -1,4 +1,4 @@
-import { getSettings, saveSettings, resetSettings } from '../database'
+import { getSettings, saveSettings } from '../database'
 import { listGlossaryTerms, importGlossaryTerms } from '../database/repositories/glossary.repository'
 import { dialog } from 'electron'
 import { writeFileSync, readFileSync } from 'fs'
@@ -145,9 +145,9 @@ export function registerSettingsHandlers(): void {
  */
 export function registerApiKeyHandlers(): void {
   // List all API keys (metadata only, not the actual key values)
-  handleIpc('apikey:list', (providerId?: string): ApiKeyEntry[] => {
-    if (providerId) {
-      return listApiKeys(providerId)
+  handleIpc('apikey:list', (providerConfigId?: string): ApiKeyEntry[] => {
+    if (providerConfigId) {
+      return listApiKeys(providerConfigId)
     }
     return listAllApiKeys()
   })
@@ -157,26 +157,26 @@ export function registerApiKeyHandlers(): void {
     return getApiKey(keyId)
   })
 
-  // Get API key for provider (for making API calls)
-  handleIpc('apikey:getForProvider', async (providerId: string): Promise<string | null> => {
-    return keyManager.getKey(providerId)
+  // Get API key for provider config (for making API calls)
+  handleIpc('apikey:getForProvider', async (providerConfigId: string): Promise<string | null> => {
+    return keyManager.getKey(providerConfigId)
   })
 
-  // Check if provider has valid keys
-  handleIpc('apikey:hasValidKeys', (providerId: string): boolean => {
-    return keyManager.hasValidKeys(providerId)
+  // Check if provider config has valid keys
+  handleIpc('apikey:hasValidKeys', (providerConfigId: string): boolean => {
+    return keyManager.hasValidKeys(providerConfigId)
   })
 
   // Save/Add a new API key
   handleIpc(
     'apikey:save',
     async (
-      providerId: string,
+      providerConfigId: string,
       keyValue: string,
       label?: string,
       priority?: number
     ): Promise<ApiKeyEntry> => {
-      return keyManager.addKey(providerId, keyValue, label, priority)
+      return keyManager.addKey(providerConfigId, keyValue, label, priority)
     }
   )
 
@@ -204,8 +204,8 @@ export function registerApiKeyHandlers(): void {
   // Validate an API key (tests it against the provider)
   handleIpc(
     'apikey:validate',
-    async (providerId: string, keyValue: string): Promise<boolean> => {
-      return keyManager.validateKey(providerId, keyValue)
+    async (providerConfigId: string, keyValue: string): Promise<boolean> => {
+      return keyManager.validateKey(providerConfigId, keyValue)
     }
   )
 
@@ -236,102 +236,20 @@ export function registerApiKeyHandlers(): void {
 }
 
 /**
- * Register provider handlers
+ * Register provider handlers (legacy - returns extended provider info)
  */
 export function registerProviderHandlers(): void {
-  // List available providers
+  // List available providers - now returns from provider configs
   handleIpc('provider:list', (): ProviderInfo[] => {
-    // Return static list of supported providers with updated pricing
-    return [
-      {
-        id: 'openai',
-        name: 'OpenAI',
-        models: [
-          {
-            id: 'gpt-4o',
-            name: 'GPT-4o',
-            contextWindow: 128000,
-            inputPricePerMillion: 5,
-            outputPricePerMillion: 15
-          },
-          {
-            id: 'gpt-4o-mini',
-            name: 'GPT-4o Mini',
-            contextWindow: 128000,
-            inputPricePerMillion: 0.15,
-            outputPricePerMillion: 0.6
-          },
-          {
-            id: 'gpt-4-turbo',
-            name: 'GPT-4 Turbo',
-            contextWindow: 128000,
-            inputPricePerMillion: 10,
-            outputPricePerMillion: 30
-          },
-          {
-            id: 'gpt-3.5-turbo',
-            name: 'GPT-3.5 Turbo',
-            contextWindow: 16385,
-            inputPricePerMillion: 0.5,
-            outputPricePerMillion: 1.5
-          }
-        ]
-      },
-      {
-        id: 'gemini',
-        name: 'Google Gemini',
-        models: [
-          {
-            id: 'gemini-1.5-pro',
-            name: 'Gemini 1.5 Pro',
-            contextWindow: 2000000,
-            inputPricePerMillion: 3.5,
-            outputPricePerMillion: 10.5
-          },
-          {
-            id: 'gemini-1.5-flash',
-            name: 'Gemini 1.5 Flash',
-            contextWindow: 1000000,
-            inputPricePerMillion: 0.075,
-            outputPricePerMillion: 0.3
-          },
-          {
-            id: 'gemini-2.0-flash',
-            name: 'Gemini 2.0 Flash',
-            contextWindow: 1000000,
-            inputPricePerMillion: 0.1,
-            outputPricePerMillion: 0.4
-          }
-        ]
-      },
-      {
-        id: 'anthropic',
-        name: 'Anthropic',
-        models: [
-          {
-            id: 'claude-3-5-sonnet-20241022',
-            name: 'Claude 3.5 Sonnet',
-            contextWindow: 200000,
-            inputPricePerMillion: 3,
-            outputPricePerMillion: 15
-          },
-          {
-            id: 'claude-3-haiku-20240307',
-            name: 'Claude 3 Haiku',
-            contextWindow: 200000,
-            inputPricePerMillion: 0.25,
-            outputPricePerMillion: 1.25
-          },
-          {
-            id: 'claude-3-opus-20240229',
-            name: 'Claude 3 Opus',
-            contextWindow: 200000,
-            inputPricePerMillion: 15,
-            outputPricePerMillion: 75
-          }
-        ]
-      }
-    ]
+    // Import dynamically to avoid circular dependencies
+    const { providerConfigService } = require('../providers/provider-config.service')
+    const providers = providerConfigService.listProvidersExtended()
+    // Convert to legacy ProviderInfo format
+    return providers.map((p: { id: string; name: string; models: Array<{ id: string; name: string; contextWindow: number; inputPricePerMillion?: number; outputPricePerMillion?: number }> }) => ({
+      id: p.id,
+      name: p.name,
+      models: p.models
+    }))
   })
 
   logger.info('[IPC] Provider handlers registered')

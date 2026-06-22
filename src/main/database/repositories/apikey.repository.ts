@@ -6,19 +6,19 @@ import type { ApiKeyEntry } from '../../../shared/types'
 // ============================================================================
 
 /**
- * Get all API keys for a provider
+ * Get all API keys for a provider config
  */
-export function listApiKeys(providerId: string): ApiKeyEntry[] {
+export function listApiKeys(providerConfigId: string): ApiKeyEntry[] {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, provider_id, label, is_valid, last_validated_at, last_error_at,
+    SELECT id, provider_config_id, label, is_valid, last_validated_at, last_error_at,
            last_error, request_count, last_used_at, priority, is_enabled, created_at
     FROM api_keys
-    WHERE provider_id = ?
+    WHERE provider_config_id = ?
     ORDER BY priority ASC, created_at ASC
   `)
 
-  const rows = stmt.all(providerId) as ApiKeyRow[]
+  const rows = stmt.all(providerConfigId) as ApiKeyRow[]
   return rows.map(rowToApiKey)
 }
 
@@ -28,10 +28,10 @@ export function listApiKeys(providerId: string): ApiKeyEntry[] {
 export function listAllApiKeys(): ApiKeyEntry[] {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, provider_id, label, is_valid, last_validated_at, last_error_at,
+    SELECT id, provider_config_id, label, is_valid, last_validated_at, last_error_at,
            last_error, request_count, last_used_at, priority, is_enabled, created_at
     FROM api_keys
-    ORDER BY provider_id, priority ASC
+    ORDER BY provider_config_id, priority ASC
   `)
 
   const rows = stmt.all() as ApiKeyRow[]
@@ -44,7 +44,7 @@ export function listAllApiKeys(): ApiKeyEntry[] {
 export function getApiKey(id: string): ApiKeyEntry | null {
   const db = getDatabase()
   const stmt = db.prepare(`
-    SELECT id, provider_id, label, is_valid, last_validated_at, last_error_at,
+    SELECT id, provider_config_id, label, is_valid, last_validated_at, last_error_at,
            last_error, request_count, last_used_at, priority, is_enabled, created_at
     FROM api_keys
     WHERE id = ?
@@ -69,7 +69,7 @@ export function getApiKeyValue(id: string): string | null {
  * Create a new API key
  */
 export function createApiKey(
-  providerId: string,
+  providerConfigId: string,
   keyEncrypted: string,
   label?: string,
   priority = 0
@@ -80,17 +80,17 @@ export function createApiKey(
 
   const stmt = db.prepare(`
     INSERT INTO api_keys (
-      id, provider_id, key_encrypted, label, is_valid, last_validated_at,
+      id, provider_config_id, key_encrypted, label, is_valid, last_validated_at,
       last_error_at, last_error, request_count, last_used_at, priority, is_enabled, created_at
     )
     VALUES (?, ?, ?, ?, 1, NULL, NULL, NULL, 0, NULL, ?, 1, ?)
   `)
 
-  stmt.run(id, providerId, keyEncrypted, label || null, priority, now)
+  stmt.run(id, providerConfigId, keyEncrypted, label || null, priority, now)
 
   return {
     id,
-    providerId,
+    providerConfigId,
     label,
     isValid: true,
     requestCount: 0,
@@ -212,10 +212,10 @@ export function recordKeyUsage(id: string): void {
 }
 
 /**
- * Get the next available key for a provider (for rotation)
+ * Get the next available key for a provider config (for rotation)
  */
 export function getNextAvailableKey(
-  providerId: string,
+  providerConfigId: string,
   strategy: 'priority' | 'round_robin' | 'least_recently_used'
 ): ApiKeyEntry | null {
   const db = getDatabase()
@@ -224,10 +224,10 @@ export function getNextAvailableKey(
   switch (strategy) {
     case 'priority':
       sql = `
-        SELECT id, provider_id, label, is_valid, last_validated_at, last_error_at,
+        SELECT id, provider_config_id, label, is_valid, last_validated_at, last_error_at,
                last_error, request_count, last_used_at, priority, is_enabled, created_at
         FROM api_keys
-        WHERE provider_id = ? AND is_enabled = 1 AND is_valid = 1
+        WHERE provider_config_id = ? AND is_enabled = 1 AND is_valid = 1
         ORDER BY priority ASC
         LIMIT 1
       `
@@ -235,10 +235,10 @@ export function getNextAvailableKey(
 
     case 'round_robin':
       sql = `
-        SELECT id, provider_id, label, is_valid, last_validated_at, last_error_at,
+        SELECT id, provider_config_id, label, is_valid, last_validated_at, last_error_at,
                last_error, request_count, last_used_at, priority, is_enabled, created_at
         FROM api_keys
-        WHERE provider_id = ? AND is_enabled = 1 AND is_valid = 1
+        WHERE provider_config_id = ? AND is_enabled = 1 AND is_valid = 1
         ORDER BY request_count ASC, priority ASC
         LIMIT 1
       `
@@ -246,33 +246,33 @@ export function getNextAvailableKey(
 
     case 'least_recently_used':
       sql = `
-        SELECT id, provider_id, label, is_valid, last_validated_at, last_error_at,
+        SELECT id, provider_config_id, label, is_valid, last_validated_at, last_error_at,
                last_error, request_count, last_used_at, priority, is_enabled, created_at
         FROM api_keys
-        WHERE provider_id = ? AND is_enabled = 1 AND is_valid = 1
+        WHERE provider_config_id = ? AND is_enabled = 1 AND is_valid = 1
         ORDER BY COALESCE(last_used_at, '1970-01-01') ASC
         LIMIT 1
       `
       break
   }
 
-  const row = db.prepare(sql).get(providerId) as ApiKeyRow | undefined
+  const row = db.prepare(sql).get(providerConfigId) as ApiKeyRow | undefined
   return row ? rowToApiKey(row) : null
 }
 
 /**
- * Check if provider has any valid keys
+ * Check if provider config has any valid keys
  */
-export function hasValidKeys(providerId: string): boolean {
+export function hasValidKeys(providerConfigId: string): boolean {
   const db = getDatabase()
   const result = db
     .prepare(
       `
-    SELECT COUNT(*) as count FROM api_keys 
-    WHERE provider_id = ? AND is_enabled = 1 AND is_valid = 1
+    SELECT COUNT(*) as count FROM api_keys
+    WHERE provider_config_id = ? AND is_enabled = 1 AND is_valid = 1
   `
     )
-    .get(providerId) as { count: number }
+    .get(providerConfigId) as { count: number }
 
   return result.count > 0
 }
@@ -283,7 +283,7 @@ export function hasValidKeys(providerId: string): boolean {
 
 interface ApiKeyRow {
   id: string
-  provider_id: string
+  provider_config_id: string
   label: string | null
   is_valid: number
   last_validated_at: string | null
@@ -299,7 +299,7 @@ interface ApiKeyRow {
 function rowToApiKey(row: ApiKeyRow): ApiKeyEntry {
   return {
     id: row.id,
-    providerId: row.provider_id,
+    providerConfigId: row.provider_config_id,
     label: row.label || undefined,
     isValid: row.is_valid === 1,
     lastValidatedAt: row.last_validated_at || undefined,

@@ -105,7 +105,7 @@ export interface RetryConfig {
 export interface TranslationConfig {
   id: string
   name: string
-  providerId: string
+  providerConfigId: string
   modelId: string
   systemPrompt: string
   userPromptTemplate: string
@@ -131,7 +131,7 @@ export interface ConfigSnapshot {
   configId: string
   version: number
   name: string
-  providerId: string
+  providerConfigId: string
   modelId: string
   systemPrompt: string
   userPromptTemplate: string
@@ -193,7 +193,7 @@ export interface CostEstimate {
 export interface ChainExecutionStep {
   configId: string
   configName: string
-  providerId: string
+  providerConfigId: string
   modelId: string
   attemptNumber: number
   durationMs: number
@@ -243,7 +243,7 @@ export interface PreviewResult {
   originalText: string
   costUsd: number
   tokensUsed: { input: number; output: number }
-  providerId: string
+  providerConfigId: string
   modelId: string
   error?: string
 }
@@ -258,10 +258,55 @@ export interface TokenUsage {
 // Provider Types
 // ============================================================================
 
+export type ProviderType = 'builtin' | 'openai_compatible'
+
+export type BuiltinProviderId = 'openai' | 'anthropic' | 'gemini' | 'groq' | 'openrouter' | 'together' | 'ollama'
+
+export interface ProviderConfig {
+  id: string
+  providerType: ProviderType
+  builtinId?: BuiltinProviderId        // e.g., 'openai', 'anthropic' - for builtin types
+  displayName: string
+  baseUrl?: string                     // Required for openai_compatible, optional override for builtin
+  customModels?: ModelInfo[]           // Custom/override model list
+  isEnabled: boolean
+  sortOrder: number
+  settings: ProviderSettings
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProviderSettings {
+  timeout?: number
+  customHeaders?: Record<string, string>
+  organizationId?: string
+}
+
+export interface BuiltinProviderTemplate {
+  id: BuiltinProviderId
+  name: string
+  description: string
+  defaultBaseUrl: string
+  supportsBaseUrlOverride: boolean
+  sdkType: 'openai' | 'anthropic' | 'gemini' | 'openai_compatible'
+  defaultModels: ModelInfo[]
+}
+
 export interface ProviderInfo {
   id: string
   name: string
   models: ModelInfo[]
+}
+
+export interface ProviderInfoExtended extends ProviderInfo {
+  configId: string
+  providerType: ProviderType
+  builtinId?: BuiltinProviderId
+  baseUrl?: string
+  isEnabled: boolean
+  hasValidKey: boolean
+  keyCount: number
+  totalRequests: number
 }
 
 export interface ModelInfo {
@@ -346,7 +391,7 @@ export interface TranslationMemoryEntry {
   sourceHash: string
   sourceText: string
   targetText: string
-  providerId: string
+  providerConfigId: string
   modelId: string
   configId?: string
   confidence: number
@@ -375,7 +420,7 @@ export interface TranslationVersion {
   translatedText: string
   configId?: string
   configName?: string
-  providerId?: string
+  providerConfigId?: string
   modelId?: string
   versionNumber: number
   createdAt: string
@@ -407,7 +452,7 @@ export interface PromptTemplate {
 
 export interface ApiKeyEntry {
   id: string
-  providerId: string
+  providerConfigId: string
   label?: string
   isValid: boolean
   lastValidatedAt?: string
@@ -424,7 +469,7 @@ export type KeyRotationStrategy = 'priority' | 'round_robin' | 'least_recently_u
 
 export interface KeyValidationResult {
   keyId: string
-  providerId: string
+  providerConfigId: string
   label?: string
   isValid: boolean
   error?: string
@@ -454,7 +499,7 @@ export interface TestResult {
   configId?: string
   configSnapshotId?: string
   configName: string
-  providerId: string
+  providerConfigId: string
   modelId: string
   resultText?: string
   tokensIn: number
@@ -476,7 +521,7 @@ export interface ConfigExport {
   exportedAt: string
   configs: Array<{
     name: string
-    providerId: string
+    providerConfigId: string
     modelId: string
     systemPrompt: string
     userPromptTemplate: string
@@ -629,6 +674,16 @@ export type IpcChannel =
   | 'apikey:setRotationStrategy'
   // Provider channels
   | 'provider:list'
+  // Provider Config channels
+  | 'providerConfig:getTemplates'
+  | 'providerConfig:list'
+  | 'providerConfig:get'
+  | 'providerConfig:create'
+  | 'providerConfig:update'
+  | 'providerConfig:delete'
+  | 'providerConfig:getModels'
+  | 'providerConfig:fetchModels'
+  | 'providerConfig:validateConnection'
   // Retry config channels
   | 'retryConfig:get'
   | 'retryConfig:save'

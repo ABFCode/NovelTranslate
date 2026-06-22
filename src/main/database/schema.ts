@@ -28,7 +28,7 @@
  * - app_settings: Key-value store for settings
  */
 
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
 export const SCHEMA_SQL = `
 -- Enable WAL mode for better concurrent read/write performance
@@ -124,12 +124,31 @@ CREATE TRIGGER IF NOT EXISTS chapters_fts_delete AFTER DELETE ON chapter_content
 END;
 
 -- ============================================================================
+-- Provider Configs (user-added providers)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS provider_configs (
+  id TEXT PRIMARY KEY,
+  provider_type TEXT NOT NULL CHECK(provider_type IN ('builtin', 'openai_compatible')),
+  builtin_id TEXT,                    -- 'openai', 'anthropic', etc. for built-in
+  display_name TEXT NOT NULL,
+  base_url TEXT,                      -- Required for openai_compatible, optional override for builtin
+  models_json TEXT,                   -- Custom/override model list as JSON array
+  is_enabled BOOLEAN NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  settings_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_provider_configs_enabled ON provider_configs(is_enabled, sort_order);
+
+-- ============================================================================
 -- Translation Configs
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS translation_configs (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  provider_id TEXT NOT NULL,
+  provider_config_id TEXT NOT NULL REFERENCES provider_configs(id) ON DELETE RESTRICT,
   model_id TEXT NOT NULL,
   system_prompt TEXT NOT NULL DEFAULT '',
   user_prompt_template TEXT NOT NULL DEFAULT '',
@@ -141,6 +160,7 @@ CREATE TABLE IF NOT EXISTS translation_configs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_configs_default ON translation_configs(is_default);
+CREATE INDEX IF NOT EXISTS idx_configs_provider ON translation_configs(provider_config_id);
 
 -- ============================================================================
 -- Config Fallbacks (Chain Definitions)
@@ -170,7 +190,7 @@ CREATE TABLE IF NOT EXISTS config_snapshots (
   config_id TEXT NOT NULL,
   version INTEGER NOT NULL,
   name TEXT NOT NULL,
-  provider_id TEXT NOT NULL,
+  provider_config_id TEXT NOT NULL,
   model_id TEXT NOT NULL,
   system_prompt TEXT NOT NULL,
   user_prompt_template TEXT NOT NULL,
@@ -216,7 +236,7 @@ CREATE TABLE IF NOT EXISTS project_budgets (
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS api_keys (
   id TEXT PRIMARY KEY,
-  provider_id TEXT NOT NULL,
+  provider_config_id TEXT NOT NULL REFERENCES provider_configs(id) ON DELETE CASCADE,
   key_encrypted TEXT NOT NULL,
   label TEXT,
   is_valid BOOLEAN NOT NULL DEFAULT 1,
@@ -230,7 +250,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_api_keys_provider ON api_keys(provider_id, priority);
+CREATE INDEX IF NOT EXISTS idx_api_keys_provider_config ON api_keys(provider_config_id, priority);
 
 -- ============================================================================
 -- Prompt Templates
@@ -308,7 +328,7 @@ CREATE TABLE IF NOT EXISTS translation_memory (
   source_hash TEXT NOT NULL,
   source_text TEXT NOT NULL,
   target_text TEXT NOT NULL,
-  provider_id TEXT NOT NULL,
+  provider_config_id TEXT NOT NULL,
   model_id TEXT NOT NULL,
   config_id TEXT,
   project_id TEXT,
@@ -366,7 +386,7 @@ CREATE TABLE IF NOT EXISTS test_results (
   config_id TEXT,
   config_snapshot_id TEXT,
   config_name TEXT NOT NULL,
-  provider_id TEXT NOT NULL,
+  provider_config_id TEXT NOT NULL,
   model_id TEXT NOT NULL,
   result_text TEXT,
   tokens_in INTEGER NOT NULL DEFAULT 0,
@@ -422,8 +442,8 @@ CREATE TABLE IF NOT EXISTS usage_logs (
   project_id TEXT NOT NULL,
   chapter_id TEXT,
   config_id TEXT,
-  provider TEXT NOT NULL,
-  model TEXT NOT NULL,
+  provider_config_id TEXT NOT NULL,
+  model_id TEXT NOT NULL,
   tokens_in INTEGER NOT NULL,
   tokens_out INTEGER NOT NULL,
   cost_usd REAL NOT NULL DEFAULT 0,
@@ -453,7 +473,7 @@ CREATE TABLE IF NOT EXISTS translation_versions (
   translated_text TEXT NOT NULL,
   config_id TEXT,
   config_name TEXT,
-  provider_id TEXT,
+  provider_config_id TEXT,
   model_id TEXT,
   version_number INTEGER NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

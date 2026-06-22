@@ -17,7 +17,7 @@ import {
   DialogTrigger
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import type { TranslationConfig, PromptTemplate } from '../../../../shared/types'
+import type { TranslationConfig, PromptTemplate, ProviderInfoExtended } from '../../../../shared/types'
 
 export function ConfigsPage(): JSX.Element {
   const navigate = useNavigate()
@@ -26,6 +26,7 @@ export function ConfigsPage(): JSX.Element {
     useConfigsStore()
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [providers, setProviders] = useState<ProviderInfoExtended[]>([])
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
@@ -35,12 +36,16 @@ export function ConfigsPage(): JSX.Element {
   useEffect(() => {
     fetchConfigs()
     fetchTemplates()
+    window.api.providerConfig.list().then(setProviders).catch(console.error)
   }, [fetchConfigs, fetchTemplates])
+
+  const providerName = (id: string): string =>
+    providers.find((p) => p.id === id)?.name ?? id
 
   const filteredConfigs = configs.filter(
     (c) =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.providerId.toLowerCase().includes(searchQuery.toLowerCase())
+      providerName(c.providerConfigId).toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const handleCreateNew = (): void => {
@@ -193,6 +198,7 @@ export function ConfigsPage(): JSX.Element {
         ) : isAdvanced ? (
           <ConfigTable
             configs={filteredConfigs}
+            providerName={providerName}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onSetDefault={handleSetDefault}
@@ -200,6 +206,7 @@ export function ConfigsPage(): JSX.Element {
         ) : (
           <ConfigGrid
             configs={filteredConfigs}
+            providerName={providerName}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onSetDefault={handleSetDefault}
@@ -216,12 +223,13 @@ export function ConfigsPage(): JSX.Element {
 
 interface ConfigGridProps {
   configs: TranslationConfig[]
+  providerName: (id: string) => string
   onEdit: (config: TranslationConfig) => void
   onDelete: (config: TranslationConfig) => void
   onSetDefault: (config: TranslationConfig) => void
 }
 
-function ConfigGrid({ configs, onEdit, onDelete, onSetDefault }: ConfigGridProps): JSX.Element {
+function ConfigGrid({ configs, providerName, onEdit, onDelete, onSetDefault }: ConfigGridProps): JSX.Element {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <AnimatePresence>
@@ -245,7 +253,7 @@ function ConfigGrid({ configs, onEdit, onDelete, onSetDefault }: ConfigGridProps
                   <div>
                     <CardTitle className="text-base">{config.name}</CardTitle>
                     <CardDescription className="text-xs">
-                      {getProviderName(config.providerId)} / {config.modelId}
+                      {providerName(config.providerConfigId)} / {config.modelId}
                     </CardDescription>
                   </div>
                   {config.isDefault && (
@@ -294,12 +302,13 @@ function ConfigGrid({ configs, onEdit, onDelete, onSetDefault }: ConfigGridProps
 
 interface ConfigTableProps {
   configs: TranslationConfig[]
+  providerName: (id: string) => string
   onEdit: (config: TranslationConfig) => void
   onDelete: (config: TranslationConfig) => void
   onSetDefault: (config: TranslationConfig) => void
 }
 
-function ConfigTable({ configs, onEdit, onDelete, onSetDefault }: ConfigTableProps): JSX.Element {
+function ConfigTable({ configs, providerName, onEdit, onDelete, onSetDefault }: ConfigTableProps): JSX.Element {
   return (
     <div className="rounded-lg border">
       <table className="w-full">
@@ -321,7 +330,7 @@ function ConfigTable({ configs, onEdit, onDelete, onSetDefault }: ConfigTablePro
               onClick={() => onEdit(config)}
             >
               <td className="px-4 py-3 font-medium">{config.name}</td>
-              <td className="px-4 py-3 text-sm">{getProviderName(config.providerId)}</td>
+              <td className="px-4 py-3 text-sm">{providerName(config.providerConfigId)}</td>
               <td className="px-4 py-3 text-sm">{config.modelId}</td>
               <td className="px-4 py-3 text-sm">{config.temperature}</td>
               <td className="px-4 py-3">
@@ -455,19 +464,6 @@ function EmptyState({ onCreateNew }: EmptyStateProps): JSX.Element {
       </Button>
     </div>
   )
-}
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function getProviderName(providerId: string): string {
-  const names: Record<string, string> = {
-    openai: 'OpenAI',
-    anthropic: 'Anthropic',
-    gemini: 'Google Gemini'
-  }
-  return names[providerId] || providerId
 }
 
 // Icons

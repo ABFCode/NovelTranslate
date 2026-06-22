@@ -13,7 +13,7 @@ export const translationConfigSchema = z.object({
     .string()
     .min(1, 'Name is required')
     .max(100, 'Name must be 100 characters or less'),
-  providerId: z.string().min(1, 'Please select a provider'),
+  providerConfigId: z.string().min(1, 'Please select a provider'),
   modelId: z.string().min(1, 'Please select a model'),
   systemPrompt: z.string().max(50000, 'System prompt is too long'),
   userPromptTemplate: z
@@ -126,7 +126,7 @@ export type TestRunFormData = z.infer<typeof testRunSchema>
 // ============================================================================
 
 export const apiKeySchema = z.object({
-  providerId: z.string().min(1, 'Please select a provider'),
+  providerConfigId: z.string().min(1, 'Please select a provider'),
   keyValue: z
     .string()
     .min(1, 'API key is required')
@@ -266,7 +266,7 @@ export const configImportSchema = z.object({
   configs: z.array(
     z.object({
       name: z.string(),
-      providerId: z.string(),
+      providerConfigId: z.string(),
       modelId: z.string(),
       systemPrompt: z.string(),
       userPromptTemplate: z.string(),

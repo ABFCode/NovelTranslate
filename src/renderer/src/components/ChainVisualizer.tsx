@@ -159,7 +159,7 @@ function ExecutionPathVisualizer({
           <div className="flex-1 min-w-0">
             <div className="font-medium text-sm">{step.configName}</div>
             <div className="text-xs text-muted-foreground">
-              {step.providerId} / {step.modelId}
+              {step.modelId}
               {step.durationMs && ` • ${step.durationMs}ms`}
               {step.attemptNumber > 1 && ` • Attempt ${step.attemptNumber}`}
             </div>
@@ -217,7 +217,7 @@ function ConfigCard({ config, isPrimary }: ConfigCardProps): JSX.Element {
         )}
       </div>
       <div className="text-xs text-muted-foreground">
-        {getProviderName(config.providerId)} / {config.modelId}
+        {config.modelId}
       </div>
     </div>
   )
@@ -236,15 +236,6 @@ function getConditionLabel(conditionType: string): string {
     network_error: 'On network error'
   }
   return labels[conditionType] || conditionType
-}
-
-function getProviderName(providerId: string): string {
-  const names: Record<string, string> = {
-    openai: 'OpenAI',
-    anthropic: 'Anthropic',
-    gemini: 'Google Gemini'
-  }
-  return names[providerId] || providerId
 }
 
 // Icons

@@ -52,12 +52,12 @@ export class TranslationMemoryService {
   cache(
     sourceText: string,
     targetText: string,
-    providerId: string,
+    providerConfigId: string,
     modelId: string,
     configId?: string,
     projectId?: string
   ): TranslationMemoryEntry {
-    return cacheTranslation(sourceText, targetText, providerId, modelId, configId, projectId)
+    return cacheTranslation(sourceText, targetText, providerConfigId, modelId, configId, projectId)
   }
 
   /**

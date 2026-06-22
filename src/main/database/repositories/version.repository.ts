@@ -9,7 +9,7 @@ export function archiveTranslation(
   translatedText: string,
   configId?: string,
   configName?: string,
-  providerId?: string,
+  providerConfigId?: string,
   modelId?: string
 ): TranslationVersion {
   const db = getDatabase()
@@ -28,12 +28,12 @@ export function archiveTranslation(
   const stmt = db.prepare(`
     INSERT INTO translation_versions (
       id, chapter_id, translated_text, config_id, config_name,
-      provider_id, model_id, version_number, created_at
+      provider_config_id, model_id, version_number, created_at
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
-  stmt.run(id, chapterId, translatedText, configId || null, configName || null, providerId || null, modelId || null, versionNumber, now)
+  stmt.run(id, chapterId, translatedText, configId || null, configName || null, providerConfigId || null, modelId || null, versionNumber, now)
 
   return {
     id,
@@ -41,7 +41,7 @@ export function archiveTranslation(
     translatedText,
     configId,
     configName,
-    providerId,
+    providerConfigId,
     modelId,
     versionNumber,
     createdAt: now
@@ -55,7 +55,7 @@ export function listTranslationVersions(chapterId: string): TranslationVersion[]
   const db = getDatabase()
   const stmt = db.prepare(`
     SELECT id, chapter_id, translated_text, config_id, config_name,
-           provider_id, model_id, version_number, created_at
+           provider_config_id, model_id, version_number, created_at
     FROM translation_versions
     WHERE chapter_id = ?
     ORDER BY version_number DESC
@@ -72,7 +72,7 @@ export function getTranslationVersion(id: string): TranslationVersion | null {
   const db = getDatabase()
   const stmt = db.prepare(`
     SELECT id, chapter_id, translated_text, config_id, config_name,
-           provider_id, model_id, version_number, created_at
+           provider_config_id, model_id, version_number, created_at
     FROM translation_versions
     WHERE id = ?
   `)
@@ -88,7 +88,7 @@ export function getLatestVersion(chapterId: string): TranslationVersion | null {
   const db = getDatabase()
   const stmt = db.prepare(`
     SELECT id, chapter_id, translated_text, config_id, config_name,
-           provider_id, model_id, version_number, created_at
+           provider_config_id, model_id, version_number, created_at
     FROM translation_versions
     WHERE chapter_id = ?
     ORDER BY version_number DESC
@@ -150,7 +150,7 @@ interface VersionRow {
   translated_text: string
   config_id: string | null
   config_name: string | null
-  provider_id: string | null
+  provider_config_id: string | null
   model_id: string | null
   version_number: number
   created_at: string
@@ -163,7 +163,7 @@ function rowToVersion(row: VersionRow): TranslationVersion {
     translatedText: row.translated_text,
     configId: row.config_id || undefined,
     configName: row.config_name || undefined,
-    providerId: row.provider_id || undefined,
+    providerConfigId: row.provider_config_id || undefined,
     modelId: row.model_id || undefined,
     versionNumber: row.version_number,
     createdAt: row.created_at

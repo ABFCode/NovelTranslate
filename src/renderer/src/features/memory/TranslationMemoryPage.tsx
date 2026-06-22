@@ -310,7 +310,7 @@ function MemoryRow({
       </td>
       <td className="py-3 pr-4 align-top text-muted-foreground">{entry.usageCount}</td>
       <td className="py-3 pr-4 align-top text-xs text-muted-foreground">
-        {entry.providerId} / {entry.modelId}
+        {entry.modelId}
       </td>
       <td className="py-3 text-right align-top">
         <div className="flex justify-end gap-2">

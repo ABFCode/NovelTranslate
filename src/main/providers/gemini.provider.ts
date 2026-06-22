@@ -4,17 +4,41 @@ import type {
   ProviderTranslationRequest,
   ProviderTranslationResult,
 } from './types'
+import type { ProviderSettings } from '../../shared/types'
 
 export class GeminiProvider implements TranslationProvider {
   readonly id = 'gemini'
   readonly name = 'Google Gemini'
+  private baseUrl?: string
+  private settings: ProviderSettings = {}
+
+  /**
+   * Configure the provider with custom settings
+   * Note: Google Generative AI SDK has limited base URL support
+   */
+  configure(baseUrl?: string, settings?: ProviderSettings): void {
+    this.baseUrl = baseUrl
+    if (settings) {
+      this.settings = settings
+    }
+  }
 
   async translate(request: ProviderTranslationRequest): Promise<ProviderTranslationResult> {
     const genAI = new GoogleGenerativeAI(request.apiKey)
-    const model = genAI.getGenerativeModel({
-      model: request.modelId,
-      systemInstruction: request.systemPrompt,
-    })
+    const baseUrl = request.baseUrl || this.baseUrl
+    const model = genAI.getGenerativeModel(
+      {
+        model: request.modelId,
+        systemInstruction: request.systemPrompt,
+      },
+      {
+        baseUrl,
+        timeout: this.settings.timeout,
+        customHeaders: this.settings.customHeaders
+          ? new Headers(this.settings.customHeaders)
+          : undefined,
+      }
+    )
 
     try {
       const result = await model.generateContent({
@@ -53,7 +77,7 @@ export class GeminiProvider implements TranslationProvider {
     return Math.ceil(text.length / 4)
   }
 
-  async validateKey(key: string): Promise<boolean> {
+  async validateKey(key: string, _baseUrl?: string): Promise<boolean> {
     const genAI = new GoogleGenerativeAI(key)
 
     try {

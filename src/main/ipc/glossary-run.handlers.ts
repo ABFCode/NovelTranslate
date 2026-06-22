@@ -17,10 +17,10 @@ export function registerGlossaryRunHandlers(): void {
     (
       projectId: string,
       chapterIds: string[],
-      providerId: string,
+      providerConfigId: string,
       modelId: string
     ): Promise<CostEstimate> => {
-      return glossaryRunService.estimateCost(projectId, chapterIds, providerId, modelId)
+      return glossaryRunService.estimateCost(projectId, chapterIds, providerConfigId, modelId)
     }
   )
 
@@ -30,7 +30,7 @@ export function registerGlossaryRunHandlers(): void {
       event,
       projectId: string,
       chapterIds: string[],
-      providerId: string,
+      providerConfigId: string,
       modelId: string,
       concurrency?: number
     ): Promise<GlossaryRunResult> => {
@@ -39,7 +39,7 @@ export function registerGlossaryRunHandlers(): void {
       return glossaryRunService.runExtraction(
         projectId,
         chapterIds as string[],
-        providerId as string,
+        providerConfigId as string,
         modelId as string,
         (concurrency as number | undefined) ?? 3,
         (current, total, chapterId) => {

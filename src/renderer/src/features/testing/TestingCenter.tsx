@@ -302,7 +302,7 @@ function ConfigSelectionItem({
       <div className="flex-1">
         <div className="font-medium">{config.name}</div>
         <div className="text-xs text-muted-foreground">
-          {getProviderName(config.providerId)} / {config.modelId}
+          {config.modelId}
         </div>
       </div>
       {config.isDefault && (
@@ -385,7 +385,6 @@ function ResultCard({ result, showFull }: ResultCardProps): JSX.Element {
           <span>
             {result.tokensIn} / {result.tokensOut} tokens
           </span>
-          <span>{result.providerId}</span>
           <span>{result.modelId}</span>
         </div>
       </CardContent>
@@ -410,15 +409,6 @@ function EmptyResults(): JSX.Element {
 // ============================================================================
 // Helpers
 // ============================================================================
-
-function getProviderName(providerId: string): string {
-  const names: Record<string, string> = {
-    openai: 'OpenAI',
-    anthropic: 'Anthropic',
-    gemini: 'Google Gemini'
-  }
-  return names[providerId] || providerId
-}
 
 // Icons
 function PlayIcon({ className }: { className?: string }): JSX.Element {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from '@tanstack/react-router'
-import { BookOpen, Play, Pause, Settings2, Eye, RotateCcw, CheckSquare, History } from 'lucide-react'
+import { BookOpen, Play, Pause, Settings2, Eye, RotateCcw, History } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
 import { Button } from '@/components/ui/button'
@@ -450,7 +450,7 @@ export function ProjectPage() {
                     </Select>
                     <p className="text-xs text-muted-foreground">
                       {selectedConfig
-                        ? `${selectedConfig.providerId} / ${selectedConfig.modelId}`
+                        ? selectedConfig.modelId
                         : 'No config selected'}
                     </p>
                   </div>

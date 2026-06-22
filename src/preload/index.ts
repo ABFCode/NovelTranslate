@@ -12,6 +12,12 @@ import type {
   PromptTemplate,
   AppSettings,
   ProviderInfo,
+  ProviderInfoExtended,
+  ProviderConfig,
+  BuiltinProviderTemplate,
+  BuiltinProviderId,
+  ModelInfo,
+  ProviderSettings,
   TestRun,
   CostEstimate,
   GlossaryTerm,
@@ -270,17 +276,17 @@ const api = {
   // =========================================================================
   glossaryRun: {
     getRecommendedModels: () =>
-      invoke<Array<{ providerId: string; modelId: string }>>('glossaryRun:getRecommendedModels'),
+      invoke<Array<{ providerConfigId: string; modelId: string; displayName: string }>>('glossaryRun:getRecommendedModels'),
     estimateCost: (
       projectId: string,
       chapterIds: string[],
-      providerId: string,
+      providerConfigId: string,
       modelId: string
-    ) => invoke<CostEstimate>('glossaryRun:estimate', projectId, chapterIds, providerId, modelId),
+    ) => invoke<CostEstimate>('glossaryRun:estimate', projectId, chapterIds, providerConfigId, modelId),
     run: (
       projectId: string,
       chapterIds: string[],
-      providerId: string,
+      providerConfigId: string,
       modelId: string,
       concurrency?: number
     ) =>
@@ -288,7 +294,7 @@ const api = {
         'glossaryRun:run',
         projectId,
         chapterIds,
-        providerId,
+        providerConfigId,
         modelId,
         concurrency
       )
@@ -337,12 +343,12 @@ const api = {
   // API Key APIs (Extended)
   // =========================================================================
   apiKey: {
-    list: (providerId?: string) => invoke<ApiKeyEntry[]>('apikey:list', providerId),
+    list: (providerConfigId?: string) => invoke<ApiKeyEntry[]>('apikey:list', providerConfigId),
     get: (keyId: string) => invoke<ApiKeyEntry | null>('apikey:get', keyId),
-    getForProvider: (providerId: string) => invoke<string | null>('apikey:getForProvider', providerId),
-    hasValidKeys: (providerId: string) => invoke<boolean>('apikey:hasValidKeys', providerId),
-    save: (providerId: string, keyValue: string, label?: string, priority?: number) =>
-      invoke<ApiKeyEntry>('apikey:save', providerId, keyValue, label, priority),
+    getForProvider: (providerConfigId: string) => invoke<string | null>('apikey:getForProvider', providerConfigId),
+    hasValidKeys: (providerConfigId: string) => invoke<boolean>('apikey:hasValidKeys', providerConfigId),
+    save: (providerConfigId: string, keyValue: string, label?: string, priority?: number) =>
+      invoke<ApiKeyEntry>('apikey:save', providerConfigId, keyValue, label, priority),
     updateValue: (keyId: string, newKeyValue: string) =>
       invoke<void>('apikey:updateValue', keyId, newKeyValue),
     updateMeta: (
@@ -350,8 +356,8 @@ const api = {
       updates: Partial<{ label: string | null; priority: number; isEnabled: boolean }>
     ) => invoke<void>('apikey:updateMeta', keyId, updates),
     delete: (keyId: string) => invoke<void>('apikey:delete', keyId),
-    validate: (providerId: string, keyValue: string) =>
-      invoke<boolean>('apikey:validate', providerId, keyValue),
+    validate: (providerConfigId: string, keyValue: string) =>
+      invoke<boolean>('apikey:validate', providerConfigId, keyValue),
     validateStored: (keyId: string) => invoke<boolean>('apikey:validateStored', keyId),
     validateAll: () => invoke<KeyValidationResult[]>('apikey:validateAll'),
     setRotationStrategy: (strategy: 'priority' | 'round_robin' | 'least_recently_used') =>
@@ -381,10 +387,61 @@ const api = {
   },
 
   // =========================================================================
-  // Provider APIs
+  // Provider APIs (Legacy)
   // =========================================================================
   provider: {
     list: () => invoke<ProviderInfo[]>('provider:list')
+  },
+
+  // =========================================================================
+  // Provider Config APIs (New)
+  // =========================================================================
+  providerConfig: {
+    // Get builtin provider templates
+    getTemplates: () => invoke<BuiltinProviderTemplate[]>('providerConfig:getTemplates'),
+
+    // List all configured providers with extended info
+    list: () => invoke<ProviderInfoExtended[]>('providerConfig:list'),
+
+    // Get a specific provider config
+    get: (configId: string) => invoke<ProviderConfig | null>('providerConfig:get', configId),
+
+    // Create a new provider config
+    create: (params: {
+      builtinId?: BuiltinProviderId
+      displayName: string
+      baseUrl?: string
+      customModels?: ModelInfo[]
+      settings?: ProviderSettings
+    }) => invoke<ProviderConfig>('providerConfig:create', params),
+
+    // Update a provider config
+    update: (
+      configId: string,
+      updates: Partial<Omit<ProviderConfig, 'id' | 'createdAt' | 'updatedAt'>>
+    ) => invoke<void>('providerConfig:update', configId, updates),
+
+    // Delete a provider config
+    delete: (configId: string) => invoke<void>('providerConfig:delete', configId),
+
+    // Get models for a provider config
+    getModels: (configId: string) => invoke<ModelInfo[]>('providerConfig:getModels', configId),
+
+    // Fetch models from provider API
+    fetchModels: (configId: string, apiKey: string) =>
+      invoke<ModelInfo[]>('providerConfig:fetchModels', configId, apiKey),
+
+    // Validate connection to a provider
+    validateConnection: (configId: string, apiKey: string) =>
+      invoke<{ valid: boolean; error?: string; models?: number }>(
+        'providerConfig:validateConnection',
+        configId,
+        apiKey
+      ),
+
+    // Check if a builtin provider is already configured
+    isBuiltinConfigured: (builtinId: BuiltinProviderId) =>
+      invoke<boolean>('providerConfig:isBuiltinConfigured', builtinId)
   },
 
   // =========================================================================

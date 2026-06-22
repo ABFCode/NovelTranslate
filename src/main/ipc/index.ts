@@ -8,6 +8,7 @@ import {
   registerProviderHandlers,
   registerBudgetHandlers
 } from './settings.handlers'
+import { registerProviderConfigHandlers } from './provider.handlers'
 import { registerTestHandlers } from './test.handlers'
 import { registerGlossaryHandlers } from './glossary.handlers'
 import { registerGlossaryRunHandlers } from './glossary-run.handlers'
@@ -65,8 +66,11 @@ export function registerIpcHandlers(): void {
   // API Key handlers
   registerApiKeyHandlers()
 
-  // Provider handlers
+  // Provider handlers (legacy)
   registerProviderHandlers()
+
+  // Provider config handlers (new)
+  registerProviderConfigHandlers()
 
   // Budget handlers
   registerBudgetHandlers()

@@ -7,20 +7,23 @@
 import type {
   CostEstimate,
   TermType,
-  GlossaryGender
+  GlossaryGender,
+  BuiltinProviderId
 } from '../../shared/types'
 import { glossaryService } from './glossary.service'
 import { estimateTokens, estimateCostForTokens } from './cost-estimator'
 import { keyManager } from './key-manager'
-import { providerRegistry } from '../providers'
+import { getProviderByConfigId } from '../providers'
+import { providerConfigService } from '../providers/provider-config.service'
+import { findProviderConfigByBuiltinId } from '../database/repositories/provider-config.repository'
 import { logger, generateCorrelationId } from './logger'
 import { getChapterContent } from '../database/repositories/chapter.repository'
 
-// Recommended cheap models for extraction
-const CHEAP_MODELS = [
-  { providerId: 'openai', modelId: 'gpt-4o-mini' },
-  { providerId: 'anthropic', modelId: 'claude-3-haiku-20240307' },
-  { providerId: 'gemini', modelId: 'gemini-1.5-flash' }
+// Recommended cheap models for extraction (builtin provider IDs)
+const CHEAP_MODEL_SPECS = [
+  { builtinId: 'openai' as BuiltinProviderId, modelId: 'gpt-4o-mini' },
+  { builtinId: 'anthropic' as BuiltinProviderId, modelId: 'claude-3-haiku-20240307' },
+  { builtinId: 'gemini' as BuiltinProviderId, modelId: 'gemini-1.5-flash' }
 ]
 
 interface ExtractionResult {
@@ -61,7 +64,7 @@ export class GlossaryRunService {
   async estimateCost(
     _projectId: string,
     chapterIds: string[],
-    providerId: string,
+    providerConfigId: string,
     modelId: string
   ): Promise<CostEstimate> {
     let totalInputTokens = 0
@@ -79,7 +82,7 @@ export class GlossaryRunService {
     return estimateCostForTokens(
       totalInputTokens + promptOverhead,
       Math.ceil(totalInputTokens * 0.3), // Output is typically shorter (just terms)
-      providerId,
+      providerConfigId,
       modelId
     )
   }
@@ -90,7 +93,7 @@ export class GlossaryRunService {
   async runExtraction(
     projectId: string,
     chapterIds: string[],
-    providerId: string,
+    providerConfigId: string,
     modelId: string,
     concurrency = 3,
     emitProgress?: (current: number, total: number, chapterId: string) => void
@@ -101,7 +104,7 @@ export class GlossaryRunService {
     log.info('Starting glossary extraction', {
       projectId,
       chapterCount: chapterIds.length,
-      providerId,
+      providerConfigId,
       modelId
     })
 
@@ -117,9 +120,9 @@ export class GlossaryRunService {
     }
 
     // Get API key
-    const apiKey = await keyManager.getKey(providerId)
+    const apiKey = await keyManager.getKey(providerConfigId)
     if (!apiKey) {
-      throw new Error(`No API key available for provider: ${providerId}`)
+      throw new Error(`No API key available for provider config: ${providerConfigId}`)
     }
 
     // Process chapters with concurrency limit
@@ -133,7 +136,7 @@ export class GlossaryRunService {
         this.extractFromChapter(
           projectId,
           chapterId,
-          providerId,
+          providerConfigId,
           modelId,
           apiKey,
           log
@@ -187,8 +190,21 @@ export class GlossaryRunService {
   /**
    * Get recommended cheap models for extraction
    */
-  getRecommendedModels(): Array<{ providerId: string; modelId: string }> {
-    return CHEAP_MODELS.filter((m) => keyManager.hasValidKeys(m.providerId))
+  getRecommendedModels(): Array<{ providerConfigId: string; modelId: string; displayName: string }> {
+    const results: Array<{ providerConfigId: string; modelId: string; displayName: string }> = []
+
+    for (const spec of CHEAP_MODEL_SPECS) {
+      const config = findProviderConfigByBuiltinId(spec.builtinId)
+      if (config && keyManager.hasValidKeys(config.id)) {
+        results.push({
+          providerConfigId: config.id,
+          modelId: spec.modelId,
+          displayName: config.displayName
+        })
+      }
+    }
+
+    return results
   }
 
   // ============================================================================
@@ -198,7 +214,7 @@ export class GlossaryRunService {
   private async extractFromChapter(
     projectId: string,
     chapterId: string,
-    providerId: string,
+    providerConfigId: string,
     modelId: string,
     apiKey: string,
     log: typeof logger
@@ -217,10 +233,14 @@ export class GlossaryRunService {
     log.debug('Extracting from chapter', { chapterId })
 
     try {
-      const provider = providerRegistry.get(providerId)
+      const provider = getProviderByConfigId(providerConfigId)
       if (!provider) {
-        throw new Error(`Unknown provider: ${providerId}`)
+        throw new Error(`Unknown provider config: ${providerConfigId}`)
       }
+
+      // Get base URL for provider config
+      const providerConfig = providerConfigService.getProviderConfig(providerConfigId)
+      const baseUrl = providerConfig ? providerConfigService.getBaseUrl(providerConfig) : undefined
 
       // Build extraction prompt
       const prompt = this.buildExtractionPrompt(content.sourceText)
@@ -232,7 +252,8 @@ export class GlossaryRunService {
         systemPrompt: this.getExtractionSystemPrompt(),
         modelId,
         apiKey,
-        temperature: 0.3
+        temperature: 0.3,
+        baseUrl
       })
 
       const durationMs = Date.now() - startTime
@@ -267,7 +288,7 @@ export class GlossaryRunService {
       const cost = estimateCostForTokens(
         response.tokensUsed.input,
         response.tokensUsed.output,
-        providerId,
+        providerConfigId,
         modelId
       )
 

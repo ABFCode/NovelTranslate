@@ -170,8 +170,8 @@ export function TranslationHistory({
                     {selectedVersion.configName && (
                       <p>Config: {selectedVersion.configName}</p>
                     )}
-                    {selectedVersion.providerId && selectedVersion.modelId && (
-                      <p>Model: {selectedVersion.providerId}/{selectedVersion.modelId}</p>
+                    {selectedVersion.modelId && (
+                      <p>Model: {selectedVersion.modelId}</p>
                     )}
                   </div>
                   <div className="border-t pt-3">

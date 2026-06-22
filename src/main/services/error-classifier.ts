@@ -21,15 +21,18 @@ export const DEFAULT_RETRYABLE_ERRORS: ErrorType[] = ['rate_limit', 'timeout', '
 
 /**
  * Classify an error into a standard error type
+ * @param error The error to classify
+ * @param sdkType The SDK type used (openai, anthropic, gemini, openai_compatible)
  */
-export function classifyError(error: unknown, providerId: string): ClassificationResult {
+export function classifyError(error: unknown, sdkType: string): ClassificationResult {
   const errorMessage = extractErrorMessage(error)
   const errorCode = extractErrorCode(error)
   const statusCode = extractStatusCode(error)
 
-  // Provider-specific classification
-  switch (providerId) {
+  // SDK-specific classification
+  switch (sdkType) {
     case 'openai':
+    case 'openai_compatible':
       return classifyOpenAIError(error, errorMessage, errorCode, statusCode)
     case 'anthropic':
       return classifyAnthropicError(error, errorMessage, errorCode, statusCode)

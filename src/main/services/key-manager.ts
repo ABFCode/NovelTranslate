@@ -12,6 +12,8 @@ import { logger } from './logger'
 import type { ApiKeyEntry, KeyRotationStrategy, KeyValidationResult } from '../../shared/types'
 import {
   listApiKeys,
+  listAllApiKeys,
+  getApiKey,
   getApiKeyValue,
   createApiKey,
   updateApiKeyValue,
@@ -23,7 +25,7 @@ import {
   getNextAvailableKey,
   hasValidKeys
 } from '../database/repositories/apikey.repository'
-import { providerRegistry } from '../providers'
+import { validateKeyForConfig } from '../providers'
 
 // Legacy key storage path (for migration)
 const LEGACY_KEYS_PATH = join(app.getPath('userData'), 'api-keys.enc')
@@ -51,8 +53,8 @@ export class KeyManager {
   /**
    * Get an API key for a provider using the configured rotation strategy
    */
-  async getKey(providerId: string): Promise<string | null> {
-    const keyEntry = getNextAvailableKey(providerId, this.rotationStrategy)
+  async getKey(providerConfigId: string): Promise<string | null> {
+    const keyEntry = getNextAvailableKey(providerConfigId, this.rotationStrategy)
 
     if (!keyEntry) {
       return null
@@ -79,7 +81,7 @@ export class KeyManager {
    * Add a new API key
    */
   async addKey(
-    providerId: string,
+    providerConfigId: string,
     keyValue: string,
     label?: string,
     priority = 0
@@ -88,7 +90,7 @@ export class KeyManager {
     const encryptedKey = this.encryptKey(keyValue)
 
     // Create the entry
-    return createApiKey(providerId, encryptedKey, label, priority)
+    return createApiKey(providerConfigId, encryptedKey, label, priority)
   }
 
   /**
@@ -109,14 +111,9 @@ export class KeyManager {
   /**
    * Validate an API key
    */
-  async validateKey(providerId: string, keyValue: string): Promise<boolean> {
-    const provider = providerRegistry.get(providerId)
-    if (!provider) {
-      throw new Error(`Unknown provider: ${providerId}`)
-    }
-
+  async validateKey(providerConfigId: string, keyValue: string): Promise<boolean> {
     try {
-      return await provider.validateKey(keyValue)
+      return await validateKeyForConfig(providerConfigId, keyValue)
     } catch {
       return false
     }
@@ -136,15 +133,14 @@ export class KeyManager {
       return false
     }
 
-    // Get the key entry to find the provider
-    const keys = listApiKeys('')
-    const keyEntry = keys.find((k) => k.id === keyId)
+    // Get the key entry to find the provider config
+    const keyEntry = getApiKey(keyId)
     if (!keyEntry) {
       return false
     }
 
     try {
-      const isValid = await this.validateKey(keyEntry.providerId, keyValue)
+      const isValid = await this.validateKey(keyEntry.providerConfigId, keyValue)
       if (isValid) {
         markKeyValidated(keyId)
       } else {
@@ -172,7 +168,7 @@ export class KeyManager {
    * Validate all stored keys and return results
    */
   async validateAllKeys(): Promise<KeyValidationResult[]> {
-    const allKeys = listApiKeys('')
+    const allKeys = listAllApiKeys()
     const results: KeyValidationResult[] = []
 
     // Validate keys in parallel with concurrency limit
@@ -185,7 +181,7 @@ export class KeyManager {
             const isValid = await this.validateStoredKey(key.id)
             return {
               keyId: key.id,
-              providerId: key.providerId,
+              providerConfigId: key.providerConfigId,
               label: key.label,
               isValid,
               error: isValid ? undefined : 'Validation failed'
@@ -193,7 +189,7 @@ export class KeyManager {
           } catch (error) {
             return {
               keyId: key.id,
-              providerId: key.providerId,
+              providerConfigId: key.providerConfigId,
               label: key.label,
               isValid: false,
               error: error instanceof Error ? error.message : String(error)
@@ -210,15 +206,15 @@ export class KeyManager {
   /**
    * Check if a provider has any valid keys
    */
-  hasValidKeys(providerId: string): boolean {
-    return hasValidKeys(providerId)
+  hasValidKeys(providerConfigId: string): boolean {
+    return hasValidKeys(providerConfigId)
   }
 
   /**
    * List all keys for a provider
    */
-  listKeys(providerId: string): ApiKeyEntry[] {
-    return listApiKeys(providerId)
+  listKeys(providerConfigId: string): ApiKeyEntry[] {
+    return listApiKeys(providerConfigId)
   }
 
   /**
@@ -233,15 +229,15 @@ export class KeyManager {
       const legacyKeys = this.loadLegacyKeys()
       let migrated = 0
 
-      for (const [providerId, keyValue] of legacyKeys) {
+      for (const [providerConfigId, keyValue] of legacyKeys) {
         // Check if provider already has keys
-        const existingKeys = listApiKeys(providerId)
+        const existingKeys = listApiKeys(providerConfigId)
         if (existingKeys.length > 0) {
           continue
         }
 
         // Add the legacy key
-        await this.addKey(providerId, keyValue, 'Migrated from legacy storage', 0)
+        await this.addKey(providerConfigId, keyValue, 'Migrated from legacy storage', 0)
         migrated++
       }
 

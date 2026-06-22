@@ -21,7 +21,7 @@ import { translationConfigSchema, type TranslationConfigFormData } from '../../.
 import type {
   TranslationConfig,
   ConfigFallback,
-  ProviderInfo,
+  ProviderInfoExtended,
   FallbackConditionType
 } from '../../../../shared/types'
 
@@ -46,14 +46,14 @@ export function ConfigBuilder(): JSX.Element {
   const { configs, selectedConfig, isSaving, fetchConfigs, selectConfig, createConfig, updateConfig } =
     useConfigsStore()
 
-  const [providers, setProviders] = useState<ProviderInfo[]>([])
+  const [providers, setProviders] = useState<ProviderInfoExtended[]>([])
 
   const form = useForm<TranslationConfigFormData>({
     resolver: zodResolver(translationConfigSchema),
     defaultValues: {
       name: '',
-      providerId: 'openai',
-      modelId: 'gpt-4o-mini',
+      providerConfigId: '',
+      modelId: '',
       systemPrompt: '',
       userPromptTemplate:
         'Translate the following text from {{sourceLanguage}} to {{targetLanguage}}:\n\n{{text}}',
@@ -64,9 +64,21 @@ export function ConfigBuilder(): JSX.Element {
 
   // Fetch providers on mount
   useEffect(() => {
-    window.api.provider.list().then(setProviders).catch(console.error)
+    window.api.providerConfig
+      .list()
+      .then((list) => {
+        setProviders(list)
+        // For a new config, default to the first available provider/model
+        if (isNew && list.length > 0 && !form.getValues('providerConfigId')) {
+          form.setValue('providerConfigId', list[0].id)
+          if (list[0].models.length > 0) {
+            form.setValue('modelId', list[0].models[0].id)
+          }
+        }
+      })
+      .catch(console.error)
     fetchConfigs()
-  }, [fetchConfigs])
+  }, [fetchConfigs, isNew, form])
 
   // Load existing config
   useEffect(() => {
@@ -82,7 +94,7 @@ export function ConfigBuilder(): JSX.Element {
     if (selectedConfig) {
       form.reset({
         name: selectedConfig.name,
-        providerId: selectedConfig.providerId,
+        providerConfigId: selectedConfig.providerConfigId,
         modelId: selectedConfig.modelId,
         systemPrompt: selectedConfig.systemPrompt,
         userPromptTemplate: selectedConfig.userPromptTemplate,
@@ -92,14 +104,14 @@ export function ConfigBuilder(): JSX.Element {
     }
   }, [selectedConfig, form])
 
-  const selectedProvider = providers.find((p) => p.id === form.watch('providerId'))
+  const selectedProvider = providers.find((p) => p.id === form.watch('providerConfigId'))
 
   const handleSave = async (data: TranslationConfigFormData): Promise<void> => {
     try {
       if (isNew) {
         const newConfig = await createConfig({
           name: data.name,
-          providerId: data.providerId,
+          providerConfigId: data.providerConfigId,
           modelId: data.modelId,
           systemPrompt: data.systemPrompt,
           userPromptTemplate: data.userPromptTemplate,
@@ -110,7 +122,7 @@ export function ConfigBuilder(): JSX.Element {
       } else if (configId) {
         await updateConfig(configId, {
           name: data.name,
-          providerId: data.providerId,
+          providerConfigId: data.providerConfigId,
           modelId: data.modelId,
           systemPrompt: data.systemPrompt,
           userPromptTemplate: data.userPromptTemplate,
@@ -164,9 +176,9 @@ export function ConfigBuilder(): JSX.Element {
               <div className="space-y-2">
                 <Label>Provider</Label>
                 <Select
-                  value={form.watch('providerId')}
+                  value={form.watch('providerConfigId')}
                   onValueChange={(value) => {
-                    form.setValue('providerId', value)
+                    form.setValue('providerConfigId', value)
                     // Reset model when provider changes
                     const provider = providers.find((p) => p.id === value)
                     if (provider?.models.length) {

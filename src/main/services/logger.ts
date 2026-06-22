@@ -169,7 +169,7 @@ export class Logger {
    * Log API call
    */
   apiCall(
-    providerId: string,
+    providerConfigId: string,
     modelId: string,
     inputTokens: number,
     outputTokens: number,
@@ -177,7 +177,7 @@ export class Logger {
     success: boolean
   ): void {
     this.info('API call', {
-      providerId,
+      providerConfigId,
       modelId,
       inputTokens,
       outputTokens,
@@ -190,9 +190,9 @@ export class Logger {
   /**
    * Log cost
    */
-  cost(providerId: string, modelId: string, costUsd: number): void {
+  cost(providerConfigId: string, modelId: string, costUsd: number): void {
     this.info('Cost incurred', {
-      providerId,
+      providerConfigId,
       modelId,
       costUsd,
       stage: 'cost'

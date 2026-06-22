@@ -31,7 +31,7 @@ export function getMemoryEntry(
 
   // Try to find a match with same config first, then fallback to any
   let sql = `
-    SELECT id, source_hash, source_text, target_text, provider_id, model_id,
+    SELECT id, source_hash, source_text, target_text, provider_config_id, model_id,
            config_id, project_id, confidence, manually_verified, usage_count,
            last_used_at, created_at
     FROM translation_memory
@@ -75,7 +75,7 @@ export function getMemoryBySourceText(
 export function cacheTranslation(
   sourceText: string,
   targetText: string,
-  providerId: string,
+  providerConfigId: string,
   modelId: string,
   configId?: string,
   projectId?: string
@@ -87,7 +87,7 @@ export function cacheTranslation(
 
   const stmt = db.prepare(`
     INSERT INTO translation_memory (
-      id, source_hash, source_text, target_text, provider_id, model_id,
+      id, source_hash, source_text, target_text, provider_config_id, model_id,
       config_id, project_id, confidence, manually_verified, usage_count,
       last_used_at, created_at
     )
@@ -99,7 +99,7 @@ export function cacheTranslation(
     sourceHash,
     sourceText,
     targetText,
-    providerId,
+    providerConfigId,
     modelId,
     configId || null,
     projectId || null,
@@ -112,7 +112,7 @@ export function cacheTranslation(
     sourceHash,
     sourceText,
     targetText,
-    providerId,
+    providerConfigId,
     modelId,
     configId,
     projectId,
@@ -173,7 +173,7 @@ export function listMemoryEntries(
   const db = getDatabase()
 
   let sql = `
-    SELECT id, source_hash, source_text, target_text, provider_id, model_id,
+    SELECT id, source_hash, source_text, target_text, provider_config_id, model_id,
            config_id, project_id, confidence, manually_verified, usage_count,
            last_used_at, created_at
     FROM translation_memory
@@ -204,7 +204,7 @@ export function searchMemory(
   const searchPattern = `%${query}%`
 
   let sql = `
-    SELECT id, source_hash, source_text, target_text, provider_id, model_id,
+    SELECT id, source_hash, source_text, target_text, provider_config_id, model_id,
            config_id, project_id, confidence, manually_verified, usage_count,
            last_used_at, created_at
     FROM translation_memory
@@ -459,7 +459,7 @@ interface MemoryRow {
   source_hash: string
   source_text: string
   target_text: string
-  provider_id: string
+  provider_config_id: string
   model_id: string
   config_id: string | null
   project_id: string | null
@@ -488,7 +488,7 @@ function rowToMemoryEntry(row: MemoryRow): TranslationMemoryEntry {
     sourceHash: row.source_hash,
     sourceText: row.source_text,
     targetText: row.target_text,
-    providerId: row.provider_id,
+    providerConfigId: row.provider_config_id,
     modelId: row.model_id,
     configId: row.config_id || undefined,
     projectId: row.project_id || undefined,

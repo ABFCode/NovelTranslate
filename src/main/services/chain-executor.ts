@@ -6,7 +6,8 @@
  */
 
 import { BrowserWindow } from 'electron'
-import { providerRegistry } from '../providers'
+import { getProviderByConfigId } from '../providers'
+import { providerConfigService } from '../providers/provider-config.service'
 import { classifyError, ClassificationResult } from './error-classifier'
 import { executeWithRetry, DEFAULT_RETRY_CONFIG } from './retry-strategy'
 import { logger } from './logger'
@@ -184,7 +185,7 @@ export async function executeChain(options: ChainExecutorOptions): Promise<Chain
       cacheTranslation(
         sourceText,
         result.translatedText,
-        finalConfig.providerId,
+        finalConfig.providerConfigId,
         finalConfig.modelId,
         result.finalConfigId,
         projectId
@@ -265,15 +266,20 @@ async function executeWithFallbacks(
   }
 
   // Get the provider
-  const provider = providerRegistry.get(config.providerId)
+  const provider = getProviderByConfigId(config.providerConfigId)
   if (!provider) {
     return {
       success: false,
       tokensUsed: { input: 0, output: 0, total: 0 },
-      finalError: `Provider not found: ${config.providerId}`,
+      finalError: `Provider not found: ${config.providerConfigId}`,
       finalErrorType: 'unknown'
     }
   }
+
+  // Get the base URL and SDK type for this provider config
+  const providerConfig = providerConfigService.getProviderConfig(config.providerConfigId)
+  const baseUrl = providerConfig ? providerConfigService.getBaseUrl(providerConfig) : undefined
+  const sdkType = providerConfig ? providerConfigService.getSdkType(providerConfig) : 'openai_compatible'
 
   // Build the prompt with glossary injection
   const systemPrompt = buildSystemPromptWithGlossary(config.systemPrompt, glossaryTerms)
@@ -299,10 +305,11 @@ async function executeWithFallbacks(
         userPrompt,
         temperature: config.temperature,
         maxTokens: config.maxTokens,
-        apiKey
+        apiKey,
+        baseUrl
       })
     },
-    config.providerId,
+    sdkType,
     effectiveRetryConfig,
     (attempt, err, delayMs) => {
       totalRetries++
@@ -319,13 +326,13 @@ async function executeWithFallbacks(
     // Check for error in result (provider-specific error handling)
     if (result.error || result.finishReason === 'error') {
       lastError = result.error
-      lastClassification = classifyError(result.error, config.providerId)
+      lastClassification = classifyError(result.error, sdkType)
     } else {
       // Success!
       const step: ChainExecutionStep = {
         configId: currentConfigId,
         configName: config.name,
-        providerId: config.providerId,
+        providerConfigId: config.providerConfigId,
         modelId: config.modelId,
         attemptNumber: attempts,
         durationMs,
@@ -343,14 +350,14 @@ async function executeWithFallbacks(
     }
   } else if (error) {
     lastError = error
-    lastClassification = classifyError(error, config.providerId)
+    lastClassification = classifyError(error, sdkType)
   }
 
   // Record the failed step
   const failedStep: ChainExecutionStep = {
     configId: currentConfigId,
     configName: config.name,
-    providerId: config.providerId,
+    providerConfigId: config.providerConfigId,
     modelId: config.modelId,
     attemptNumber: attempts,
     durationMs,

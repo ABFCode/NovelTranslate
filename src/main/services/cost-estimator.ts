@@ -57,7 +57,7 @@ export function estimateTokens(text: string): number {
 export function estimateCostForTokens(
   inputTokens: number,
   outputTokens: number,
-  _providerId: string,
+  _providerConfigId: string,
   modelId: string
 ): CostEstimate {
   const pricing = getModelPricing(modelId)

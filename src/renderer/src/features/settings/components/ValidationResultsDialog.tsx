@@ -8,11 +8,11 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
-import type { KeyValidationResult, ProviderInfo } from '@shared/types'
+import type { KeyValidationResult, ProviderInfoExtended } from '@shared/types'
 
 interface ValidationResultsDialogProps {
   results: KeyValidationResult[]
-  providers: ProviderInfo[]
+  providers: ProviderInfoExtended[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -26,13 +26,13 @@ export function ValidationResultsDialog({
   const validCount = results.filter((r) => r.isValid).length
   const invalidCount = results.filter((r) => !r.isValid).length
 
-  const getProviderName = (providerId: string) => {
-    return providers.find((p) => p.id === providerId)?.name || providerId
+  const getProviderName = (providerConfigId: string) => {
+    return providers.find((p) => p.id === providerConfigId)?.name || providerConfigId
   }
 
   const groupedResults = results.reduce(
     (acc, result) => {
-      const providerName = getProviderName(result.providerId)
+      const providerName = getProviderName(result.providerConfigId)
       if (!acc[providerName]) {
         acc[providerName] = []
       }

@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Settings, Key, Palette, Zap, Save, Plus, Trash2, RefreshCw, Pencil } from 'lucide-react'
+import { Settings, Cloud, Palette, Zap, Save } from 'lucide-react'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
@@ -18,31 +16,19 @@ import {
 } from '@/components/ui/select'
 import { GlobalModeToggle } from '@/components/ModeToggle'
 import { useUIMode } from '@/contexts/UIModeContext'
-import { EditKeyDialog } from './components/EditKeyDialog'
-import { KeyUsageStats } from './components/KeyUsageStats'
-import { ValidationResultsDialog } from './components/ValidationResultsDialog'
+import { ProviderList } from './components/providers/ProviderList'
 import { BackupRestore } from './components/BackupRestore'
-import type { AppSettings, ProviderInfo, ApiKeyEntry, TranslationConfig, KeyValidationResult } from '@shared/types'
+import type { AppSettings, TranslationConfig } from '@shared/types'
 
 export function SettingsPage() {
   const { isAdvanced } = useUIMode()
   const [settings, setSettings] = useState<AppSettings | null>(null)
-  const [providers, setProviders] = useState<ProviderInfo[]>([])
   const [configs, setConfigs] = useState<TranslationConfig[]>([])
-  const [apiKeys, setApiKeys] = useState<Record<string, ApiKeyEntry[]>>({})
-  const [newKeyInputs, setNewKeyInputs] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
-  const [editingKey, setEditingKey] = useState<ApiKeyEntry | null>(null)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [validationResults, setValidationResults] = useState<KeyValidationResult[]>([])
-  const [validationDialogOpen, setValidationDialogOpen] = useState(false)
-  const [isValidatingAll, setIsValidatingAll] = useState(false)
 
   useEffect(() => {
     loadSettings()
-    loadProviders()
     loadConfigs()
-    loadApiKeys()
   }, [])
 
   const loadSettings = async () => {
@@ -60,16 +46,6 @@ export function SettingsPage() {
     }
   }
 
-  const loadProviders = async () => {
-    if (!window.api) return
-    try {
-      const p = await window.api.provider.list()
-      setProviders(p)
-    } catch (error) {
-      console.error('Failed to load providers:', error)
-    }
-  }
-
   const loadConfigs = async () => {
     if (!window.api) return
     try {
@@ -77,23 +53,6 @@ export function SettingsPage() {
       setConfigs(c)
     } catch (error) {
       console.error('Failed to load configs:', error)
-    }
-  }
-
-  const loadApiKeys = async () => {
-    if (!window.api) return
-    try {
-      const keys = await window.api.apiKey.list()
-      const grouped: Record<string, ApiKeyEntry[]> = {}
-      for (const key of keys) {
-        if (!grouped[key.providerId]) {
-          grouped[key.providerId] = []
-        }
-        grouped[key.providerId].push(key)
-      }
-      setApiKeys(grouped)
-    } catch (error) {
-      console.error('Failed to load API keys:', error)
     }
   }
 
@@ -107,60 +66,6 @@ export function SettingsPage() {
       toast.error('Failed to save settings')
     }
     setIsSaving(false)
-  }
-
-  const handleAddApiKey = async (providerId: string) => {
-    const keyValue = newKeyInputs[providerId]
-    if (!keyValue?.trim()) return
-
-    try {
-      await window.api.apiKey.save(providerId, keyValue.trim(), undefined, apiKeys[providerId]?.length || 0)
-      toast.success(`API key added for ${providerId}`)
-      setNewKeyInputs((prev) => ({ ...prev, [providerId]: '' }))
-      loadApiKeys()
-    } catch (error) {
-      toast.error('Failed to add API key')
-    }
-  }
-
-  const handleDeleteApiKey = async (keyId: string) => {
-    if (!confirm('Delete this API key?')) return
-    try {
-      await window.api.apiKey.delete(keyId)
-      toast.success('API key deleted')
-      loadApiKeys()
-    } catch (error) {
-      toast.error('Failed to delete API key')
-    }
-  }
-
-  const handleValidateKey = async (keyId: string) => {
-    try {
-      const isValid = await window.api.apiKey.validateStored(keyId)
-      if (isValid) {
-        toast.success('API key is valid')
-      } else {
-        toast.error('API key is invalid')
-      }
-      loadApiKeys()
-    } catch (error) {
-      toast.error('Failed to validate API key')
-    }
-  }
-
-  const handleValidateAllKeys = async () => {
-    setIsValidatingAll(true)
-    try {
-      const results = await window.api.apiKey.validateAll()
-      setValidationResults(results)
-      setValidationDialogOpen(true)
-      loadApiKeys()
-    } catch (error) {
-      toast.error('Failed to validate keys')
-      console.error('Failed to validate keys:', error)
-    } finally {
-      setIsValidatingAll(false)
-    }
   }
 
   if (!settings) {
@@ -180,7 +85,7 @@ export function SettingsPage() {
             <Settings className="h-7 w-7" />
             Settings
           </h1>
-          <p className="page-subtitle">Configure your API keys and app preferences</p>
+          <p className="page-subtitle">Configure your providers and app preferences</p>
         </div>
         <Button onClick={handleSaveSettings} disabled={isSaving}>
           <Save className="mr-2 h-4 w-4" />
@@ -190,11 +95,11 @@ export function SettingsPage() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-6">
-        <Tabs defaultValue="api-keys" className="w-full">
+        <Tabs defaultValue="providers" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="api-keys" className="flex items-center gap-2">
-              <Key className="h-4 w-4" />
-              API Keys
+            <TabsTrigger value="providers" className="flex items-center gap-2">
+              <Cloud className="h-4 w-4" />
+              Providers
             </TabsTrigger>
             <TabsTrigger value="defaults" className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
@@ -212,133 +117,9 @@ export function SettingsPage() {
             )}
           </TabsList>
 
-          {/* API Keys Tab */}
-          <TabsContent value="api-keys" className="mt-6">
-            <div className="grid gap-6">
-              {/* Key Usage Statistics */}
-              <KeyUsageStats apiKeys={apiKeys} providers={providers} />
-
-              {/* Validate All Keys Button */}
-              {Object.values(apiKeys).flat().length > 0 && (
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={handleValidateAllKeys}
-                    disabled={isValidatingAll}
-                  >
-                    <RefreshCw className={`mr-2 h-4 w-4 ${isValidatingAll ? 'animate-spin' : ''}`} />
-                    {isValidatingAll ? 'Validating...' : 'Validate All Keys'}
-                  </Button>
-                </div>
-              )}
-
-              {providers.map((provider) => (
-                <Card key={provider.id}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>{provider.name}</CardTitle>
-                        <CardDescription>
-                          {apiKeys[provider.id]?.length || 0} key(s) configured
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Existing keys */}
-                    <AnimatePresence>
-                      {apiKeys[provider.id]?.map((key, index) => (
-                        <motion.div
-                          key={key.id}
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="flex items-center gap-2 rounded-lg border p-3"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">
-                                {key.label || `Key ${index + 1}`}
-                              </span>
-                              {key.isValid ? (
-                                <span className="rounded bg-green-500/10 px-1.5 py-0.5 text-xs text-green-600">
-                                  Valid
-                                </span>
-                              ) : (
-                                <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-xs text-destructive">
-                                  Invalid
-                                </span>
-                              )}
-                              {!key.isEnabled && (
-                                <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                                  Disabled
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-1 text-xs text-muted-foreground">
-                              {key.requestCount} requests
-                              {key.lastUsedAt && ` • Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`}
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setEditingKey(key)
-                                setEditDialogOpen(true)
-                              }}
-                              title="Edit"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleValidateKey(key.id)}
-                              title="Validate"
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteApiKey(key.id)}
-                              title="Delete"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-
-                    {/* Add new key */}
-                    <div className="flex gap-2">
-                      <Input
-                        type="password"
-                        placeholder={`Enter ${provider.name} API key`}
-                        value={newKeyInputs[provider.id] || ''}
-                        onChange={(e) =>
-                          setNewKeyInputs((prev) => ({ ...prev, [provider.id]: e.target.value }))
-                        }
-                      />
-                      <Button
-                        onClick={() => handleAddApiKey(provider.id)}
-                        disabled={!newKeyInputs[provider.id]?.trim()}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Key
-                      </Button>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground">
-                      Models: {provider.models.map((m) => m.name).join(', ')}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          {/* Providers Tab */}
+          <TabsContent value="providers" className="mt-6">
+            <ProviderList />
           </TabsContent>
 
           {/* Defaults Tab */}
@@ -635,22 +416,6 @@ export function SettingsPage() {
           )}
         </Tabs>
       </div>
-
-      {/* Edit Key Dialog */}
-      <EditKeyDialog
-        keyEntry={editingKey}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onSave={loadApiKeys}
-      />
-
-      {/* Validation Results Dialog */}
-      <ValidationResultsDialog
-        results={validationResults}
-        providers={providers}
-        open={validationDialogOpen}
-        onOpenChange={setValidationDialogOpen}
-      />
     </div>
   )
 }
