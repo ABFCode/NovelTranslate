@@ -1,11 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
+import type { ModelInfo, ProviderSettings } from '../../shared/types'
 import {
   describeProviderError,
-  type TranslationProvider,
   type ProviderTranslationRequest,
   type ProviderTranslationResult,
+  type TranslationProvider,
 } from './types'
-import type { ModelInfo, ProviderSettings } from '../../shared/types'
 
 export class AnthropicProvider implements TranslationProvider {
   readonly id = 'anthropic'
@@ -28,7 +28,7 @@ export class AnthropicProvider implements TranslationProvider {
       apiKey: request.apiKey,
       baseURL: request.baseUrl || this.baseUrl,
       timeout: this.settings.timeout,
-      defaultHeaders: this.settings.customHeaders
+      defaultHeaders: this.settings.customHeaders,
     })
 
     try {
@@ -71,7 +71,7 @@ export class AnthropicProvider implements TranslationProvider {
     const client = new Anthropic({
       apiKey: key,
       baseURL: baseUrl || this.baseUrl,
-      timeout: this.settings.timeout
+      timeout: this.settings.timeout,
     })
 
     try {
@@ -88,7 +88,7 @@ export class AnthropicProvider implements TranslationProvider {
       apiKey,
       baseURL: baseUrl || this.baseUrl,
       timeout: this.settings.timeout,
-      defaultHeaders: this.settings.customHeaders
+      defaultHeaders: this.settings.customHeaders,
     })
 
     try {
@@ -98,7 +98,7 @@ export class AnthropicProvider implements TranslationProvider {
         models.push({
           id: model.id,
           name: model.display_name ?? model.id,
-          contextWindow: 200000
+          contextWindow: 200000,
         })
       }
       return models

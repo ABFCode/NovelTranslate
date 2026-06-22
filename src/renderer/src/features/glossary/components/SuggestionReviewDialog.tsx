@@ -1,24 +1,24 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { TermTypeBadge } from './TermTypeBadge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { GlossarySuggestion, GlossaryTerm } from '../../../../../shared/types'
+import { TermTypeBadge } from './TermTypeBadge'
 
 interface SuggestionReviewDialogProps {
   open: boolean
@@ -39,7 +39,7 @@ export function SuggestionReviewDialog({
   onAccept,
   onReject,
   onMerge,
-  projectId
+  projectId,
 }: SuggestionReviewDialogProps): JSX.Element {
   const [query, setQuery] = useState('')
   const [mergeTargets, setMergeTargets] = useState<Record<string, string>>({})
@@ -94,9 +94,7 @@ export function SuggestionReviewDialog({
           <DialogHeader>
             <DialogTitle>Review Suggestions</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Select a project to review suggestions.
-          </p>
+          <p className="text-sm text-muted-foreground">Select a project to review suggestions.</p>
         </DialogContent>
       </Dialog>
     )
@@ -127,7 +125,9 @@ export function SuggestionReviewDialog({
         <ScrollArea className="h-[480px] rounded-lg border">
           <div className="divide-y">
             {filtered.length === 0 ? (
-              <div className="p-6 text-sm text-muted-foreground">No suggestions match your search.</div>
+              <div className="p-6 text-sm text-muted-foreground">
+                No suggestions match your search.
+              </div>
             ) : (
               filtered.map((suggestion) => (
                 <div key={suggestion.id} className="p-4 space-y-3">
@@ -141,9 +141,14 @@ export function SuggestionReviewDialog({
                         </span>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Suggested: <span className="font-medium text-foreground">{suggestion.suggestedTarget}</span>
+                        Suggested:{' '}
+                        <span className="font-medium text-foreground">
+                          {suggestion.suggestedTarget}
+                        </span>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">{suggestion.sourceContext}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {suggestion.sourceContext}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button

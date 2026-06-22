@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import type React from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 
 export type Theme = 'light' | 'dark' | 'system'
 
@@ -28,7 +29,10 @@ function getSystemTheme(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProviderProps): JSX.Element {
+export function ThemeProvider({
+  children,
+  defaultTheme = 'system',
+}: ThemeProviderProps): JSX.Element {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') return defaultTheme
     try {
@@ -99,7 +103,7 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
     theme,
     setTheme,
     resolvedTheme,
-    toggleTheme
+    toggleTheme,
   }
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

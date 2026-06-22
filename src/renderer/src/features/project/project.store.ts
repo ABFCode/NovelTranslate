@@ -1,5 +1,5 @@
+import type { ChainFallbackEvent, Chapter, Project, TranslationProgressEvent } from '@shared/types'
 import { create } from 'zustand'
-import type { Project, Chapter, TranslationProgressEvent, ChainFallbackEvent } from '@shared/types'
 
 interface ProjectState {
   // Current project
@@ -92,9 +92,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
   updateChapterStatus: (chapterId, status) => {
     const { chapters } = get()
-    const updatedChapters = chapters.map((ch) =>
-      ch.id === chapterId ? { ...ch, status } : ch
-    )
+    const updatedChapters = chapters.map((ch) => (ch.id === chapterId ? { ...ch, status } : ch))
     set({ chapters: updatedChapters })
   },
 
@@ -158,7 +156,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       set({
         recentProjects: recentProjects.filter((p) => p.id !== id),
         currentProject: currentProject?.id === id ? null : currentProject,
-        isLoading: false
+        isLoading: false,
       })
     } catch (error) {
       set({ error: String(error), isLoading: false })
@@ -245,5 +243,5 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       unsubProgress()
       unsubFallback()
     }
-  }
+  },
 }))

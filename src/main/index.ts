@@ -1,12 +1,12 @@
-import { app, shell, BrowserWindow, session } from 'electron'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { closeDatabase, initDatabase } from './database'
 import { registerIpcHandlers } from './ipc'
-import { initDatabase, closeDatabase } from './database'
+import { logger } from './services/logger'
 import { startSidecar, stopSidecar } from './services/sidecar'
 import { setMainWindow } from './window'
-import { logger } from './services/logger'
 
 // Disable GPU for WSL compatibility (check for WSL environment)
 const isWSL = process.platform === 'linux' && process.env.WSL_DISTRO_NAME
@@ -129,12 +129,18 @@ app.whenReady().then(async () => {
     initDatabase()
     logger.info('[Main] Database initialized')
   } catch (error) {
-    logger.error('[Main] Failed to initialize database:', error instanceof Error ? error : new Error(String(error)))
+    logger.error(
+      '[Main] Failed to initialize database:',
+      error instanceof Error ? error : new Error(String(error))
+    )
   }
 
   // Start Go sidecar (don't await - let it start in background)
   startSidecar().catch((error) => {
-    logger.error('[Main] Failed to start sidecar:', error instanceof Error ? error : new Error(String(error)))
+    logger.error(
+      '[Main] Failed to start sidecar:',
+      error instanceof Error ? error : new Error(String(error))
+    )
   })
 
   // Default open or close DevTools by F12 in development

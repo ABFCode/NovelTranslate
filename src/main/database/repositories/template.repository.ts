@@ -1,5 +1,5 @@
-import { getDatabase, generateId } from '../index'
 import type { PromptTemplate, TemplateCategory } from '../../../shared/types'
+import { generateId, getDatabase } from '../index'
 
 // ============================================================================
 // Prompt Template CRUD
@@ -89,7 +89,7 @@ export function createTemplate(
     ...template,
     isBuiltIn: false,
     usageCount: 0,
-    createdAt: now
+    createdAt: now,
   }
 }
 
@@ -192,7 +192,7 @@ export function cloneTemplate(id: string, newName: string): PromptTemplate {
     systemPrompt: template.systemPrompt,
     userPromptTemplate: template.userPromptTemplate,
     suggestedTemperature: template.suggestedTemperature,
-    suggestedMaxTokens: template.suggestedMaxTokens
+    suggestedMaxTokens: template.suggestedMaxTokens,
   })
 }
 
@@ -226,6 +226,6 @@ function rowToTemplate(row: TemplateRow): PromptTemplate {
     suggestedMaxTokens: row.suggested_max_tokens || undefined,
     isBuiltIn: row.is_built_in === 1,
     usageCount: row.usage_count,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   }
 }

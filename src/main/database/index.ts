@@ -1,10 +1,10 @@
 import Database from 'better-sqlite3'
-import { app } from 'electron'
-import { join } from 'path'
 import { randomUUID } from 'crypto'
+import { app } from 'electron'
 import { existsSync, mkdirSync, unlinkSync } from 'fs'
-import { SCHEMA_SQL, SCHEMA_VERSION, SEED_PROMPT_TEMPLATES } from './schema'
+import { join } from 'path'
 import { logger } from '../services/logger'
+import { SCHEMA_SQL, SCHEMA_VERSION, SEED_PROMPT_TEMPLATES } from './schema'
 
 let db: Database.Database | null = null
 
@@ -33,9 +33,9 @@ function shouldRecreateDatabase(dbPath: string): boolean {
 
   try {
     const testDb = new Database(dbPath, { readonly: true })
-    const result = testDb
-      .prepare('SELECT MAX(version) as version FROM migrations')
-      .get() as { version: number } | undefined
+    const result = testDb.prepare('SELECT MAX(version) as version FROM migrations').get() as
+      | { version: number }
+      | undefined
     testDb.close()
 
     const currentVersion = result?.version ?? 0
@@ -80,7 +80,7 @@ function seedDatabase(database: Database.Database): void {
         insertTemplate.run({
           ...template,
           // better-sqlite3 only accepts numbers/strings/null; normalize booleans
-          is_built_in: template.is_built_in ? 1 : 0
+          is_built_in: template.is_built_in ? 1 : 0,
         })
       }
     })
@@ -110,7 +110,10 @@ export function initDatabase(): Database.Database {
       if (existsSync(`${dbPath}-shm`)) unlinkSync(`${dbPath}-shm`)
       logger.info('[Database] Removed old database files')
     } catch (error) {
-      logger.error('[Database] Error removing old database:', error instanceof Error ? error : new Error(String(error)))
+      logger.error(
+        '[Database] Error removing old database:',
+        error instanceof Error ? error : new Error(String(error))
+      )
     }
   }
 
@@ -170,15 +173,15 @@ export function generateId(): string {
 // Repository exports
 // ============================================================================
 
-export * from './repositories/project.repository'
+export * from './repositories/apikey.repository'
+export * from './repositories/budget.repository'
 export * from './repositories/chapter.repository'
 export * from './repositories/config.repository'
+export * from './repositories/glossary.repository'
+export * from './repositories/memory.repository'
+export * from './repositories/project.repository'
+export * from './repositories/provider-config.repository'
 export * from './repositories/settings.repository'
 export * from './repositories/template.repository'
 export * from './repositories/test.repository'
-export * from './repositories/glossary.repository'
-export * from './repositories/memory.repository'
-export * from './repositories/budget.repository'
-export * from './repositories/apikey.repository'
 export * from './repositories/version.repository'
-export * from './repositories/provider-config.repository'

@@ -1,6 +1,6 @@
-import { getDatabase, generateId } from '../index'
-import type { TranslationMemoryEntry, TranslationOverride } from '../../../shared/types'
 import { createHash } from 'crypto'
+import type { TranslationMemoryEntry, TranslationOverride } from '../../../shared/types'
+import { generateId, getDatabase } from '../index'
 
 // ============================================================================
 // Hash Utilities
@@ -45,7 +45,8 @@ export function getMemoryEntry(
   }
 
   if (configId) {
-    sql += ' ORDER BY CASE WHEN config_id = ? THEN 0 ELSE 1 END, manually_verified DESC, confidence DESC'
+    sql +=
+      ' ORDER BY CASE WHEN config_id = ? THEN 0 ELSE 1 END, manually_verified DESC, confidence DESC'
     params.push(configId)
   } else {
     sql += ' ORDER BY manually_verified DESC, confidence DESC'
@@ -120,7 +121,7 @@ export function cacheTranslation(
     manuallyVerified: false,
     usageCount: 1,
     lastUsedAt: now,
-    createdAt: now
+    createdAt: now,
   }
 }
 
@@ -229,12 +230,14 @@ export function searchMemory(
  */
 export function getOverrideById(id: string): TranslationOverride | null {
   const db = getDatabase()
-  const row = db.prepare(`
+  const row = db
+    .prepare(`
     SELECT id, project_id, chapter_id, source_segment, original_translation,
            override_translation, scope, reason, created_at
     FROM translation_overrides
     WHERE id = ?
-  `).get(id) as OverrideRow | undefined
+  `)
+    .get(id) as OverrideRow | undefined
   return row ? rowToOverride(row) : null
 }
 
@@ -266,7 +269,7 @@ export function getMemoryStats(projectId?: string): {
     return {
       totalEntries: row.total_entries,
       verifiedEntries: row.verified_entries || 0,
-      totalUsageCount: row.total_usage_count || 0
+      totalUsageCount: row.total_usage_count || 0,
     }
   }
 
@@ -278,7 +281,7 @@ export function getMemoryStats(projectId?: string): {
   return {
     totalEntries: row.total_entries,
     verifiedEntries: row.verified_entries || 0,
-    totalUsageCount: row.total_usage_count || 0
+    totalUsageCount: row.total_usage_count || 0,
   }
 }
 
@@ -290,10 +293,12 @@ export function cleanupUnusedMemory(olderThanDays = 90, maxUsageCount = 1): numb
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - olderThanDays)
 
-  const result = db.prepare(`
+  const result = db
+    .prepare(`
     DELETE FROM translation_memory 
     WHERE last_used_at < ? AND usage_count <= ? AND manually_verified = 0
-  `).run(cutoff.toISOString(), maxUsageCount)
+  `)
+    .run(cutoff.toISOString(), maxUsageCount)
 
   return result.changes
 }
@@ -496,7 +501,7 @@ function rowToMemoryEntry(row: MemoryRow): TranslationMemoryEntry {
     manuallyVerified: row.manually_verified === 1,
     usageCount: row.usage_count,
     lastUsedAt: row.last_used_at || undefined,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   }
 }
 
@@ -510,6 +515,6 @@ function rowToOverride(row: OverrideRow): TranslationOverride {
     overrideTranslation: row.override_translation,
     scope: row.scope as 'chapter' | 'project' | 'global',
     reason: row.reason || undefined,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   }
 }

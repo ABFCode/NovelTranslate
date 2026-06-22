@@ -5,24 +5,24 @@
  */
 
 import { safeStorage } from 'electron'
-import { logger } from './logger'
 import type { ApiKeyEntry, KeyRotationStrategy, KeyValidationResult } from '../../shared/types'
 import {
-  listApiKeys,
-  listAllApiKeys,
+  createApiKey,
+  deleteApiKey,
   getApiKey,
   getApiKeyValue,
-  createApiKey,
-  updateApiKeyValue,
-  deleteApiKey,
-  markKeyValidated,
+  getNextAvailableKey,
+  hasValidKeys,
+  listAllApiKeys,
+  listApiKeys,
   markKeyError,
   markKeyInvalid,
+  markKeyValidated,
   recordKeyUsage,
-  getNextAvailableKey,
-  hasValidKeys
+  updateApiKeyValue,
 } from '../database/repositories/apikey.repository'
 import { validateKeyForConfig } from '../providers'
+import { logger } from './logger'
 
 /**
  * Key Manager class for handling API key operations
@@ -178,7 +178,7 @@ export class KeyManager {
               providerConfigId: key.providerConfigId,
               label: key.label,
               isValid,
-              error: isValid ? undefined : 'Validation failed'
+              error: isValid ? undefined : 'Validation failed',
             }
           } catch (error) {
             return {
@@ -186,7 +186,7 @@ export class KeyManager {
               providerConfigId: key.providerConfigId,
               label: key.label,
               isValid: false,
-              error: error instanceof Error ? error.message : String(error)
+              error: error instanceof Error ? error.message : String(error),
             }
           }
         })
@@ -246,7 +246,10 @@ export class KeyManager {
       // Fallback: simple de-obfuscation
       return Buffer.from(encryptedKey, 'base64').toString('utf-8')
     } catch (error) {
-      logger.error('[KeyManager] Failed to decrypt key:', error instanceof Error ? error : new Error(String(error)))
+      logger.error(
+        '[KeyManager] Failed to decrypt key:',
+        error instanceof Error ? error : new Error(String(error))
+      )
       return null
     }
   }

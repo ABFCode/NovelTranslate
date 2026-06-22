@@ -1,8 +1,8 @@
+import type { Chapter } from '@shared/types'
 import { Check } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { StatusIcon } from './StatusIcon'
-import type { Chapter } from '@shared/types'
 
 interface ChapterListProps {
   chapters: Chapter[]
@@ -19,7 +19,7 @@ export function ChapterList({
   onToggleSelection,
   activeChapterId,
   onSelectChapter,
-  showSelection
+  showSelection,
 }: ChapterListProps): JSX.Element {
   if (chapters.length === 0) {
     return (
@@ -63,7 +63,7 @@ function ChapterItem({
   onToggleSelection,
   onSelectChapter,
   isActive,
-  showSelection
+  showSelection,
 }: ChapterItemProps): JSX.Element {
   return (
     <div

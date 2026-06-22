@@ -1,20 +1,20 @@
 import { dialog } from 'electron'
 import { basename } from 'path'
+import type { Project } from '../../shared/types'
 import {
-  createProject,
-  getProject,
-  listProjects,
-  deleteProject,
-  updateProjectMetadata,
   createChaptersBulk,
-  listChapters,
+  createProject,
+  deleteProject,
   getChapterContent,
+  getProject,
+  listChapters,
+  listProjects,
+  updateProjectMetadata,
 } from '../database'
-import { parseEpub, exportEpub, isSidecarConnected } from '../services/sidecar'
+import { logger } from '../services/logger'
+import { exportEpub, isSidecarConnected, parseEpub } from '../services/sidecar'
 import { getMainWindow } from '../window'
 import { handleIpc } from './utils'
-import { logger } from '../services/logger'
-import type { Project } from '../../shared/types'
 
 /**
  * Register project-related IPC handlers

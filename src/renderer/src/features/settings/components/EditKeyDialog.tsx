@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import type { ApiKeyEntry } from '@shared/types'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -7,12 +8,11 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import type { ApiKeyEntry } from '@shared/types'
 
 interface EditKeyDialogProps {
   keyEntry: ApiKeyEntry | null
@@ -43,7 +43,7 @@ export function EditKeyDialog({ keyEntry, open, onOpenChange, onSave }: EditKeyD
       await window.api.apiKey.updateMeta(keyEntry.id, {
         label: label.trim() || null,
         isEnabled,
-        priority
+        priority,
       })
       toast.success('Key updated successfully')
       onSave()
@@ -61,9 +61,7 @@ export function EditKeyDialog({ keyEntry, open, onOpenChange, onSave }: EditKeyD
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit API Key</DialogTitle>
-          <DialogDescription>
-            Update the label and settings for this API key.
-          </DialogDescription>
+          <DialogDescription>Update the label and settings for this API key.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -75,9 +73,7 @@ export function EditKeyDialog({ keyEntry, open, onOpenChange, onSave }: EditKeyD
               value={label}
               onChange={(e) => setLabel(e.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
-              A friendly name to identify this key
-            </p>
+            <p className="text-xs text-muted-foreground">A friendly name to identify this key</p>
           </div>
 
           <div className="flex items-center justify-between">

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import { History, RotateCcw, Eye, Loader2 } from 'lucide-react'
+import type { TranslationVersion } from '@shared/types'
+import { Eye, History, Loader2, RotateCcw } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,10 +9,9 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import type { TranslationVersion } from '@shared/types'
 
 interface TranslationHistoryProps {
   chapterId: string | null
@@ -26,7 +26,7 @@ export function TranslationHistory({
   chapterTitle,
   open,
   onOpenChange,
-  onRestore
+  onRestore,
 }: TranslationHistoryProps) {
   const [versions, setVersions] = useState<TranslationVersion[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -58,7 +58,11 @@ export function TranslationHistory({
   }
 
   const handleRestore = async (version: TranslationVersion) => {
-    if (!confirm(`Restore to version ${version.versionNumber}? The current translation will be archived.`)) {
+    if (
+      !confirm(
+        `Restore to version ${version.versionNumber}? The current translation will be archived.`
+      )
+    ) {
       return
     }
 
@@ -94,16 +98,15 @@ export function TranslationHistory({
             Translation History
           </DialogTitle>
           <DialogDescription>
-            {chapterTitle || 'Chapter'} - {versions.length} version{versions.length !== 1 ? 's' : ''} available
+            {chapterTitle || 'Chapter'} - {versions.length} version
+            {versions.length !== 1 ? 's' : ''} available
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden grid grid-cols-[280px_1fr] gap-4">
           {/* Version list */}
           <div className="border rounded-md overflow-hidden">
-            <div className="bg-muted px-3 py-2 text-sm font-medium">
-              Versions
-            </div>
+            <div className="bg-muted px-3 py-2 text-sm font-medium">Versions</div>
             <ScrollArea className="h-[400px]">
               {isLoading ? (
                 <div className="flex items-center justify-center py-8">
@@ -167,12 +170,8 @@ export function TranslationHistory({
                 <div className="space-y-3">
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p>Created: {formatDate(selectedVersion.createdAt)}</p>
-                    {selectedVersion.configName && (
-                      <p>Config: {selectedVersion.configName}</p>
-                    )}
-                    {selectedVersion.modelId && (
-                      <p>Model: {selectedVersion.modelId}</p>
-                    )}
+                    {selectedVersion.configName && <p>Config: {selectedVersion.configName}</p>}
+                    {selectedVersion.modelId && <p>Model: {selectedVersion.modelId}</p>}
                   </div>
                   <div className="border-t pt-3">
                     <p className="text-sm whitespace-pre-wrap">{selectedVersion.translatedText}</p>

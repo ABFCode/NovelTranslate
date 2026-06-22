@@ -1,13 +1,13 @@
+import { logger } from '../services/logger'
 import {
-  startTranslation,
-  pauseTranslation,
-  resumeTranslation,
   cancelTranslation,
+  type PreviewResult,
+  pauseTranslation,
   previewTranslation,
-  type PreviewResult
+  resumeTranslation,
+  startTranslation,
 } from '../services/translation'
 import { handleIpc } from './utils'
-import { logger } from '../services/logger'
 
 /**
  * Register translation-related IPC handlers

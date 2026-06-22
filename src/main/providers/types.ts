@@ -4,8 +4,8 @@
  * All LLM providers must implement this interface to be used for translation.
  */
 
+import type { ModelInfo, ProviderSettings } from '../../shared/types'
 import { logger } from '../services/logger'
-import type { ProviderSettings, ModelInfo } from '../../shared/types'
 
 export interface TranslationProvider {
   readonly id: string

@@ -1,8 +1,8 @@
 import { RouterProvider } from '@tanstack/react-router'
 import { router } from '@/app/router'
-import { UIModeProvider } from '@/contexts/UIModeContext'
-import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { ThemeProvider } from '@/contexts/ThemeContext'
+import { UIModeProvider } from '@/contexts/UIModeContext'
 
 function App(): React.JSX.Element {
   return (

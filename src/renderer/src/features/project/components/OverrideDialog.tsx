@@ -1,19 +1,19 @@
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '@/components/ui/select'
 
 export interface OverrideDraft {
@@ -38,7 +38,8 @@ export function OverrideDialog({ draft, onDraftChange, onSave }: OverrideDialogP
         <DialogHeader>
           <DialogTitle>Translation Override</DialogTitle>
           <DialogDescription>
-            Save a manual correction for this segment. Overrides take priority over translation memory.
+            Save a manual correction for this segment. Overrides take priority over translation
+            memory.
           </DialogDescription>
         </DialogHeader>
         {draft && (
@@ -61,9 +62,7 @@ export function OverrideDialog({ draft, onDraftChange, onSave }: OverrideDialogP
                 rows={4}
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                 value={draft.overrideTranslation}
-                onChange={(e) =>
-                  onDraftChange({ ...draft, overrideTranslation: e.target.value })
-                }
+                onChange={(e) => onDraftChange({ ...draft, overrideTranslation: e.target.value })}
               />
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -74,7 +73,7 @@ export function OverrideDialog({ draft, onDraftChange, onSave }: OverrideDialogP
                   onValueChange={(value) =>
                     onDraftChange({
                       ...draft,
-                      scope: value as 'chapter' | 'project' | 'global'
+                      scope: value as 'chapter' | 'project' | 'global',
                     })
                   }
                 >

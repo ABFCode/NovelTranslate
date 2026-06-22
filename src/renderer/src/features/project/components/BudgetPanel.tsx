@@ -70,12 +70,21 @@ export function BudgetPanel({ projectId }: BudgetPanelProps): JSX.Element {
             value={Math.min(spentPercent, 100)}
             className={cn(
               'h-2',
-              spentPercent > 90 ? '[&>div]:bg-destructive' : spentPercent > 70 ? '[&>div]:bg-yellow-500' : ''
+              spentPercent > 90
+                ? '[&>div]:bg-destructive'
+                : spentPercent > 70
+                  ? '[&>div]:bg-yellow-500'
+                  : ''
             )}
           />
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>${remaining.toFixed(2)} remaining</span>
-            <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setIsEditing(true)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-xs"
+              onClick={() => setIsEditing(true)}
+            >
               Edit
             </Button>
           </div>

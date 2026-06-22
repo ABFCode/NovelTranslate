@@ -1,23 +1,23 @@
-import { useState, useEffect } from 'react'
-import { Settings, Cloud, Palette, Zap, Check, Loader2, AlertCircle } from 'lucide-react'
+import type { AppSettings, TranslationConfig } from '@shared/types'
+import { AlertCircle, Check, Cloud, Loader2, Palette, Settings, Zap } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { GlobalModeToggle } from '@/components/ModeToggle'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
-import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '@/components/ui/select'
-import { GlobalModeToggle } from '@/components/ModeToggle'
+import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useUIMode } from '@/contexts/UIModeContext'
-import { ProviderList } from './components/providers/ProviderList'
 import { BackupRestore } from './components/BackupRestore'
-import type { AppSettings, TranslationConfig } from '@shared/types'
+import { ProviderList } from './components/providers/ProviderList'
 
 export function SettingsPage() {
   const { isAdvanced } = useUIMode()
@@ -262,9 +262,7 @@ export function SettingsPage() {
                   </div>
                   <Switch
                     checked={settings.showCostEstimates}
-                    onCheckedChange={(checked) =>
-                      updateSettings({ showCostEstimates: checked })
-                    }
+                    onCheckedChange={(checked) => updateSettings({ showCostEstimates: checked })}
                   />
                 </div>
               </CardContent>
@@ -303,7 +301,9 @@ export function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>UI Mode</CardTitle>
-                <CardDescription>Choose between simple and advanced interface modes</CardDescription>
+                <CardDescription>
+                  Choose between simple and advanced interface modes
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
@@ -369,9 +369,7 @@ export function SettingsPage() {
                     </div>
                     <Select
                       value={String(settings.autoSaveInterval)}
-                      onValueChange={(value) =>
-                        updateSettings({ autoSaveInterval: Number(value) })
-                      }
+                      onValueChange={(value) => updateSettings({ autoSaveInterval: Number(value) })}
                     >
                       <SelectTrigger className="w-40">
                         <SelectValue />
@@ -429,9 +427,7 @@ export function SettingsPage() {
                     </div>
                     <Switch
                       checked={settings.enableFileLogging}
-                      onCheckedChange={(checked) =>
-                        updateSettings({ enableFileLogging: checked })
-                      }
+                      onCheckedChange={(checked) => updateSettings({ enableFileLogging: checked })}
                     />
                   </div>
                 </CardContent>

@@ -1,8 +1,8 @@
 import { BrowserWindow } from 'electron'
 import type { CostEstimate, GlossaryRunResult } from '../../shared/types'
 import { glossaryRunService } from '../services/glossary-run.service'
-import { handleIpc, handleIpcWithEvent } from './utils'
 import { logger } from '../services/logger'
+import { handleIpc, handleIpcWithEvent } from './utils'
 
 /**
  * Register glossary run IPC handlers
@@ -47,7 +47,7 @@ export function registerGlossaryRunHandlers(): void {
             projectId,
             current,
             total,
-            chapterId
+            chapterId,
           })
         }
       )

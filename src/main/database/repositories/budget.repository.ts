@@ -1,5 +1,5 @@
-import { getDatabase } from '../index'
 import type { ProjectBudget } from '../../../shared/types'
+import { getDatabase } from '../index'
 
 // ============================================================================
 // Project Budget CRUD
@@ -56,7 +56,7 @@ export function setProjectBudget(
     alertThreshold,
     hardLimit,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
   }
 }
 
@@ -104,7 +104,7 @@ export function checkBudget(
     return {
       allowed: false,
       warning: `Budget exceeded: $${budget.spentUsd.toFixed(2)} / $${budget.budgetUsd.toFixed(2)}`,
-      remaining
+      remaining,
     }
   }
 
@@ -112,7 +112,7 @@ export function checkBudget(
     return {
       allowed: true,
       warning: `Approaching budget limit: ${(utilizationRatio * 100).toFixed(0)}% used`,
-      remaining
+      remaining,
     }
   }
 
@@ -172,7 +172,7 @@ export function getProjectsNearBudget(): Array<ProjectBudget & { utilizationRati
   const rows = stmt.all() as (BudgetRow & { utilization_ratio: number })[]
   return rows.map((row) => ({
     ...rowToBudget(row),
-    utilizationRatio: row.utilization_ratio
+    utilizationRatio: row.utilization_ratio,
   }))
 }
 
@@ -198,6 +198,6 @@ function rowToBudget(row: BudgetRow): ProjectBudget {
     alertThreshold: row.alert_threshold,
     hardLimit: row.hard_limit === 1,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
   }
 }

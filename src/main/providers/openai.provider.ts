@@ -1,11 +1,11 @@
 import OpenAI from 'openai'
+import type { ModelInfo, ProviderSettings } from '../../shared/types'
 import {
   describeProviderError,
-  type TranslationProvider,
   type ProviderTranslationRequest,
   type ProviderTranslationResult,
+  type TranslationProvider,
 } from './types'
-import type { ModelInfo, ProviderSettings } from '../../shared/types'
 
 export class OpenAIProvider implements TranslationProvider {
   readonly id = 'openai'
@@ -29,7 +29,7 @@ export class OpenAIProvider implements TranslationProvider {
       baseURL: request.baseUrl || this.baseUrl,
       timeout: this.settings.timeout,
       organization: this.settings.organizationId,
-      defaultHeaders: this.settings.customHeaders
+      defaultHeaders: this.settings.customHeaders,
     })
 
     try {
@@ -76,7 +76,7 @@ export class OpenAIProvider implements TranslationProvider {
       apiKey: key,
       baseURL: baseUrl || this.baseUrl,
       timeout: this.settings.timeout,
-      organization: this.settings.organizationId
+      organization: this.settings.organizationId,
     })
 
     try {
@@ -94,7 +94,7 @@ export class OpenAIProvider implements TranslationProvider {
       baseURL: baseUrl || this.baseUrl,
       timeout: this.settings.timeout,
       organization: this.settings.organizationId,
-      defaultHeaders: this.settings.customHeaders
+      defaultHeaders: this.settings.customHeaders,
     })
 
     try {
@@ -131,10 +131,16 @@ function isChatModel(modelId: string): boolean {
     'search',
     'codex',
     'davinci',
-    'babbage'
+    'babbage',
   ]
   if (excluded.some((term) => id.includes(term))) {
     return false
   }
-  return id.startsWith('gpt') || id.startsWith('o1') || id.startsWith('o3') || id.startsWith('o4') || id.startsWith('chatgpt')
+  return (
+    id.startsWith('gpt') ||
+    id.startsWith('o1') ||
+    id.startsWith('o3') ||
+    id.startsWith('o4') ||
+    id.startsWith('chatgpt')
+  )
 }

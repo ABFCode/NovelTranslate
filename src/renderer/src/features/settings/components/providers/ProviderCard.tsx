@@ -1,7 +1,7 @@
-import { Cloud, Server, KeyRound, CheckCircle2, AlertCircle } from 'lucide-react'
+import type { ProviderInfoExtended } from '@shared/types'
+import { AlertCircle, CheckCircle2, Cloud, KeyRound, Server } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import type { ProviderInfoExtended } from '@shared/types'
 
 interface ProviderCardProps {
   provider: ProviderInfoExtended

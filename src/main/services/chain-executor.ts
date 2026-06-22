@@ -5,38 +5,35 @@
  * Handles retries, error classification, and fallback to alternate configs.
  */
 
-import { BrowserWindow } from 'electron'
-import { getProviderByConfigId } from '../providers'
-import { providerConfigService } from '../providers/provider-config.service'
-import { classifyError, ClassificationResult } from './error-classifier'
-import { executeWithRetry, DEFAULT_RETRY_CONFIG } from './retry-strategy'
-import { getModelPricing } from './cost-estimator'
-import { logger } from './logger'
-import {
-  getConfig,
-  getFallbacksForConfig,
-  createConfigSnapshot
-} from '../database/repositories/config.repository'
-import {
-  getMemoryBySourceText,
-  incrementMemoryUsage,
-  cacheTranslation
-} from '../database/repositories/memory.repository'
-import { getOverride } from '../database/repositories/memory.repository'
-import {
-  listGlossaryTerms,
-  incrementTermUsage
-} from '../database/repositories/glossary.repository'
-import { recordSpending } from '../database/repositories/budget.repository'
+import type { BrowserWindow } from 'electron'
 import type {
   ChainExecutionResult,
   ChainExecutionStep,
-  TranslationConfig,
   ConfigFallback,
   ErrorType,
+  GlossaryTerm,
   RetryConfig,
-  GlossaryTerm
+  TranslationConfig,
 } from '../../shared/types'
+import { recordSpending } from '../database/repositories/budget.repository'
+import {
+  createConfigSnapshot,
+  getConfig,
+  getFallbacksForConfig,
+} from '../database/repositories/config.repository'
+import { incrementTermUsage, listGlossaryTerms } from '../database/repositories/glossary.repository'
+import {
+  cacheTranslation,
+  getMemoryBySourceText,
+  getOverride,
+  incrementMemoryUsage,
+} from '../database/repositories/memory.repository'
+import { getProviderByConfigId } from '../providers'
+import { providerConfigService } from '../providers/provider-config.service'
+import { getModelPricing } from './cost-estimator'
+import { type ClassificationResult, classifyError } from './error-classifier'
+import { logger } from './logger'
+import { DEFAULT_RETRY_CONFIG, executeWithRetry } from './retry-strategy'
 
 export interface ChainExecutorOptions {
   /** The starting config ID */
@@ -85,7 +82,7 @@ export async function executeChain(options: ChainExecutorOptions): Promise<Chain
     useGlossary = true,
     createSnapshot = false,
     snapshotReason = 'translation',
-    window
+    window,
   } = options
 
   const executionPath: ChainExecutionStep[] = []
@@ -104,7 +101,7 @@ export async function executeChain(options: ChainExecutorOptions): Promise<Chain
         totalCostUsd: 0,
         executionPath: [],
         source: 'override',
-        glossaryTermsUsed: 0
+        glossaryTermsUsed: 0,
       }
     }
   }
@@ -121,7 +118,7 @@ export async function executeChain(options: ChainExecutorOptions): Promise<Chain
         totalCostUsd: 0,
         executionPath: [],
         source: 'memory',
-        glossaryTermsUsed: 0
+        glossaryTermsUsed: 0,
       }
     }
   }
@@ -153,7 +150,7 @@ export async function executeChain(options: ChainExecutorOptions): Promise<Chain
     executionPath,
     attemptedConfigs,
     retryConfig: options.retryConfig,
-    window
+    window,
   })
 
   // Update total cost
@@ -204,7 +201,7 @@ export async function executeChain(options: ChainExecutorOptions): Promise<Chain
     totalCostUsd,
     executionPath,
     source: 'live',
-    glossaryTermsUsed
+    glossaryTermsUsed,
   }
 }
 
@@ -229,7 +226,9 @@ interface ExecuteWithFallbacksOptions {
 
 async function executeWithFallbacks(
   options: ExecuteWithFallbacksOptions
-): Promise<Omit<ChainExecutionResult, 'totalCostUsd' | 'executionPath' | 'source' | 'glossaryTermsUsed'>> {
+): Promise<
+  Omit<ChainExecutionResult, 'totalCostUsd' | 'executionPath' | 'source' | 'glossaryTermsUsed'>
+> {
   const {
     currentConfigId,
     sourceText,
@@ -240,7 +239,7 @@ async function executeWithFallbacks(
     executionPath,
     attemptedConfigs,
     retryConfig,
-    window
+    window,
   } = options
 
   // Prevent cycles and excessive depth
@@ -249,7 +248,7 @@ async function executeWithFallbacks(
       success: false,
       tokensUsed: { input: 0, output: 0, total: 0 },
       finalError: 'Chain depth exceeded or cycle detected',
-      finalErrorType: 'unknown'
+      finalErrorType: 'unknown',
     }
   }
 
@@ -262,7 +261,7 @@ async function executeWithFallbacks(
       success: false,
       tokensUsed: { input: 0, output: 0, total: 0 },
       finalError: `Config not found: ${currentConfigId}`,
-      finalErrorType: 'unknown'
+      finalErrorType: 'unknown',
     }
   }
 
@@ -273,25 +272,32 @@ async function executeWithFallbacks(
       success: false,
       tokensUsed: { input: 0, output: 0, total: 0 },
       finalError: `Provider not found: ${config.providerConfigId}`,
-      finalErrorType: 'unknown'
+      finalErrorType: 'unknown',
     }
   }
 
   // Get the base URL and SDK type for this provider config
   const providerConfig = providerConfigService.getProviderConfig(config.providerConfigId)
   const baseUrl = providerConfig ? providerConfigService.getBaseUrl(providerConfig) : undefined
-  const sdkType = providerConfig ? providerConfigService.getSdkType(providerConfig) : 'openai_compatible'
+  const sdkType = providerConfig
+    ? providerConfigService.getSdkType(providerConfig)
+    : 'openai_compatible'
 
   // Build the prompt with glossary injection
   const systemPrompt = buildSystemPromptWithGlossary(config.systemPrompt, glossaryTerms)
-  const userPrompt = buildUserPrompt(config.userPromptTemplate, sourceText, sourceLanguage, targetLanguage)
+  const userPrompt = buildUserPrompt(
+    config.userPromptTemplate,
+    sourceText,
+    sourceLanguage,
+    targetLanguage
+  )
 
   // Execute with retry
   const startTime = Date.now()
   const effectiveRetryConfig = retryConfig || {
     ...DEFAULT_RETRY_CONFIG,
     id: 'temp',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   }
 
   let lastError: unknown
@@ -307,7 +313,7 @@ async function executeWithFallbacks(
         temperature: config.temperature,
         maxTokens: config.maxTokens,
         apiKey,
-        baseUrl
+        baseUrl,
       })
       // Providers report failures in-band (finishReason: 'error') rather than
       // throwing. Re-throw here so the retry strategy can classify and retry
@@ -340,7 +346,7 @@ async function executeWithFallbacks(
       attemptNumber: attempts,
       durationMs,
       costUsd: calculateCost(result.tokensUsed.input, result.tokensUsed.output, config),
-      retryCount: totalRetries
+      retryCount: totalRetries,
     }
     executionPath.push(step)
 
@@ -348,7 +354,7 @@ async function executeWithFallbacks(
       success: true,
       translatedText: result.translatedText,
       tokensUsed: result.tokensUsed,
-      finalConfigId: currentConfigId
+      finalConfigId: currentConfigId,
     }
   } else if (error) {
     lastError = error
@@ -366,13 +372,13 @@ async function executeWithFallbacks(
     costUsd: 0,
     error: lastClassification?.details || String(lastError),
     errorType: lastClassification?.errorType || errorType || 'unknown',
-    retryCount: totalRetries
+    retryCount: totalRetries,
   }
   executionPath.push(failedStep)
 
   // Emit fallback event
   const actualErrorType = lastClassification?.errorType || errorType || 'unknown'
-  
+
   // Try to find a matching fallback
   const fallbacks = getFallbacksForConfig(currentConfigId)
   const matchingFallback = findMatchingFallback(fallbacks, actualErrorType)
@@ -383,14 +389,14 @@ async function executeWithFallbacks(
       fromConfigId: currentConfigId,
       toConfigId: matchingFallback.fallbackConfigId,
       errorType: actualErrorType,
-      error: String(lastError)
+      error: String(lastError),
     })
 
     // Recurse with the fallback config
     return executeWithFallbacks({
       ...options,
       currentConfigId: matchingFallback.fallbackConfigId,
-      triggeringErrorType: actualErrorType
+      triggeringErrorType: actualErrorType,
     })
   }
 
@@ -399,7 +405,7 @@ async function executeWithFallbacks(
     success: false,
     tokensUsed: { input: 0, output: 0, total: 0 },
     finalError: String(lastError),
-    finalErrorType: actualErrorType
+    finalErrorType: actualErrorType,
   }
 }
 

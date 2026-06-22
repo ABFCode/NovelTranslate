@@ -1,5 +1,5 @@
-import { getDatabase } from '../index'
 import type { AppSettings } from '../../../shared/types'
+import { getDatabase } from '../index'
 
 const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
@@ -16,7 +16,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   showCostEstimates: true,
   // Debug/Logging settings
   logLevel: 'info',
-  enableFileLogging: false
+  enableFileLogging: false,
 }
 
 /**

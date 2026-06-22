@@ -5,8 +5,8 @@
  */
 
 import type { CostEstimate, TranslationConfig } from '../../shared/types'
-import { getConfig, getFallbacksForConfig } from '../database/repositories/config.repository'
 import { checkBudget as checkProjectBudget } from '../database/repositories/budget.repository'
+import { getConfig, getFallbacksForConfig } from '../database/repositories/config.repository'
 
 /**
  * Model pricing per million tokens (USD)
@@ -36,7 +36,7 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
 
   // DeepSeek
   'deepseek-v4-flash': { input: 0.14, output: 0.28 },
-  'deepseek-v4-pro': { input: 0.44, output: 0.87 }
+  'deepseek-v4-pro': { input: 0.44, output: 0.87 },
 }
 
 /**
@@ -79,7 +79,7 @@ export function estimateCostForTokens(
     outputCostUsd,
     totalCostUsd: inputCostUsd + outputCostUsd,
     configBreakdown: [],
-    warnings: []
+    warnings: [],
   }
 }
 
@@ -125,18 +125,14 @@ export function estimateSingleCost(
   return {
     inputTokens,
     outputTokens,
-    costUsd: inputCost + outputCost
+    costUsd: inputCost + outputCost,
   }
 }
 
 /**
  * Estimate cost for a translation with fallback chain
  */
-export function estimateChainCost(
-  text: string,
-  configId: string,
-  maxDepth = 3
-): CostEstimate {
+export function estimateChainCost(text: string, configId: string, maxDepth = 3): CostEstimate {
   const config = getConfig(configId)
   if (!config) {
     return {
@@ -146,7 +142,7 @@ export function estimateChainCost(
       outputCostUsd: 0,
       totalCostUsd: 0,
       configBreakdown: [],
-      warnings: ['Config not found']
+      warnings: ['Config not found'],
     }
   }
 
@@ -171,7 +167,7 @@ export function estimateChainCost(
       configId: currentConfigId,
       configName: currentConfig.name,
       probability,
-      estimatedCostUsd: estimate.costUsd * probability
+      estimatedCostUsd: estimate.costUsd * probability,
     })
 
     // Get fallbacks for next iteration
@@ -199,7 +195,7 @@ export function estimateChainCost(
       (primaryEstimate.outputTokens / 1_000_000) * getModelPricing(config.modelId).output,
     totalCostUsd,
     configBreakdown,
-    warnings
+    warnings,
   }
 }
 
@@ -224,7 +220,7 @@ export function estimateBatchCost(
       totalCostUsd: 0,
       configBreakdown: [],
       warnings: ['Config not found'],
-      perChapter: []
+      perChapter: [],
     }
   }
 
@@ -250,11 +246,11 @@ export function estimateBatchCost(
         configId,
         configName: config.name,
         probability: 1.0,
-        estimatedCostUsd: inputCostUsd + outputCostUsd
-      }
+        estimatedCostUsd: inputCostUsd + outputCostUsd,
+      },
     ],
     warnings: [],
-    perChapter
+    perChapter,
   }
 }
 

@@ -7,7 +7,7 @@ const TERM_TYPE_COLORS: Record<TermType, string> = {
   skill: 'bg-purple-500/10 text-purple-600',
   item: 'bg-orange-500/10 text-orange-600',
   honorific: 'bg-pink-500/10 text-pink-600',
-  other: 'bg-gray-500/10 text-gray-600'
+  other: 'bg-gray-500/10 text-gray-600',
 }
 
 export function TermTypeBadge({ type }: { type: TermType }): JSX.Element {

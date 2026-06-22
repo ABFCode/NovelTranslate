@@ -1,5 +1,5 @@
-import { getDatabase, generateId } from '../index'
 import type { Project, ProjectMetadata } from '../../../shared/types'
+import { generateId, getDatabase } from '../index'
 
 /**
  * Create a new project
@@ -15,7 +15,7 @@ export function createProject(
   const now = new Date().toISOString()
   const metadata: ProjectMetadata = {
     totalChapters: 0,
-    translatedChapters: 0
+    translatedChapters: 0,
   }
 
   const stmt = db.prepare(`
@@ -23,7 +23,16 @@ export function createProject(
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
-  stmt.run(id, name, sourcePath || null, sourceLanguage, targetLanguage, now, now, JSON.stringify(metadata))
+  stmt.run(
+    id,
+    name,
+    sourcePath || null,
+    sourceLanguage,
+    targetLanguage,
+    now,
+    now,
+    JSON.stringify(metadata)
+  )
 
   return {
     id,
@@ -33,7 +42,7 @@ export function createProject(
     targetLanguage,
     createdAt: now,
     updatedAt: now,
-    metadata
+    metadata,
   }
 }
 
@@ -182,6 +191,6 @@ function rowToProject(row: ProjectRow): Project {
     targetLanguage: row.target_language || 'en',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    metadata: JSON.parse(row.metadata_json)
+    metadata: JSON.parse(row.metadata_json),
   }
 }

@@ -1,5 +1,5 @@
-import { getDatabase, generateId } from '../index'
 import type { Chapter, ChapterContent, ChapterStatus } from '../../../shared/types'
+import { generateId, getDatabase } from '../index'
 
 /**
  * Create a new chapter

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { GlossaryTerm, GlossarySuggestion, TermType } from '../../../../shared/types'
+import type { GlossarySuggestion, GlossaryTerm, TermType } from '../../../../shared/types'
 
 interface GlossaryState {
   // Data
@@ -45,7 +45,10 @@ interface GlossaryState {
   mergeSuggestion: (id: string, existingTermId: string) => Promise<void>
 
   // Import/Export
-  importCSV: (csvData: string, projectId: string | null) => Promise<{ imported: number; skipped: number; errors: string[] }>
+  importCSV: (
+    csvData: string,
+    projectId: string | null
+  ) => Promise<{ imported: number; skipped: number; errors: string[] }>
   exportCSV: (projectId?: string) => Promise<string>
 
   // Filtered terms getter
@@ -134,7 +137,7 @@ export const useGlossaryStore = create<GlossaryState>((set, get) => ({
       const { terms, suggestions } = get()
       set({
         terms: [term, ...terms],
-        suggestions: suggestions.filter((s) => s.id !== id)
+        suggestions: suggestions.filter((s) => s.id !== id),
       })
       return term
     } catch (error) {
@@ -162,7 +165,7 @@ export const useGlossaryStore = create<GlossaryState>((set, get) => ({
       const refreshedTerms = await window.api.glossary.list(selectedProjectId)
       set({
         terms: refreshedTerms,
-        suggestions: suggestions.filter((s) => s.id !== id)
+        suggestions: suggestions.filter((s) => s.id !== id),
       })
     } catch (error) {
       console.error('Failed to merge suggestion:', error)
@@ -186,7 +189,7 @@ export const useGlossaryStore = create<GlossaryState>((set, get) => ({
 
   exportCSV: async (projectId) => {
     const terms = await window.api.glossary.export(projectId)
-    
+
     // Convert to CSV
     const headers = ['Source Term', 'Target Term', 'Type', 'Gender', 'Notes']
     const rows = terms.map((t) => [
@@ -194,15 +197,15 @@ export const useGlossaryStore = create<GlossaryState>((set, get) => ({
       escapeCSV(t.targetTerm),
       t.termType,
       t.gender || '',
-      escapeCSV(t.notes || '')
+      escapeCSV(t.notes || ''),
     ])
-    
+
     return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
   },
 
   getFilteredTerms: () => {
     const { terms, searchQuery, filterType, showGlobalOnly } = get()
-    
+
     return terms.filter((term) => {
       // Filter by global only
       if (showGlobalOnly && term.projectId !== null) {
@@ -226,7 +229,7 @@ export const useGlossaryStore = create<GlossaryState>((set, get) => ({
 
       return true
     })
-  }
+  },
 }))
 
 function escapeCSV(value: string): string {

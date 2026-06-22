@@ -1,7 +1,7 @@
+import type { Chapter, ChapterContent, TranslationOverride } from '@shared/types'
 import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { Chapter, ChapterContent, TranslationOverride } from '@shared/types'
 import type { OverrideDraft } from './OverrideDialog'
 
 interface ChapterContentViewerProps {
@@ -17,7 +17,7 @@ export function ChapterContentViewer({
   chapterContent,
   isLoadingContent,
   overrides,
-  onOverrideDraft
+  onOverrideDraft,
 }: ChapterContentViewerProps): JSX.Element {
   const overridesBySegment = useMemo(() => {
     return new Map(overrides.map((override) => [override.sourceSegment, override]))
@@ -36,7 +36,7 @@ export function ChapterContentViewer({
   const chapterPairs = useMemo(() => {
     return segments.map((segment, index) => ({
       source: segment,
-      translation: translatedSegments[index] || ''
+      translation: translatedSegments[index] || '',
     }))
   }, [segments, translatedSegments])
 
@@ -91,7 +91,7 @@ export function ChapterContentViewer({
                             overrideTranslation:
                               override?.overrideTranslation || pair.translation || '',
                             scope: override?.scope || 'chapter',
-                            reason: override?.reason || ''
+                            reason: override?.reason || '',
                           })
                         }
                       >
@@ -126,7 +126,13 @@ export function ChapterContentViewer({
 function splitSegments(text: string): string[] {
   const normalized = text.replace(/\r\n/g, '\n').trim()
   if (!normalized) return []
-  const blocks = normalized.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean)
+  const blocks = normalized
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
   if (blocks.length > 1) return blocks
-  return normalized.split('\n').map((line) => line.trim()).filter(Boolean)
+  return normalized
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
 }

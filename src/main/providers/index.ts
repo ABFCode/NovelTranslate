@@ -1,15 +1,15 @@
-import { providerRegistry, TranslationProvider } from './types'
-import { OpenAIProvider } from './openai.provider'
-import { GeminiProvider } from './gemini.provider'
+import type { ProviderConfig } from '../../shared/types'
+import { logger } from '../services/logger'
 import { AnthropicProvider } from './anthropic.provider'
+import { GeminiProvider } from './gemini.provider'
+import { OpenAIProvider } from './openai.provider'
 import { OpenAICompatibleProvider } from './openai-compatible.provider'
 import { providerConfigService } from './provider-config.service'
-import { logger } from '../services/logger'
-import type { ProviderConfig } from '../../shared/types'
+import { providerRegistry, type TranslationProvider } from './types'
 
-export * from './types'
 export * from './openai-compatible.provider'
 export * from './provider-config.service'
+export * from './types'
 
 // Cache of provider instances by provider config ID
 const providerInstances = new Map<string, TranslationProvider>()
@@ -20,7 +20,7 @@ const providerInstances = new Map<string, TranslationProvider>()
 const builtinFactories: Record<'openai' | 'anthropic' | 'gemini', () => TranslationProvider> = {
   openai: () => new OpenAIProvider(),
   anthropic: () => new AnthropicProvider(),
-  gemini: () => new GeminiProvider()
+  gemini: () => new GeminiProvider(),
 }
 
 /**
@@ -102,10 +102,7 @@ export function clearProviderCache(configId?: string): void {
 /**
  * Validate a key for a provider config
  */
-export async function validateKeyForConfig(
-  configId: string,
-  keyValue: string
-): Promise<boolean> {
+export async function validateKeyForConfig(configId: string, keyValue: string): Promise<boolean> {
   const config = providerConfigService.getProviderConfig(configId)
   if (!config) {
     return false

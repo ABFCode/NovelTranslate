@@ -415,7 +415,8 @@ export const SEED_PROMPT_TEMPLATES = [
   {
     id: 'template-literal',
     name: 'Literal Translation',
-    description: 'Preserves original sentence structure with minimal interpretation. Good for technical or legal content.',
+    description:
+      'Preserves original sentence structure with minimal interpretation. Good for technical or legal content.',
     category: 'literal',
     system_prompt: `You are a precise translator. Translate the text as literally as possible while maintaining grammatical correctness. Preserve the original sentence structure, word order, and phrasing when possible. Do not add interpretation or localize idioms.`,
     user_prompt_template: `Translate the following text from {{sourceLanguage}} to {{targetLanguage}}. Maintain literal accuracy.
@@ -424,12 +425,13 @@ Text to translate:
 {{text}}`,
     suggested_temperature: 0.3,
     suggested_max_tokens: null,
-    is_built_in: true
+    is_built_in: true,
   },
   {
     id: 'template-natural',
     name: 'Natural/Localized',
-    description: 'Adapts idioms and expressions to read naturally in the target language. Best for fiction and casual content.',
+    description:
+      'Adapts idioms and expressions to read naturally in the target language. Best for fiction and casual content.',
     category: 'natural',
     system_prompt: `You are a skilled literary translator. Translate the text to read naturally and fluently in the target language. Adapt idioms, expressions, and cultural references appropriately. Prioritize readability and natural flow over literal accuracy.`,
     user_prompt_template: `Translate the following text from {{sourceLanguage}} to {{targetLanguage}}. Make it read naturally and fluently.
@@ -438,12 +440,13 @@ Text to translate:
 {{text}}`,
     suggested_temperature: 0.7,
     suggested_max_tokens: null,
-    is_built_in: true
+    is_built_in: true,
   },
   {
     id: 'template-honorifics',
     name: 'Preserve Honorifics',
-    description: 'Keeps Japanese/Korean honorifics (-san, -sama, senpai, etc.) intact. Common for light novels and manga.',
+    description:
+      'Keeps Japanese/Korean honorifics (-san, -sama, senpai, etc.) intact. Common for light novels and manga.',
     category: 'specialized',
     system_prompt: `You are a translator specializing in Japanese/Korean content. Preserve all honorifics in their original form (-san, -sama, -kun, -chan, -senpai, -sensei, etc.). Keep cultural terms that don't have good English equivalents. Translate naturally otherwise.
 
@@ -460,12 +463,13 @@ Text to translate:
 {{text}}`,
     suggested_temperature: 0.6,
     suggested_max_tokens: null,
-    is_built_in: true
+    is_built_in: true,
   },
   {
     id: 'template-webnovel',
     name: 'Web Novel Style',
-    description: 'Optimized for Chinese web novels (xianxia, xuanhuan). Handles cultivation terms and genre conventions.',
+    description:
+      'Optimized for Chinese web novels (xianxia, xuanhuan). Handles cultivation terms and genre conventions.',
     category: 'specialized',
     system_prompt: `You are a translator specializing in Chinese web novels (xianxia, xuanhuan, wuxia). Handle cultivation-specific terminology appropriately:
 
@@ -486,12 +490,13 @@ Text to translate:
 {{text}}`,
     suggested_temperature: 0.7,
     suggested_max_tokens: null,
-    is_built_in: true
+    is_built_in: true,
   },
   {
     id: 'template-formal',
     name: 'Formal/Professional',
-    description: 'Business-appropriate language with no slang or colloquialisms. Suitable for professional documents.',
+    description:
+      'Business-appropriate language with no slang or colloquialisms. Suitable for professional documents.',
     category: 'literal',
     system_prompt: `You are a professional translator for business and formal documents. Use formal, professional language throughout. Avoid slang, colloquialisms, and casual expressions. Maintain a neutral, authoritative tone.`,
     user_prompt_template: `Translate the following text from {{sourceLanguage}} to {{targetLanguage}}. Use formal, professional language.
@@ -500,6 +505,6 @@ Text to translate:
 {{text}}`,
     suggested_temperature: 0.4,
     suggested_max_tokens: null,
-    is_built_in: true
-  }
+    is_built_in: true,
+  },
 ]

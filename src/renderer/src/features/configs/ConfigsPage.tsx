@@ -1,29 +1,40 @@
-import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { motion, AnimatePresence } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { useConfigsStore } from './configs.store'
-import { useFeatureMode } from '@/contexts/UIModeContext'
 import { FeatureModeToggle } from '@/components/ModeToggle'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { useFeatureMode } from '@/contexts/UIModeContext'
 import { cn } from '@/lib/utils'
-import type { TranslationConfig, PromptTemplate, ProviderInfoExtended } from '../../../../shared/types'
+import type {
+  PromptTemplate,
+  ProviderInfoExtended,
+  TranslationConfig,
+} from '../../../../shared/types'
+import { useConfigsStore } from './configs.store'
 
 export function ConfigsPage(): JSX.Element {
   const navigate = useNavigate()
   const { isAdvanced } = useFeatureMode('configs')
-  const { configs, templates, isLoading, fetchConfigs, fetchTemplates, deleteConfig, setDefaultConfig } =
-    useConfigsStore()
+  const {
+    configs,
+    templates,
+    isLoading,
+    fetchConfigs,
+    fetchTemplates,
+    deleteConfig,
+    setDefaultConfig,
+  } = useConfigsStore()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [providers, setProviders] = useState<ProviderInfoExtended[]>([])
@@ -39,8 +50,7 @@ export function ConfigsPage(): JSX.Element {
     window.api.providerConfig.list().then(setProviders).catch(console.error)
   }, [fetchConfigs, fetchTemplates])
 
-  const providerName = (id: string): string =>
-    providers.find((p) => p.id === id)?.name ?? id
+  const providerName = (id: string): string => providers.find((p) => p.id === id)?.name ?? id
 
   const filteredConfigs = configs.filter(
     (c) =>
@@ -120,7 +130,11 @@ export function ConfigsPage(): JSX.Element {
         </div>
         <div className="flex items-center gap-2">
           <FeatureModeToggle feature="configs" />
-          <Button variant="outline" onClick={handleExport} disabled={isExporting || configs.length === 0}>
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isExporting || configs.length === 0}
+          >
             <ExportIcon className="mr-2 h-4 w-4" />
             {isExporting ? 'Exporting...' : 'Export'}
           </Button>
@@ -160,9 +174,7 @@ export function ConfigsPage(): JSX.Element {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create from Template</DialogTitle>
-                <DialogDescription>
-                  Choose a pre-built template to start with
-                </DialogDescription>
+                <DialogDescription>Choose a pre-built template to start with</DialogDescription>
               </DialogHeader>
               <TemplateSelector
                 templates={templates}
@@ -229,7 +241,13 @@ interface ConfigGridProps {
   onSetDefault: (config: TranslationConfig) => void
 }
 
-function ConfigGrid({ configs, providerName, onEdit, onDelete, onSetDefault }: ConfigGridProps): JSX.Element {
+function ConfigGrid({
+  configs,
+  providerName,
+  onEdit,
+  onDelete,
+  onSetDefault,
+}: ConfigGridProps): JSX.Element {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <AnimatePresence>
@@ -308,7 +326,13 @@ interface ConfigTableProps {
   onSetDefault: (config: TranslationConfig) => void
 }
 
-function ConfigTable({ configs, providerName, onEdit, onDelete, onSetDefault }: ConfigTableProps): JSX.Element {
+function ConfigTable({
+  configs,
+  providerName,
+  onEdit,
+  onDelete,
+  onSetDefault,
+}: ConfigTableProps): JSX.Element {
   return (
     <div className="rounded-lg border">
       <table className="w-full">

@@ -1,11 +1,11 @@
+import type { ApiKeyEntry } from '@shared/types'
+import { Pencil, Plus, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, RefreshCw, Pencil, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { EditKeyDialog } from '../EditKeyDialog'
-import type { ApiKeyEntry } from '@shared/types'
 
 interface KeyManagementProps {
   providerConfigId: string
@@ -132,7 +132,8 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {key.requestCount} requests
-                  {key.lastUsedAt && ` • Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`}
+                  {key.lastUsedAt &&
+                    ` • Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`}
                 </div>
               </div>
               <div className="flex gap-1">
@@ -154,7 +155,9 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
                   disabled={validatingId === key.id}
                   title="Validate"
                 >
-                  <RefreshCw className={`h-4 w-4 ${validatingId === key.id ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 ${validatingId === key.id ? 'animate-spin' : ''}`}
+                  />
                 </Button>
                 <Button
                   variant="ghost"

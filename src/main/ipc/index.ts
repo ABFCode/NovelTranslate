@@ -1,21 +1,21 @@
-import { registerProjectHandlers } from './project.handlers'
+import { registerProviders } from '../providers'
+import { logger } from '../services/logger'
+import { healthCheck } from '../services/sidecar'
 import { registerChapterHandlers } from './chapter.handlers'
 import { registerConfigHandlers } from './config.handlers'
-import { registerTranslationHandlers } from './translation.handlers'
-import {
-  registerSettingsHandlers,
-  registerApiKeyHandlers,
-  registerBudgetHandlers
-} from './settings.handlers'
-import { registerProviderConfigHandlers } from './provider.handlers'
-import { registerTestHandlers } from './test.handlers'
 import { registerGlossaryHandlers } from './glossary.handlers'
 import { registerGlossaryRunHandlers } from './glossary-run.handlers'
 import { registerMemoryHandlers } from './memory.handlers'
-import { healthCheck } from '../services/sidecar'
-import { registerProviders } from '../providers'
+import { registerProjectHandlers } from './project.handlers'
+import { registerProviderConfigHandlers } from './provider.handlers'
+import {
+  registerApiKeyHandlers,
+  registerBudgetHandlers,
+  registerSettingsHandlers,
+} from './settings.handlers'
+import { registerTestHandlers } from './test.handlers'
+import { registerTranslationHandlers } from './translation.handlers'
 import { handleIpc } from './utils'
-import { logger } from '../services/logger'
 
 /**
  * Register all IPC handlers for main process

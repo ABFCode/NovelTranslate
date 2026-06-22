@@ -1,41 +1,41 @@
-import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { contextBridge, ipcRenderer } from 'electron'
 import type {
-  Project,
+  ApiKeyEntry,
+  AppSettings,
+  BuiltinProviderId,
+  BuiltinProviderTemplate,
+  ChainFallbackEvent,
   Chapter,
   ChapterContent,
-  TranslationConfig,
+  ConfigExport,
   ConfigFallback,
   ConfigSnapshot,
   ConfigWithFallbacks,
-  ProjectConfig,
-  PromptTemplate,
-  AppSettings,
-  ProviderInfoExtended,
-  ProviderConfig,
-  BuiltinProviderTemplate,
-  BuiltinProviderId,
-  ModelInfo,
-  ProviderSettings,
-  TestRun,
   CostEstimate,
-  GlossaryTerm,
-  GlossarySuggestion,
-  GlossaryRunResult,
-  GlossaryRunProgressEvent,
-  TranslationMemoryEntry,
-  TranslationOverride,
-  ApiKeyEntry,
-  ProjectBudget,
-  TranslationProgressEvent,
-  SidecarStatusEvent,
-  ChainFallbackEvent,
   FallbackConditionType,
-  ConfigExport,
+  GlossaryRunProgressEvent,
+  GlossaryRunResult,
+  GlossarySuggestion,
+  GlossaryTerm,
   ImportResult,
   KeyValidationResult,
+  ModelInfo,
   PreviewResult,
-  TranslationVersion
+  Project,
+  ProjectBudget,
+  ProjectConfig,
+  PromptTemplate,
+  ProviderConfig,
+  ProviderInfoExtended,
+  ProviderSettings,
+  SidecarStatusEvent,
+  TestRun,
+  TranslationConfig,
+  TranslationMemoryEntry,
+  TranslationOverride,
+  TranslationProgressEvent,
+  TranslationVersion,
 } from '../shared/types'
 
 // Type-safe IPC invoke wrapper
@@ -54,7 +54,7 @@ const api = {
     delete: (id: string) => invoke<void>('project:delete', id),
     list: () => invoke<Project[]>('project:list'),
     get: (id: string) => invoke<Project | null>('project:get', id),
-    importEpub: (filePath?: string) => invoke<Project | null>('project:import-epub', filePath)
+    importEpub: (filePath?: string) => invoke<Project | null>('project:import-epub', filePath),
   },
 
   // =========================================================================
@@ -65,10 +65,13 @@ const api = {
     get: (id: string) => invoke<Chapter | null>('chapter:get', id),
     getContent: (id: string) => invoke<ChapterContent | null>('chapter:get-content', id),
     updateStatus: (id: string, status: string) => invoke<void>('chapter:update-status', id, status),
-    clearTranslations: (chapterIds: string[]) => invoke<number>('chapter:clear-translations', chapterIds),
-    listVersions: (chapterId: string) => invoke<TranslationVersion[]>('chapter:list-versions', chapterId),
-    getVersion: (versionId: string) => invoke<TranslationVersion | null>('chapter:get-version', versionId),
-    restoreVersion: (versionId: string) => invoke<boolean>('chapter:restore-version', versionId)
+    clearTranslations: (chapterIds: string[]) =>
+      invoke<number>('chapter:clear-translations', chapterIds),
+    listVersions: (chapterId: string) =>
+      invoke<TranslationVersion[]>('chapter:list-versions', chapterId),
+    getVersion: (versionId: string) =>
+      invoke<TranslationVersion | null>('chapter:get-version', versionId),
+    restoreVersion: (versionId: string) => invoke<boolean>('chapter:restore-version', versionId),
   },
 
   // =========================================================================
@@ -81,7 +84,7 @@ const api = {
     resume: (projectId: string) => invoke<void>('translation:resume', projectId),
     cancel: (projectId: string) => invoke<void>('translation:cancel', projectId),
     preview: (text: string, configId: string, sourceLanguage: string, targetLanguage: string) =>
-      invoke<PreviewResult>('translation:preview', text, configId, sourceLanguage, targetLanguage)
+      invoke<PreviewResult>('translation:preview', text, configId, sourceLanguage, targetLanguage),
   },
 
   // =========================================================================
@@ -90,7 +93,8 @@ const api = {
   config: {
     list: () => invoke<TranslationConfig[]>('config:list'),
     get: (id: string) => invoke<TranslationConfig | null>('config:get', id),
-    getWithFallbacks: (id: string) => invoke<ConfigWithFallbacks | null>('config:getWithFallbacks', id),
+    getWithFallbacks: (id: string) =>
+      invoke<ConfigWithFallbacks | null>('config:getWithFallbacks', id),
     save: (config: TranslationConfig) => invoke<TranslationConfig>('config:save', config),
     delete: (id: string) => invoke<void>('config:delete', id),
     getDefault: () => invoke<TranslationConfig | null>('config:getDefault'),
@@ -128,7 +132,7 @@ const api = {
 
     // Import/Export
     export: (configIds: string[]) => invoke<ConfigExport>('config:export', configIds),
-    import: (data: ConfigExport) => invoke<ImportResult>('config:import', data)
+    import: (data: ConfigExport) => invoke<ImportResult>('config:import', data),
   },
 
   // =========================================================================
@@ -141,7 +145,7 @@ const api = {
     assign: (projectId: string, configId: string, isDefault: boolean, priority: number) =>
       invoke<ProjectConfig>('projectConfig:assign', projectId, configId, isDefault, priority),
     remove: (projectId: string, configId: string) =>
-      invoke<void>('projectConfig:remove', projectId, configId)
+      invoke<void>('projectConfig:remove', projectId, configId),
   },
 
   // =========================================================================
@@ -159,7 +163,7 @@ const api = {
     delete: (id: string) => invoke<void>('template:delete', id),
     clone: (id: string, newName: string) => invoke<PromptTemplate>('template:clone', id, newName),
     use: (templateId: string, configName: string) =>
-      invoke<TranslationConfig>('template:use', templateId, configName)
+      invoke<TranslationConfig>('template:use', templateId, configName),
   },
 
   // =========================================================================
@@ -185,7 +189,8 @@ const api = {
       configId: string,
       sourceLanguage: string,
       targetLanguage: string
-    ) => invoke<TestRun>('test:runSingle', name, sampleText, configId, sourceLanguage, targetLanguage),
+    ) =>
+      invoke<TestRun>('test:runSingle', name, sampleText, configId, sourceLanguage, targetLanguage),
     runComparison: (
       name: string,
       sampleText: string,
@@ -225,7 +230,7 @@ const api = {
         'test:estimateSingleCost',
         text,
         configId
-      )
+      ),
   },
 
   // =========================================================================
@@ -267,7 +272,7 @@ const api = {
         csvData,
         projectId,
         skipDuplicates
-      )
+      ),
   },
 
   // =========================================================================
@@ -275,13 +280,22 @@ const api = {
   // =========================================================================
   glossaryRun: {
     getRecommendedModels: () =>
-      invoke<Array<{ providerConfigId: string; modelId: string; displayName: string }>>('glossaryRun:getRecommendedModels'),
+      invoke<Array<{ providerConfigId: string; modelId: string; displayName: string }>>(
+        'glossaryRun:getRecommendedModels'
+      ),
     estimateCost: (
       projectId: string,
       chapterIds: string[],
       providerConfigId: string,
       modelId: string
-    ) => invoke<CostEstimate>('glossaryRun:estimate', projectId, chapterIds, providerConfigId, modelId),
+    ) =>
+      invoke<CostEstimate>(
+        'glossaryRun:estimate',
+        projectId,
+        chapterIds,
+        providerConfigId,
+        modelId
+      ),
     run: (
       projectId: string,
       chapterIds: string[],
@@ -296,7 +310,7 @@ const api = {
         providerConfigId,
         modelId,
         concurrency
-      )
+      ),
   },
 
   // =========================================================================
@@ -313,7 +327,7 @@ const api = {
     verify: (id: string) => invoke<void>('memory:verify', id),
     updateConfidence: (id: string, confidence: number) =>
       invoke<void>('memory:updateConfidence', id, confidence),
-    delete: (id: string) => invoke<void>('memory:delete', id)
+    delete: (id: string) => invoke<void>('memory:delete', id),
   },
 
   override: {
@@ -325,7 +339,7 @@ const api = {
       id: string,
       updates: Partial<Omit<TranslationOverride, 'id' | 'projectId' | 'createdAt'>>
     ) => invoke<void>('override:update', id, updates),
-    delete: (id: string) => invoke<void>('override:delete', id)
+    delete: (id: string) => invoke<void>('override:delete', id),
   },
 
   // =========================================================================
@@ -334,8 +348,14 @@ const api = {
   settings: {
     get: () => invoke<AppSettings>('settings:get'),
     save: (settings: Partial<AppSettings>) => invoke<AppSettings>('settings:save', settings),
-    export: () => invoke<{ success: boolean; filePath?: string; error?: string }>('settings:export'),
-    import: () => invoke<{ success: boolean; imported?: { settings: boolean; glossaryTerms: number }; error?: string }>('settings:import')
+    export: () =>
+      invoke<{ success: boolean; filePath?: string; error?: string }>('settings:export'),
+    import: () =>
+      invoke<{
+        success: boolean
+        imported?: { settings: boolean; glossaryTerms: number }
+        error?: string
+      }>('settings:import'),
   },
 
   // =========================================================================
@@ -344,8 +364,10 @@ const api = {
   apiKey: {
     list: (providerConfigId?: string) => invoke<ApiKeyEntry[]>('apikey:list', providerConfigId),
     get: (keyId: string) => invoke<ApiKeyEntry | null>('apikey:get', keyId),
-    getForProvider: (providerConfigId: string) => invoke<string | null>('apikey:getForProvider', providerConfigId),
-    hasValidKeys: (providerConfigId: string) => invoke<boolean>('apikey:hasValidKeys', providerConfigId),
+    getForProvider: (providerConfigId: string) =>
+      invoke<string | null>('apikey:getForProvider', providerConfigId),
+    hasValidKeys: (providerConfigId: string) =>
+      invoke<boolean>('apikey:hasValidKeys', providerConfigId),
     encryptionAvailable: () => invoke<boolean>('apikey:encryptionAvailable'),
     save: (providerConfigId: string, keyValue: string, label?: string, priority?: number) =>
       invoke<ApiKeyEntry>('apikey:save', providerConfigId, keyValue, label, priority),
@@ -362,9 +384,8 @@ const api = {
     validateAll: () => invoke<KeyValidationResult[]>('apikey:validateAll'),
     setRotationStrategy: (strategy: 'priority' | 'round_robin' | 'least_recently_used') =>
       invoke<void>('apikey:setRotationStrategy', strategy),
-    getRotationStrategy: () => invoke<'priority' | 'round_robin' | 'least_recently_used'>(
-      'apikey:getRotationStrategy'
-    )
+    getRotationStrategy: () =>
+      invoke<'priority' | 'round_robin' | 'least_recently_used'>('apikey:getRotationStrategy'),
   },
 
   // =========================================================================
@@ -383,7 +404,7 @@ const api = {
     recordSpending: (projectId: string, amountUsd: number) =>
       invoke<void>('budget:recordSpending', projectId, amountUsd),
     resetSpending: (projectId: string) => invoke<void>('budget:resetSpending', projectId),
-    list: () => invoke<ProjectBudget[]>('budget:list')
+    list: () => invoke<ProjectBudget[]>('budget:list'),
   },
 
   // =========================================================================
@@ -434,14 +455,14 @@ const api = {
 
     // Check if a builtin provider is already configured
     isBuiltinConfigured: (builtinId: BuiltinProviderId) =>
-      invoke<boolean>('providerConfig:isBuiltinConfigured', builtinId)
+      invoke<boolean>('providerConfig:isBuiltinConfigured', builtinId),
   },
 
   // =========================================================================
   // Sidecar APIs
   // =========================================================================
   sidecar: {
-    health: () => invoke<boolean>('sidecar:health')
+    health: () => invoke<boolean>('sidecar:health'),
   },
 
   // =========================================================================
@@ -464,7 +485,12 @@ const api = {
       return () => ipcRenderer.removeListener('sidecar:status', handler)
     },
     testBatchProgress: (
-      callback: (event: { testRunId: string; current: number; total: number; chapterId: string }) => void
+      callback: (event: {
+        testRunId: string
+        current: number
+        total: number
+        chapterId: string
+      }) => void
     ) => {
       const handler = (
         _: unknown,
@@ -477,13 +503,13 @@ const api = {
       const handler = (_: unknown, data: GlossaryRunProgressEvent) => callback(data)
       ipcRenderer.on('glossary:runProgress', handler)
       return () => ipcRenderer.removeListener('glossary:runProgress', handler)
-    }
+    },
   },
 
   // =========================================================================
   // Utility APIs
   // =========================================================================
-  ping: () => invoke<string>('ping')
+  ping: () => invoke<string>('ping'),
 }
 
 // Export type for use in renderer
@@ -499,9 +525,10 @@ if (process.contextIsolated) {
     console.error('[Preload] Failed to expose API:', error)
   }
 } else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
+  // Cast rather than a @ts-ignore: preload is compiled by both the node and web
+  // tsconfigs and the global Window augmentation is only visible to one of them.
+  const globalWindow = window as unknown as { electron: typeof electronAPI; api: Api }
+  globalWindow.electron = electronAPI
+  globalWindow.api = api
   console.log('[Preload] API attached to window (non-isolated)')
 }

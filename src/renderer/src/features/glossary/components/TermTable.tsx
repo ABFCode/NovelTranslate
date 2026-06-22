@@ -1,8 +1,8 @@
-import { motion, AnimatePresence } from 'motion/react'
-import { Button } from '@/components/ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
-import { TermTypeBadge } from './TermTypeBadge'
+import { AnimatePresence, motion } from 'motion/react'
+import { Button } from '@/components/ui/button'
 import type { GlossaryTerm } from '../../../../../shared/types'
+import { TermTypeBadge } from './TermTypeBadge'
 
 interface TermTableProps {
   terms: GlossaryTerm[]
@@ -41,14 +41,10 @@ export function TermTable({ terms, onEdit, onDelete, isAdvanced }: TermTableProp
                   <TermTypeBadge type={term.termType} />
                 </td>
                 {isAdvanced && (
-                  <td className="px-6 py-3 text-sm text-muted-foreground">
-                    {term.gender || '-'}
-                  </td>
+                  <td className="px-6 py-3 text-sm text-muted-foreground">{term.gender || '-'}</td>
                 )}
                 {isAdvanced && (
-                  <td className="px-6 py-3 text-sm text-muted-foreground">
-                    {term.usageCount}
-                  </td>
+                  <td className="px-6 py-3 text-sm text-muted-foreground">{term.usageCount}</td>
                 )}
                 <td className="px-6 py-3">
                   <div className="flex justify-end gap-1">

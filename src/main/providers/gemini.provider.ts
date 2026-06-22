@@ -1,11 +1,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import type { ModelInfo, ProviderSettings } from '../../shared/types'
 import {
   describeProviderError,
-  type TranslationProvider,
   type ProviderTranslationRequest,
   type ProviderTranslationResult,
+  type TranslationProvider,
 } from './types'
-import type { ModelInfo, ProviderSettings } from '../../shared/types'
 
 const GEMINI_DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com'
 
@@ -97,7 +97,7 @@ export class GeminiProvider implements TranslationProvider {
 
     try {
       const res = await fetch(url, {
-        headers: this.settings.customHeaders
+        headers: this.settings.customHeaders,
       })
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`)
@@ -120,7 +120,7 @@ export class GeminiProvider implements TranslationProvider {
         models.push({
           id,
           name: m.displayName ?? id,
-          contextWindow: m.inputTokenLimit ?? 0
+          contextWindow: m.inputTokenLimit ?? 0,
         })
       }
       return models.sort((a, b) => a.id.localeCompare(b.id))

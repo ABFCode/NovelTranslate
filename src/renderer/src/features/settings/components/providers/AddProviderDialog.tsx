@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import type { BuiltinProviderTemplate, ModelInfo } from '@shared/types'
 import { ArrowLeft, Cloud, Server } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,12 +9,11 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CustomProviderForm, type CustomProviderValues } from './CustomProviderForm'
-import type { BuiltinProviderTemplate, ModelInfo } from '@shared/types'
 
 interface AddProviderDialogProps {
   open: boolean
@@ -30,7 +30,11 @@ export function AddProviderDialog({ open, onOpenChange, onCreated }: AddProvider
   const [displayName, setDisplayName] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
   const [initialKey, setInitialKey] = useState('')
-  const [custom, setCustom] = useState<CustomProviderValues>({ displayName: '', baseUrl: '', models: '' })
+  const [custom, setCustom] = useState<CustomProviderValues>({
+    displayName: '',
+    baseUrl: '',
+    models: '',
+  })
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -97,16 +101,21 @@ export function AddProviderDialog({ open, onOpenChange, onCreated }: AddProvider
           : template && url && url !== template.defaultBaseUrl
             ? url
             : undefined,
-        customModels: customModels && customModels.length > 0 ? customModels : undefined
+        customModels: customModels && customModels.length > 0 ? customModels : undefined,
       })
 
       if (initialKey.trim()) {
         await window.api.apiKey.save(created.id, initialKey.trim())
-        const result = await window.api.providerConfig.validateConnection(created.id, initialKey.trim())
+        const result = await window.api.providerConfig.validateConnection(
+          created.id,
+          initialKey.trim()
+        )
         if (result.valid) {
           toast.success(`${name} added and connected`)
         } else {
-          toast.warning(`${name} added, but the key could not be validated${result.error ? `: ${result.error}` : ''}`)
+          toast.warning(
+            `${name} added, but the key could not be validated${result.error ? `: ${result.error}` : ''}`
+          )
         }
       } else {
         toast.success(`${name} added`)

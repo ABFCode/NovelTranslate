@@ -1,25 +1,25 @@
+import type {
+  ChainExecutionStep,
+  ChapterStatus,
+  TranslationConfig,
+  TranslationProgressEvent,
+} from '../../shared/types'
 import {
+  archiveTranslation,
   getChapterContent,
-  updateChapterStatus,
-  updateChapterTranslation,
   getConfig,
   getProjectDefaultConfig,
-  archiveTranslation
+  updateChapterStatus,
+  updateChapterTranslation,
 } from '../database'
-import { getProject } from '../database/repositories/project.repository'
-import { getMainWindow } from '../window'
-import { executeChain, ChainExecutorOptions } from './chain-executor'
-import { keyManager } from './key-manager'
-import { getSettings } from '../database/repositories/settings.repository'
-import { estimateSingleCost } from './cost-estimator'
 import { checkBudget } from '../database/repositories/budget.repository'
+import { getProject } from '../database/repositories/project.repository'
+import { getSettings } from '../database/repositories/settings.repository'
+import { getMainWindow } from '../window'
+import { type ChainExecutorOptions, executeChain } from './chain-executor'
+import { estimateSingleCost } from './cost-estimator'
+import { keyManager } from './key-manager'
 import { logger } from './logger'
-import type {
-  TranslationProgressEvent,
-  ChapterStatus,
-  ChainExecutionStep,
-  TranslationConfig
-} from '../../shared/types'
 
 // Active translation jobs
 const activeJobs = new Map<string, TranslationJob>()
@@ -90,7 +90,7 @@ export async function startTranslation(
     errorCount: 0,
     skippedCount: 0,
     totalCost: 0,
-    budgetStopped: false
+    budgetStopped: false,
   }
 
   activeJobs.set(projectId, job)
@@ -167,7 +167,7 @@ export function getTranslationStatus(projectId: string): {
     progress: job.chapterIds.length > 0 ? (processed / job.chapterIds.length) * 100 : 0,
     completedCount: job.completedCount,
     errorCount: job.errorCount,
-    totalCost: job.totalCost
+    totalCost: job.totalCost,
   }
 }
 
@@ -278,7 +278,7 @@ async function translateChapter(
       useMemory,
       useGlossary,
       createSnapshot: false,
-      window: mainWindow || undefined
+      window: mainWindow || undefined,
     }
 
     const result = await executeChain(options)
@@ -369,7 +369,7 @@ function sendProgressEvent(
       progress,
       message,
       configId,
-      executionPath
+      executionPath,
     }
     mainWindow.webContents.send('translation:progress', event)
   }
@@ -422,7 +422,7 @@ export async function previewTranslation(
       tokensUsed: { input: 0, output: 0 },
       providerConfigId: '',
       modelId: '',
-      error: 'Config not found'
+      error: 'Config not found',
     }
   }
 
@@ -435,7 +435,7 @@ export async function previewTranslation(
       tokensUsed: { input: 0, output: 0 },
       providerConfigId: config.providerConfigId,
       modelId: config.modelId,
-      error: `No API key for provider config ${config.providerConfigId}`
+      error: `No API key for provider config ${config.providerConfigId}`,
     }
   }
 
@@ -448,7 +448,7 @@ export async function previewTranslation(
       apiKey,
       useMemory: false,
       useGlossary: false,
-      createSnapshot: false
+      createSnapshot: false,
     }
 
     const result = await executeChain(options)
@@ -460,11 +460,11 @@ export async function previewTranslation(
       costUsd: result.totalCostUsd,
       tokensUsed: {
         input: result.tokensUsed.input,
-        output: result.tokensUsed.output
+        output: result.tokensUsed.output,
       },
       providerConfigId: config.providerConfigId,
       modelId: config.modelId,
-      error: result.finalError
+      error: result.finalError,
     }
   } catch (error) {
     return {
@@ -474,7 +474,7 @@ export async function previewTranslation(
       tokensUsed: { input: 0, output: 0 },
       providerConfigId: config.providerConfigId,
       modelId: config.modelId,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     }
   }
 }

@@ -5,7 +5,7 @@
  */
 
 import { app } from 'electron'
-import { writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs'
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
@@ -34,7 +34,7 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   debug: 0,
   info: 1,
   warn: 2,
-  error: 3
+  error: 3,
 }
 
 /**
@@ -84,7 +84,7 @@ export class Logger {
       minLevel: this.minLevel,
       enableConsole: this.enableConsole,
       enableFile: this.enableFile,
-      maxFileSizeMb: this.maxFileSizeMb
+      maxFileSizeMb: this.maxFileSizeMb,
     })
     childLogger.correlationId = correlationId
     return childLogger
@@ -125,7 +125,7 @@ export class Logger {
     this.info('Chain execution started', {
       configId,
       sourceLength,
-      stage: 'chain_start'
+      stage: 'chain_start',
     })
   }
 
@@ -143,25 +143,20 @@ export class Logger {
       step,
       action,
       stage: 'chain_step',
-      ...details
+      ...details,
     })
   }
 
   /**
    * Log chain execution end
    */
-  chainEnd(
-    configId: string,
-    success: boolean,
-    durationMs: number,
-    finalConfigId?: string
-  ): void {
+  chainEnd(configId: string, success: boolean, durationMs: number, finalConfigId?: string): void {
     this.info('Chain execution completed', {
       configId,
       success,
       durationMs,
       finalConfigId,
-      stage: 'chain_end'
+      stage: 'chain_end',
     })
   }
 
@@ -183,7 +178,7 @@ export class Logger {
       outputTokens,
       durationMs,
       success,
-      stage: 'api_call'
+      stage: 'api_call',
     })
   }
 
@@ -195,7 +190,7 @@ export class Logger {
       providerConfigId,
       modelId,
       costUsd,
-      stage: 'cost'
+      stage: 'cost',
     })
   }
 
@@ -255,14 +250,14 @@ export class Logger {
       level,
       message,
       correlationId: this.correlationId,
-      context
+      context,
     }
 
     if (error) {
       entry.error = {
         name: error.name,
         message: error.message,
-        stack: error.stack
+        stack: error.stack,
       }
     }
 
@@ -342,5 +337,5 @@ export function generateCorrelationId(): string {
 export const logger = new Logger({
   minLevel: 'info',
   enableConsole: true,
-  enableFile: false
+  enableFile: false,
 })

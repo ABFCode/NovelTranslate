@@ -1,5 +1,5 @@
-import { CheckCircle, AlertCircle, Clock, FileText } from 'lucide-react'
 import type { ChapterStatus } from '@shared/types'
+import { AlertCircle, CheckCircle, Clock, FileText } from 'lucide-react'
 
 interface StatusIconProps {
   status: ChapterStatus

@@ -1,8 +1,8 @@
-import { spawn, ChildProcess } from 'child_process'
-import { join } from 'path'
+import { type ChildProcess, spawn } from 'child_process'
 import { randomBytes } from 'crypto'
 import { app } from 'electron'
 import http from 'http'
+import { join } from 'path'
 import { logger } from './logger'
 
 // Sidecar state
@@ -84,11 +84,7 @@ function request<T>(path: string, body?: unknown): Promise<T> {
 /**
  * Make an SSE streaming request to the sidecar
  */
-function streamRequest<T>(
-  path: string,
-  body: unknown,
-  onEvent: (event: T) => void
-): Promise<void> {
+function streamRequest<T>(path: string, body: unknown, onEvent: (event: T) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!sidecarPort) {
       reject(new Error('Sidecar not running'))
@@ -303,50 +299,44 @@ export async function parseEpub(
   let result: EpubResult | null = null
   let error: string | null = null
 
-  await streamRequest<SSEProgressEvent>(
-    '/epub/parse',
-    { file_path: filePath },
-    (event) => {
-      switch (event.type) {
-        case 'progress':
-          if (onProgress) {
-            onProgress({
-              current: event.current || 0,
-              total: event.total || 100,
-              message: event.message || '',
-            })
-          }
-          break
+  await streamRequest<SSEProgressEvent>('/epub/parse', { file_path: filePath }, (event) => {
+    switch (event.type) {
+      case 'progress':
+        if (onProgress) {
+          onProgress({
+            current: event.current || 0,
+            total: event.total || 100,
+            message: event.message || '',
+          })
+        }
+        break
 
-        case 'complete':
-          if (onProgress) {
-            onProgress({
-              current: 100,
-              total: 100,
-              message: 'Complete',
-            })
-          }
-          result = {
-            metadata: event.metadata!,
-            chapters: (event.chapters || []).map((ch) => ({
-              spineIndex: ch.spine_index,
-              title: ch.title,
-              content: ch.content,
-              wordCount: ch.word_count,
-            })),
-            coverImage: event.cover_image
-              ? Buffer.from(event.cover_image)
-              : undefined,
-            coverContentType: event.cover_content_type,
-          }
-          break
+      case 'complete':
+        if (onProgress) {
+          onProgress({
+            current: 100,
+            total: 100,
+            message: 'Complete',
+          })
+        }
+        result = {
+          metadata: event.metadata!,
+          chapters: (event.chapters || []).map((ch) => ({
+            spineIndex: ch.spine_index,
+            title: ch.title,
+            content: ch.content,
+            wordCount: ch.word_count,
+          })),
+          coverImage: event.cover_image ? Buffer.from(event.cover_image) : undefined,
+          coverContentType: event.cover_content_type,
+        }
+        break
 
-        case 'error':
-          error = event.error || 'Unknown error'
-          break
-      }
+      case 'error':
+        error = event.error || 'Unknown error'
+        break
     }
-  )
+  })
 
   if (error) {
     throw new Error(error)

@@ -1,16 +1,16 @@
-import {
-  getChapter,
-  listChapters,
-  getChapterContent,
-  updateChapterStatus,
-  clearChapterTranslationsBulk,
-  updateChapterTranslation,
-  listTranslationVersions,
-  getTranslationVersion,
-} from '../database'
-import { handleIpc } from './utils'
-import { logger } from '../services/logger'
 import type { Chapter, ChapterContent, ChapterStatus, TranslationVersion } from '../../shared/types'
+import {
+  clearChapterTranslationsBulk,
+  getChapter,
+  getChapterContent,
+  getTranslationVersion,
+  listChapters,
+  listTranslationVersions,
+  updateChapterStatus,
+  updateChapterTranslation,
+} from '../database'
+import { logger } from '../services/logger'
+import { handleIpc } from './utils'
 
 /**
  * Register chapter-related IPC handlers

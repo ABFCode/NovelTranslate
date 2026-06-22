@@ -1,5 +1,11 @@
-import { getDatabase, generateId } from '../index'
-import type { ProviderConfig, ProviderSettings, ModelInfo, ProviderType, BuiltinProviderId } from '../../../shared/types'
+import type {
+  BuiltinProviderId,
+  ModelInfo,
+  ProviderConfig,
+  ProviderSettings,
+  ProviderType,
+} from '../../../shared/types'
+import { generateId, getDatabase } from '../index'
 
 // ============================================================================
 // Provider Config CRUD
@@ -107,7 +113,7 @@ export function createProviderConfig(
     id,
     ...config,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
   }
 }
 
@@ -191,14 +197,16 @@ export function getProviderConfigStats(providerConfigId: string): {
 } {
   const db = getDatabase()
 
-  const keyStats = db.prepare(`
+  const keyStats = db
+    .prepare(`
     SELECT
       COUNT(*) as key_count,
       SUM(CASE WHEN is_valid = 1 AND is_enabled = 1 THEN 1 ELSE 0 END) as valid_key_count,
       SUM(request_count) as total_requests
     FROM api_keys
     WHERE provider_config_id = ?
-  `).get(providerConfigId) as {
+  `)
+    .get(providerConfigId) as {
     key_count: number
     valid_key_count: number
     total_requests: number
@@ -207,7 +215,7 @@ export function getProviderConfigStats(providerConfigId: string): {
   return {
     keyCount: keyStats.key_count || 0,
     validKeyCount: keyStats.valid_key_count || 0,
-    totalRequests: keyStats.total_requests || 0
+    totalRequests: keyStats.total_requests || 0,
   }
 }
 
@@ -276,6 +284,6 @@ function rowToProviderConfig(row: ProviderConfigRow): ProviderConfig {
     sortOrder: row.sort_order,
     settings,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
   }
 }

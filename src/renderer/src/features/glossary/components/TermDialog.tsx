@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -7,14 +8,8 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
 import type { GlossaryGender, GlossaryTerm, TermType } from '../../../../../shared/types'
 
 const TERM_TYPES: { value: TermType; label: string }[] = [
@@ -23,14 +18,16 @@ const TERM_TYPES: { value: TermType; label: string }[] = [
   { value: 'skill', label: 'Skills' },
   { value: 'item', label: 'Items' },
   { value: 'honorific', label: 'Honorifics' },
-  { value: 'other', label: 'Other' }
+  { value: 'other', label: 'Other' },
 ]
 
 interface TermDialogProps {
   open: boolean
   term: GlossaryTerm | null
   onClose: () => void
-  onSave: (data: Pick<GlossaryTerm, 'sourceTerm' | 'targetTerm' | 'termType' | 'gender' | 'notes'>) => Promise<void>
+  onSave: (
+    data: Pick<GlossaryTerm, 'sourceTerm' | 'targetTerm' | 'termType' | 'gender' | 'notes'>
+  ) => Promise<void>
 }
 
 export function TermDialog({ open, term, onClose, onSave }: TermDialogProps): JSX.Element {
@@ -39,7 +36,7 @@ export function TermDialog({ open, term, onClose, onSave }: TermDialogProps): JS
     targetTerm: '',
     termType: 'other' as TermType,
     gender: undefined as GlossaryGender | undefined,
-    notes: ''
+    notes: '',
   })
   const [isSaving, setIsSaving] = useState(false)
 
@@ -50,7 +47,7 @@ export function TermDialog({ open, term, onClose, onSave }: TermDialogProps): JS
         targetTerm: term.targetTerm,
         termType: term.termType,
         gender: term.gender,
-        notes: term.notes || ''
+        notes: term.notes || '',
       })
     } else {
       setFormData({
@@ -58,7 +55,7 @@ export function TermDialog({ open, term, onClose, onSave }: TermDialogProps): JS
         targetTerm: '',
         termType: 'other',
         gender: undefined,
-        notes: ''
+        notes: '',
       })
     }
   }, [term, open])
@@ -127,7 +124,10 @@ export function TermDialog({ open, term, onClose, onSave }: TermDialogProps): JS
               <Select
                 value={formData.gender || 'none'}
                 onValueChange={(v) =>
-                  setFormData({ ...formData, gender: v === 'none' ? undefined : v as GlossaryGender })
+                  setFormData({
+                    ...formData,
+                    gender: v === 'none' ? undefined : (v as GlossaryGender),
+                  })
                 }
               >
                 <SelectTrigger>

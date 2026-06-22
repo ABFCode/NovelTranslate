@@ -4,7 +4,7 @@
  * Handles retry logic with different backoff strategies.
  */
 
-import type { RetryConfig, RetryStrategyType, ErrorType } from '../../shared/types'
+import type { ErrorType, RetryConfig, RetryStrategyType } from '../../shared/types'
 import { classifyError, isRetryableError } from './error-classifier'
 
 /**
@@ -16,7 +16,7 @@ export const DEFAULT_RETRY_CONFIG: Omit<RetryConfig, 'id' | 'configId' | 'create
   baseDelayMs: 1000,
   maxDelayMs: 60000,
   jitterFactor: 0.2,
-  retryableErrors: ['rate_limit', 'timeout', 'network_error']
+  retryableErrors: ['rate_limit', 'timeout', 'network_error'],
 }
 
 /**
@@ -47,15 +47,16 @@ export function calculateDelay(
       break
 
     case 'exponential':
-      delay = config.baseDelayMs * Math.pow(2, attempt - 1)
+      delay = config.baseDelayMs * 2 ** (attempt - 1)
       break
 
     case 'exponential_jitter':
-    default:
-      const exponential = config.baseDelayMs * Math.pow(2, attempt - 1)
+    default: {
+      const exponential = config.baseDelayMs * 2 ** (attempt - 1)
       const jitter = exponential * config.jitterFactor * Math.random()
       delay = exponential + jitter
       break
+    }
   }
 
   return Math.min(delay, config.maxDelayMs)
@@ -91,7 +92,7 @@ export function shouldRetry(
   return {
     shouldRetry: canRetry,
     errorType: classification.errorType,
-    retryAfterMs: classification.retryAfterMs
+    retryAfterMs: classification.retryAfterMs,
   }
 }
 
@@ -114,12 +115,11 @@ export async function executeWithRetry<T>(
     } catch (error) {
       lastError = error
 
-      const { shouldRetry: retry, errorType, retryAfterMs } = shouldRetry(
-        error,
-        sdkType,
-        attempt,
-        config
-      )
+      const {
+        shouldRetry: retry,
+        errorType,
+        retryAfterMs,
+      } = shouldRetry(error, sdkType, attempt, config)
 
       lastErrorType = errorType
 

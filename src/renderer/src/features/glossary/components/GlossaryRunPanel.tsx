@@ -1,32 +1,32 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { CostEstimateDisplay } from '@/components/CostEstimateDisplay'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { CostEstimateDisplay } from '@/components/CostEstimateDisplay'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import type {
   Chapter,
   CostEstimate,
   GlossaryRunResult,
-  ProviderInfoExtended
+  ProviderInfoExtended,
 } from '../../../../../shared/types'
 
 interface GlossaryRunPanelProps {
@@ -40,7 +40,7 @@ export function GlossaryRunPanel({
   projectId,
   chapters,
   isLoadingChapters,
-  onRunComplete
+  onRunComplete,
 }: GlossaryRunPanelProps): JSX.Element {
   const [providers, setProviders] = useState<ProviderInfoExtended[]>([])
   const [recommended, setRecommended] = useState<
@@ -75,7 +75,7 @@ export function GlossaryRunPanel({
       try {
         const [providerList, recommendedModels] = await Promise.all([
           window.api.providerConfig.list(),
-          window.api.glossaryRun.getRecommendedModels()
+          window.api.glossaryRun.getRecommendedModels(),
         ])
         setProviders(providerList)
         setRecommended(recommendedModels)
@@ -139,7 +139,9 @@ export function GlossaryRunPanel({
       if (event.projectId !== projectId) return
       setRunProgress({ current: event.current, total: event.total })
     })
-    return () => { unsubscribe() }
+    return () => {
+      unsubscribe()
+    }
   }, [projectId])
 
   const availableModels = providers.find((p) => p.id === providerConfigId)?.models || []
@@ -218,9 +220,9 @@ export function GlossaryRunPanel({
                 ))}
               </SelectContent>
             </Select>
-            {recommended.some((r) => r.providerConfigId === providerConfigId && r.modelId === modelId) && (
-              <span className="text-xs text-emerald-600">Recommended</span>
-            )}
+            {recommended.some(
+              (r) => r.providerConfigId === providerConfigId && r.modelId === modelId
+            ) && <span className="text-xs text-emerald-600">Recommended</span>}
           </div>
           <div className="space-y-2">
             <Label>Concurrency</Label>
@@ -253,7 +255,9 @@ export function GlossaryRunPanel({
               type="button"
               className={cn(
                 'rounded px-2 py-1',
-                scope === 'selected' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                scope === 'selected'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground'
               )}
               onClick={() => setScope('selected')}
             >
@@ -265,7 +269,9 @@ export function GlossaryRunPanel({
               Choose chapters
             </Button>
           )}
-          {isLoadingChapters && <span className="text-xs text-muted-foreground">Loading chapters...</span>}
+          {isLoadingChapters && (
+            <span className="text-xs text-muted-foreground">Loading chapters...</span>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -294,9 +300,7 @@ export function GlossaryRunPanel({
               </span>
             </div>
             <Progress
-              value={
-                runProgress.total > 0 ? (runProgress.current / runProgress.total) * 100 : 0
-              }
+              value={runProgress.total > 0 ? (runProgress.current / runProgress.total) * 100 : 0}
             />
           </div>
         )}
@@ -319,7 +323,12 @@ export function GlossaryRunPanel({
         )}
 
         <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowChapterDialog(true)} disabled={scope !== 'selected'}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowChapterDialog(true)}
+            disabled={scope !== 'selected'}
+          >
             Preview selection
           </Button>
           <Button onClick={handleRun} disabled={isRunning || chaptersForRun.length === 0}>
@@ -331,7 +340,9 @@ export function GlossaryRunPanel({
           <DialogContent className="max-w-xl">
             <DialogHeader>
               <DialogTitle>Select chapters</DialogTitle>
-              <DialogDescription>Choose the chapters to scan for glossary suggestions.</DialogDescription>
+              <DialogDescription>
+                Choose the chapters to scan for glossary suggestions.
+              </DialogDescription>
             </DialogHeader>
             <ScrollArea className="h-[360px] rounded-md border">
               <div className="divide-y">
@@ -344,7 +355,9 @@ export function GlossaryRunPanel({
                         checked={isSelected}
                         onChange={() =>
                           setSelectedChapterIds((prev) =>
-                            isSelected ? prev.filter((id) => id !== chapter.id) : [...prev, chapter.id]
+                            isSelected
+                              ? prev.filter((id) => id !== chapter.id)
+                              : [...prev, chapter.id]
                           )
                         }
                       />
@@ -357,7 +370,9 @@ export function GlossaryRunPanel({
               </div>
             </ScrollArea>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{selectedChapterIds.length} selected</span>
+              <span className="text-xs text-muted-foreground">
+                {selectedChapterIds.length} selected
+              </span>
               <div className="flex gap-2">
                 <Button
                   variant="ghost"

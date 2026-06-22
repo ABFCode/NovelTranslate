@@ -1,39 +1,39 @@
-import { useEffect, useState } from 'react'
-import { useParams } from '@tanstack/react-router'
-import { BookOpen, Play, Pause, Settings2, Eye, RotateCcw, History } from 'lucide-react'
-import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'motion/react'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import { useFeatureMode } from '@/contexts/UIModeContext'
-import { AdvancedSection, ShowAdvancedToggle } from '@/components/ModeToggle'
-import { useProjectStore } from './project.store'
-import {
-  ChapterList,
-  BudgetPanel,
-  OverrideDialog,
-  GlossarySummary,
-  OverridesList,
-  ChapterContentViewer,
-  PreviewDialog,
-  TranslationHistory,
-  type OverrideDraft
-} from './components'
 import type {
   Chapter,
   ChapterContent,
   ProjectConfig,
   TranslationConfig,
-  TranslationOverride
+  TranslationOverride,
 } from '@shared/types'
+import { useParams } from '@tanstack/react-router'
+import { BookOpen, Eye, History, Pause, Play, RotateCcw, Settings2 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { AdvancedSection, ShowAdvancedToggle } from '@/components/ModeToggle'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useFeatureMode } from '@/contexts/UIModeContext'
+import {
+  BudgetPanel,
+  ChapterContentViewer,
+  ChapterList,
+  GlossarySummary,
+  OverrideDialog,
+  type OverrideDraft,
+  OverridesList,
+  PreviewDialog,
+  TranslationHistory,
+} from './components'
+import { useProjectStore } from './project.store'
 
 export function ProjectPage() {
   const { projectId } = useParams({ from: '/project/$projectId' })
@@ -46,7 +46,7 @@ export function ProjectPage() {
     loadProject,
     startTranslation,
     pauseTranslation,
-    cancelTranslation
+    cancelTranslation,
   } = useProjectStore()
 
   const [configs, setConfigs] = useState<TranslationConfig[]>([])
@@ -102,7 +102,7 @@ export function ProjectPage() {
     try {
       const [terms, suggestions] = await Promise.all([
         window.api.glossary.list(pid),
-        window.api.glossary.getPendingSuggestions(pid)
+        window.api.glossary.getPendingSuggestions(pid),
       ])
       setGlossaryStats({ termCount: terms.length, suggestionCount: suggestions.length })
     } catch (error) {
@@ -223,7 +223,7 @@ export function ProjectPage() {
           originalTranslation: overrideDraft.originalTranslation,
           overrideTranslation: overrideDraft.overrideTranslation,
           scope: overrideDraft.scope,
-          reason: overrideDraft.reason || undefined
+          reason: overrideDraft.reason || undefined,
         })
       } else {
         await window.api.override.create({
@@ -233,7 +233,7 @@ export function ProjectPage() {
           originalTranslation: overrideDraft.originalTranslation,
           overrideTranslation: overrideDraft.overrideTranslation,
           scope: overrideDraft.scope,
-          reason: overrideDraft.reason || undefined
+          reason: overrideDraft.reason || undefined,
         })
       }
       toast.success('Override saved')
@@ -280,15 +280,15 @@ export function ProjectPage() {
   }
 
   const selectAllTranslated = (): void => {
-    const translatedIds = chapters
-      .filter((c) => c.status === 'translated')
-      .map((c) => c.id)
+    const translatedIds = chapters.filter((c) => c.status === 'translated').map((c) => c.id)
     setSelectedChapters(new Set(translatedIds))
   }
 
   const handleClearSelectedTranslations = async (): Promise<void> => {
     if (selectedChapters.size === 0) return
-    if (!confirm(`Clear translations for ${selectedChapters.size} chapter(s)? This cannot be undone.`)) {
+    if (
+      !confirm(`Clear translations for ${selectedChapters.size} chapter(s)? This cannot be undone.`)
+    ) {
       return
     }
 
@@ -339,9 +339,7 @@ export function ProjectPage() {
                 <BookOpen className="h-7 w-7 text-primary" />
                 {currentProject.name}
               </h1>
-              <p className="page-subtitle">
-                {currentProject.metadata.author || 'Unknown Author'}
-              </p>
+              <p className="page-subtitle">{currentProject.metadata.author || 'Unknown Author'}</p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={() => setShowSettings(!showSettings)}>
@@ -353,7 +351,10 @@ export function ProjectPage() {
                     <Pause className="mr-2 h-4 w-4" />
                     Pause
                   </Button>
-                  <Button variant="destructive" onClick={() => projectId && cancelTranslation(projectId)}>
+                  <Button
+                    variant="destructive"
+                    onClick={() => projectId && cancelTranslation(projectId)}
+                  >
                     Cancel
                   </Button>
                 </>
@@ -449,9 +450,7 @@ export function ProjectPage() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      {selectedConfig
-                        ? selectedConfig.modelId
-                        : 'No config selected'}
+                      {selectedConfig ? selectedConfig.modelId : 'No config selected'}
                     </p>
                   </div>
 
@@ -464,7 +463,9 @@ export function ProjectPage() {
                         onClick={() => selectedConfigId && handleSetProjectConfig(selectedConfigId)}
                         disabled={
                           !selectedConfigId ||
-                          projectConfigs.some((pc) => pc.configId === selectedConfigId && pc.isDefault)
+                          projectConfigs.some(
+                            (pc) => pc.configId === selectedConfigId && pc.isDefault
+                          )
                         }
                       >
                         Set as Default for This Project
@@ -510,13 +511,28 @@ export function ProjectPage() {
                       {selectedChapters.size} selected
                     </span>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={selectAllPending}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={selectAllPending}
+                      >
                         Pending
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={selectAllTranslated}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={selectAllTranslated}
+                      >
                         Translated
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={clearSelection}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={clearSelection}
+                      >
                         Clear
                       </Button>
                     </div>
@@ -653,6 +669,6 @@ function getChapterStats(chapters: Chapter[]) {
     translating: chapters.filter((c) => c.status === 'translating').length,
     translated: chapters.filter((c) => c.status === 'translated').length,
     error: chapters.filter((c) => c.status === 'error').length,
-    skipped: chapters.filter((c) => c.status === 'skipped').length
+    skipped: chapters.filter((c) => c.status === 'skipped').length,
   }
 }

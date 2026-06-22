@@ -1,25 +1,25 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
-  Home,
-  Settings,
   BookOpen,
-  Plus,
-  Sliders,
-  FlaskConical,
   BookText,
   Database,
   Feather,
+  FlaskConical,
+  Home,
+  Moon,
+  Plus,
+  Settings,
+  Sliders,
   Sun,
-  Moon
 } from 'lucide-react'
-import { toast } from 'sonner'
 import { motion } from 'motion/react'
-import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useProjectStore } from '@/features/project/project.store'
-import { useUIMode } from '@/contexts/UIModeContext'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useUIMode } from '@/contexts/UIModeContext'
+import { useProjectStore } from '@/features/project/project.store'
+import { cn } from '@/lib/utils'
 
 export function Sidebar() {
   const navigate = useNavigate()
@@ -55,9 +55,7 @@ export function Sidebar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-accent">
             <Feather className="h-4 w-4 text-sidebar-primary" />
           </div>
-          <span className="text-sm font-semibold text-sidebar-foreground">
-            NovelTranslate
-          </span>
+          <span className="text-sm font-semibold text-sidebar-foreground">NovelTranslate</span>
         </Link>
       </div>
 
@@ -104,7 +102,9 @@ export function Sidebar() {
       {/* Recent projects section */}
       <div className="mt-6 flex-1 overflow-hidden px-3">
         <div className="mb-2 flex items-center justify-between px-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-sidebar-muted">Library</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-sidebar-muted">
+            Library
+          </span>
           <Button
             variant="ghost"
             size="icon"
@@ -120,9 +120,7 @@ export function Sidebar() {
           {recentProjects.length === 0 ? (
             <div className="px-2 py-8 text-center">
               <BookOpen className="mx-auto h-8 w-8 text-sidebar-muted opacity-40" />
-              <p className="mt-3 text-xs text-sidebar-muted">
-                No books yet
-              </p>
+              <p className="mt-3 text-xs text-sidebar-muted">No books yet</p>
               <Button
                 variant="ghost"
                 size="sm"
@@ -171,19 +169,13 @@ export function Sidebar() {
             className="flex h-7 w-7 items-center justify-center rounded-md text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
             title={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {resolvedTheme === 'dark' ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
+            {resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
         </div>
 
         {/* Version */}
         <div className="border-t border-sidebar-border px-4 py-2">
-          <p className="text-center text-[10px] text-sidebar-muted">
-            Version 1.0.0
-          </p>
+          <p className="text-center text-[10px] text-sidebar-muted">Version 1.0.0</p>
         </div>
       </div>
     </div>
@@ -199,17 +191,10 @@ interface NavItemProps {
 
 function NavItem({ to, icon, label, active }: NavItemProps) {
   return (
-    <Link
-      to={to}
-      className={cn(
-        'sidebar-nav-item flex items-center gap-3',
-        active && 'active'
-      )}
-    >
-      <span className={cn(
-        'transition-colors',
-        active ? 'text-sidebar-primary' : 'text-sidebar-muted'
-      )}>
+    <Link to={to} className={cn('sidebar-nav-item flex items-center gap-3', active && 'active')}>
+      <span
+        className={cn('transition-colors', active ? 'text-sidebar-primary' : 'text-sidebar-muted')}
+      >
         {icon}
       </span>
       <span className="truncate">{label}</span>
@@ -225,10 +210,7 @@ interface ProjectNavItemProps {
 
 function ProjectNavItem({ projectId, name, active }: ProjectNavItemProps) {
   return (
-    <motion.div
-      whileHover={{ x: 2 }}
-      transition={{ duration: 0.15 }}
-    >
+    <motion.div whileHover={{ x: 2 }} transition={{ duration: 0.15 }}>
       <Link
         to="/project/$projectId"
         params={{ projectId }}
@@ -239,10 +221,9 @@ function ProjectNavItem({ projectId, name, active }: ProjectNavItemProps) {
             : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
         )}
       >
-        <BookOpen className={cn(
-          'h-4 w-4 shrink-0',
-          active ? 'text-sidebar-primary' : 'text-sidebar-muted'
-        )} />
+        <BookOpen
+          className={cn('h-4 w-4 shrink-0', active ? 'text-sidebar-primary' : 'text-sidebar-muted')}
+        />
         <span className="truncate font-medium">{name}</span>
       </Link>
     </motion.div>

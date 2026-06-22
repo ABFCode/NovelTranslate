@@ -71,17 +71,21 @@ function classifyOpenAIError(
     return {
       errorType: 'content_block',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
   // Rate limit
-  if (code === 'rate_limit_exceeded' || statusCode === 429 || message.toLowerCase().includes('rate limit')) {
+  if (
+    code === 'rate_limit_exceeded' ||
+    statusCode === 429 ||
+    message.toLowerCase().includes('rate limit')
+  ) {
     return {
       errorType: 'rate_limit',
       retryAfterMs: extractRetryAfter(error) || 60000,
       details: message,
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
@@ -94,7 +98,7 @@ function classifyOpenAIError(
     return {
       errorType: 'context_length',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
@@ -108,7 +112,7 @@ function classifyOpenAIError(
     return {
       errorType: 'auth_error',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
@@ -117,7 +121,7 @@ function classifyOpenAIError(
     return {
       errorType: 'quota_exceeded',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
@@ -126,7 +130,7 @@ function classifyOpenAIError(
     return {
       errorType: 'model_unavailable',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
@@ -138,7 +142,7 @@ function classifyOpenAIError(
   ) {
     return {
       errorType: 'timeout',
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
@@ -150,7 +154,7 @@ function classifyOpenAIError(
   ) {
     return {
       errorType: 'network_error',
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
@@ -159,14 +163,14 @@ function classifyOpenAIError(
     return {
       errorType: 'network_error',
       details: `Server error: ${statusCode}`,
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
   return {
     errorType: 'unknown',
     details: message,
-    isRetryable: false
+    isRetryable: false,
   }
 }
 
@@ -179,12 +183,12 @@ function classifyAnthropicError(
   // Content blocked
   if (
     code === 'content_blocked' ||
-    message.toLowerCase().includes('content') && message.toLowerCase().includes('block')
+    (message.toLowerCase().includes('content') && message.toLowerCase().includes('block'))
   ) {
     return {
       errorType: 'content_block',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
@@ -198,7 +202,7 @@ function classifyAnthropicError(
       errorType: 'rate_limit',
       retryAfterMs: extractRetryAfter(error) || 60000,
       details: message,
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
@@ -207,7 +211,7 @@ function classifyAnthropicError(
     return {
       errorType: 'auth_error',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
@@ -220,7 +224,7 @@ function classifyAnthropicError(
     return {
       errorType: 'context_length',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
@@ -230,7 +234,7 @@ function classifyAnthropicError(
       errorType: 'rate_limit',
       retryAfterMs: 30000,
       details: 'API overloaded',
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
@@ -238,7 +242,7 @@ function classifyAnthropicError(
   if (message.toLowerCase().includes('timeout')) {
     return {
       errorType: 'timeout',
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
@@ -247,14 +251,14 @@ function classifyAnthropicError(
     return {
       errorType: 'network_error',
       details: `Server error: ${statusCode}`,
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
   return {
     errorType: 'unknown',
     details: message,
-    isRetryable: false
+    isRetryable: false,
   }
 }
 
@@ -273,7 +277,7 @@ function classifyGeminiError(
     return {
       errorType: 'content_block',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
@@ -287,40 +291,44 @@ function classifyGeminiError(
       errorType: 'rate_limit',
       retryAfterMs: 60000, // Default 60s for Gemini
       details: message,
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
   // Authentication
   if (
-    message.toLowerCase().includes('invalid_argument') && message.toLowerCase().includes('api key') ||
+    (message.toLowerCase().includes('invalid_argument') &&
+      message.toLowerCase().includes('api key')) ||
     statusCode === 401
   ) {
     return {
       errorType: 'auth_error',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
   // Model not found
-  if (message.toLowerCase().includes('not found') || message.toLowerCase().includes('invalid model')) {
+  if (
+    message.toLowerCase().includes('not found') ||
+    message.toLowerCase().includes('invalid model')
+  ) {
     return {
       errorType: 'model_unavailable',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
   // Context length
   if (
-    message.toLowerCase().includes('token') && message.toLowerCase().includes('limit') ||
+    (message.toLowerCase().includes('token') && message.toLowerCase().includes('limit')) ||
     message.toLowerCase().includes('too long')
   ) {
     return {
       errorType: 'context_length',
       details: message,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
@@ -329,14 +337,14 @@ function classifyGeminiError(
     return {
       errorType: 'network_error',
       details: `Server error: ${statusCode}`,
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
   return {
     errorType: 'unknown',
     details: message,
-    isRetryable: false
+    isRetryable: false,
   }
 }
 
@@ -344,19 +352,27 @@ function classifyGenericError(message: string, statusCode?: number): Classificat
   const lowerMessage = message.toLowerCase()
 
   // Rate limit patterns
-  if (lowerMessage.includes('rate limit') || lowerMessage.includes('too many requests') || statusCode === 429) {
+  if (
+    lowerMessage.includes('rate limit') ||
+    lowerMessage.includes('too many requests') ||
+    statusCode === 429
+  ) {
     return {
       errorType: 'rate_limit',
       retryAfterMs: 60000,
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
   // Auth patterns
-  if (lowerMessage.includes('unauthorized') || lowerMessage.includes('invalid key') || statusCode === 401) {
+  if (
+    lowerMessage.includes('unauthorized') ||
+    lowerMessage.includes('invalid key') ||
+    statusCode === 401
+  ) {
     return {
       errorType: 'auth_error',
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
@@ -364,7 +380,7 @@ function classifyGenericError(message: string, statusCode?: number): Classificat
   if (lowerMessage.includes('timeout') || lowerMessage.includes('etimedout')) {
     return {
       errorType: 'timeout',
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
@@ -376,15 +392,18 @@ function classifyGenericError(message: string, statusCode?: number): Classificat
   ) {
     return {
       errorType: 'network_error',
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
   // Content block patterns
-  if (lowerMessage.includes('content') && (lowerMessage.includes('block') || lowerMessage.includes('policy'))) {
+  if (
+    lowerMessage.includes('content') &&
+    (lowerMessage.includes('block') || lowerMessage.includes('policy'))
+  ) {
     return {
       errorType: 'content_block',
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
@@ -393,14 +412,14 @@ function classifyGenericError(message: string, statusCode?: number): Classificat
     return {
       errorType: 'network_error',
       details: `Server error: ${statusCode}`,
-      isRetryable: true
+      isRetryable: true,
     }
   }
 
   return {
     errorType: 'unknown',
     details: message,
-    isRetryable: false
+    isRetryable: false,
   }
 }
 
