@@ -55,7 +55,10 @@ export function ChapterContentViewer({
       <CardContent className="space-y-4">
         {!activeChapter ? (
           <p className="text-muted-foreground">Select a chapter to view its content</p>
-        ) : isLoadingContent ? (
+        ) : isLoadingContent && chapterPairs.length === 0 ? (
+          // Only show the spinner when there's nothing to display yet (first load).
+          // When switching chapters we keep the previous content visible until the
+          // new content arrives, which avoids a flash/collapse on every click.
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             Loading chapter content...
