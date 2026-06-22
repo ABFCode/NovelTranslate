@@ -123,10 +123,12 @@ export async function executeChain(options: ChainExecutorOptions): Promise<Chain
     }
   }
 
-  // Get glossary terms if enabled
+  // Get glossary terms if enabled. Only inject terms that actually occur in this
+  // chapter — injecting the entire project glossary into every call balloons prompt
+  // size and token cost at scale (thousands of chapters, hundreds of terms).
   let glossaryTerms: GlossaryTerm[] = []
   if (useGlossary && projectId) {
-    glossaryTerms = listGlossaryTerms(projectId)
+    glossaryTerms = filterRelevantGlossaryTerms(listGlossaryTerms(projectId), sourceText)
   }
 
   // Create snapshot if requested
@@ -436,6 +438,19 @@ function buildUserPrompt(
     .replace(/\{\{text\}\}/g, text)
     .replace(/\{\{sourceLanguage\}\}/g, sourceLanguage)
     .replace(/\{\{targetLanguage\}\}/g, targetLanguage)
+}
+
+/**
+ * Keep only glossary terms whose source term (or one of its aliases) actually
+ * occurs in the chapter text. Bounds prompt size to terms that could plausibly
+ * be used in this chapter rather than the whole project glossary.
+ */
+function filterRelevantGlossaryTerms(terms: GlossaryTerm[], sourceText: string): GlossaryTerm[] {
+  const haystack = sourceText.toLowerCase()
+  return terms.filter((term) => {
+    if (haystack.includes(term.sourceTerm.toLowerCase())) return true
+    return term.aliases.some((alias) => alias.length > 0 && haystack.includes(alias.toLowerCase()))
+  })
 }
 
 /**
