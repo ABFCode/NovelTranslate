@@ -335,7 +335,7 @@ Output your findings in JSON format.`
   private buildExtractionPrompt(text: string): string {
     // Truncate very long texts
     const maxLength = 10000
-    const truncatedText = text.length > maxLength ? text.slice(0, maxLength) + '...' : text
+    const truncatedText = text.length > maxLength ? `${text.slice(0, maxLength)}...` : text
 
     return `Extract glossary terms from the following text. Return a JSON array of objects with these fields:
 - sourceTerm: the original term
@@ -407,7 +407,7 @@ Respond with only the JSON array, no additional text.`
 
     const start = Math.max(0, index - 30)
     const end = Math.min(text.length, index + term.length + 30)
-    return '...' + text.slice(start, end).replace(/\n/g, ' ') + '...'
+    return `...${text.slice(start, end).replace(/\n/g, ' ')}...`
   }
 }
 

@@ -35,7 +35,7 @@ export function BudgetPanel({ projectId }: BudgetPanelProps): JSX.Element {
 
   const handleSaveBudget = async (): Promise<void> => {
     const value = parseFloat(newBudget)
-    if (isNaN(value) || value < 0) {
+    if (Number.isNaN(value) || value < 0) {
       toast.error('Please enter a valid budget amount')
       return
     }
@@ -46,7 +46,7 @@ export function BudgetPanel({ projectId }: BudgetPanelProps): JSX.Element {
       await loadBudget()
       setIsEditing(false)
       toast.success('Budget updated')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update budget')
     } finally {
       setIsSaving(false)

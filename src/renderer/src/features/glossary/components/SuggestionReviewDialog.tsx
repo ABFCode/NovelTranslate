@@ -48,7 +48,7 @@ export function SuggestionReviewDialog({
     try {
       await onAccept(id)
       toast.success('Suggestion accepted')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to accept suggestion')
     }
   }
@@ -57,7 +57,7 @@ export function SuggestionReviewDialog({
     try {
       await onReject(id)
       toast.success('Suggestion rejected')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to reject suggestion')
     }
   }
@@ -71,7 +71,7 @@ export function SuggestionReviewDialog({
         return next
       })
       toast.success('Suggestion merged')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to merge suggestion')
     }
   }

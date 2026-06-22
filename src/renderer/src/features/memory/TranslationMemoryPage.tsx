@@ -85,7 +85,7 @@ export function TranslationMemoryPage(): JSX.Element {
     try {
       await verifyEntry(id)
       toast.success('Marked as verified')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to verify entry')
     }
   }
@@ -94,7 +94,7 @@ export function TranslationMemoryPage(): JSX.Element {
     try {
       await updateConfidence(id, confidence)
       toast.success('Confidence updated')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update confidence')
     }
   }
@@ -104,7 +104,7 @@ export function TranslationMemoryPage(): JSX.Element {
     try {
       await deleteEntry(id)
       toast.success('Memory entry deleted')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete entry')
     }
   }
@@ -114,7 +114,7 @@ export function TranslationMemoryPage(): JSX.Element {
     try {
       await deleteOverride(id)
       toast.success('Override deleted')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete override')
     }
   }

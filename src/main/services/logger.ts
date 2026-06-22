@@ -4,9 +4,9 @@
  * Provides consistent logging with correlation IDs for chain execution tracking.
  */
 
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { app } from 'electron'
-import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'fs'
-import { join } from 'path'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -201,7 +201,7 @@ export class Logger {
     // Read existing log file and filter by date if needed
     // For now, just copy the log file
     if (existsSync(this.logFilePath)) {
-      const { readFileSync } = require('fs')
+      const { readFileSync } = require('node:fs')
       const content = readFileSync(this.logFilePath, 'utf-8')
 
       if (fromDate) {
@@ -297,7 +297,7 @@ export class Logger {
 
   private writeToFile(entry: LogEntry): void {
     try {
-      const line = JSON.stringify(entry) + '\n'
+      const line = `${JSON.stringify(entry)}\n`
       appendFileSync(this.logFilePath, line)
 
       // Check file size and rotate if needed
@@ -309,7 +309,7 @@ export class Logger {
 
   private rotateIfNeeded(): void {
     try {
-      const { statSync } = require('fs')
+      const { statSync } = require('node:fs')
       const stats = statSync(this.logFilePath)
       const sizeMb = stats.size / (1024 * 1024)
 
@@ -317,7 +317,7 @@ export class Logger {
         // Rename current log file with timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
         const rotatedPath = this.logFilePath.replace('.log', `-${timestamp}.log`)
-        const { renameSync } = require('fs')
+        const { renameSync } = require('node:fs')
         renameSync(this.logFilePath, rotatedPath)
       }
     } catch {

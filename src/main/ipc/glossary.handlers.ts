@@ -150,9 +150,9 @@ export function registerGlossaryHandlers(): void {
       const sourceIndex = header.findIndex((h) => h === 'source' || h === 'source_term')
       const targetIndex = header.findIndex((h) => h === 'target' || h === 'target_term')
       const typeIndex = header.findIndex((h) => h === 'type' || h === 'term_type')
-      const contextIndex = header.findIndex((h) => h === 'context')
-      const notesIndex = header.findIndex((h) => h === 'notes')
-      const genderIndex = header.findIndex((h) => h === 'gender')
+      const contextIndex = header.indexOf('context')
+      const notesIndex = header.indexOf('notes')
+      const genderIndex = header.indexOf('gender')
 
       if (sourceIndex === -1 || targetIndex === -1) {
         return {

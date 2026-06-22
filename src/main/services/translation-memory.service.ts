@@ -4,7 +4,7 @@
  * Manages cached translations and manual overrides for efficiency.
  */
 
-import { createHash } from 'crypto'
+import { createHash } from 'node:crypto'
 import type { TranslationMemoryEntry, TranslationOverride } from '../../shared/types'
 import {
   cacheTranslation,

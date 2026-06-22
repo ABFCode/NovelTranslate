@@ -502,7 +502,7 @@ function extractRetryAfter(error: unknown): number | undefined {
       const retryAfter = headers['retry-after'] || headers['Retry-After']
       if (typeof retryAfter === 'string') {
         const seconds = parseInt(retryAfter, 10)
-        if (!isNaN(seconds)) return seconds * 1000
+        if (!Number.isNaN(seconds)) return seconds * 1000
       }
     }
   }

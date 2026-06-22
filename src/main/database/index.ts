@@ -1,8 +1,8 @@
+import { randomUUID } from 'node:crypto'
+import { existsSync, mkdirSync, unlinkSync } from 'node:fs'
+import { join } from 'node:path'
 import Database from 'better-sqlite3'
-import { randomUUID } from 'crypto'
 import { app } from 'electron'
-import { existsSync, mkdirSync, unlinkSync } from 'fs'
-import { join } from 'path'
 import { logger } from '../services/logger'
 import { SCHEMA_SQL, SCHEMA_VERSION, SEED_PROMPT_TEMPLATES } from './schema'
 

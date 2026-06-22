@@ -119,7 +119,7 @@ export function pauseTranslation(projectId: string): void {
  */
 export async function resumeTranslation(projectId: string): Promise<void> {
   const job = activeJobs.get(projectId)
-  if (job && job.isPaused) {
+  if (job?.isPaused) {
     job.isPaused = false
     logger.info(`[Translation] Resumed for project ${projectId}`)
 

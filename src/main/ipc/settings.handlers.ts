@@ -1,5 +1,5 @@
+import { readFileSync, writeFileSync } from 'node:fs'
 import { dialog } from 'electron'
-import { readFileSync, writeFileSync } from 'fs'
 import type {
   ApiKeyEntry,
   AppSettings,

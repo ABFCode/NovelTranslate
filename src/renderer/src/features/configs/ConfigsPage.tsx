@@ -88,7 +88,7 @@ export function ConfigsPage(): JSX.Element {
       a.click()
       URL.revokeObjectURL(url)
       toast.success('Configs exported')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to export configs')
     } finally {
       setIsExporting(false)

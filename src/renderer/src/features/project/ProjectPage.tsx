@@ -174,7 +174,7 @@ export function ProjectPage() {
       setSelectedConfigId(configId)
       await loadProjectConfigs(projectId)
       toast.success('Project config updated')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to set project config')
     }
   }
@@ -207,7 +207,7 @@ export function ProjectPage() {
     if (!projectId) return
     try {
       await pauseTranslation(projectId)
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to pause translation')
     }
   }
@@ -239,7 +239,7 @@ export function ProjectPage() {
       toast.success('Override saved')
       setOverrideDraft(null)
       await loadOverrides(projectId, activeChapterId || undefined)
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to save override')
     }
   }
@@ -251,7 +251,7 @@ export function ProjectPage() {
       await window.api.override.delete(id)
       await loadOverrides(projectId, activeChapterId || undefined)
       toast.success('Override deleted')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete override')
     }
   }

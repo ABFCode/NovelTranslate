@@ -1,5 +1,5 @@
+import { basename } from 'node:path'
 import { dialog } from 'electron'
-import { basename } from 'path'
 import type { Project } from '../../shared/types'
 import {
   createChaptersBulk,
@@ -139,7 +139,7 @@ export function registerProjectHandlers(): void {
 
     for (const chapter of chapters) {
       const content = getChapterContent(chapter.id)
-      if (content && content.translatedText) {
+      if (content?.translatedText) {
         exportChapters.push({
           title: chapter.title,
           content: content.translatedText,

@@ -132,7 +132,7 @@ export function GlossaryPage(): JSX.Element {
       a.click()
       URL.revokeObjectURL(url)
       toast.success('Glossary exported')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to export glossary')
     }
   }
@@ -149,7 +149,7 @@ export function GlossaryPage(): JSX.Element {
         console.warn('Import errors:', result.errors)
       }
       setShowImportDialog(false)
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to import glossary')
     }
   }
@@ -159,7 +159,7 @@ export function GlossaryPage(): JSX.Element {
     try {
       await deleteTerm(term.id)
       toast.success('Term deleted')
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete term')
     }
   }

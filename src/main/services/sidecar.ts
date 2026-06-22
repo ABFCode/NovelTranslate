@@ -1,8 +1,8 @@
-import { type ChildProcess, spawn } from 'child_process'
-import { randomBytes } from 'crypto'
+import { type ChildProcess, spawn } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
+import http from 'node:http'
+import { join } from 'node:path'
 import { app } from 'electron'
-import http from 'http'
-import { join } from 'path'
 import { logger } from './logger'
 
 // Sidecar state
@@ -64,7 +64,7 @@ function request<T>(path: string, body?: unknown): Promise<T> {
         try {
           const parsed = JSON.parse(data)
           resolve(parsed as T)
-        } catch (error) {
+        } catch (_error) {
           reject(new Error(`Invalid JSON response: ${data}`))
         }
       })
@@ -120,7 +120,7 @@ function streamRequest<T>(path: string, body: unknown, onEvent: (event: T) => vo
             try {
               const data = JSON.parse(eventStr.slice(6))
               onEvent(data as T)
-            } catch (e) {
+            } catch (_e) {
               logger.error(`[Sidecar] Failed to parse SSE event: ${eventStr}`)
             }
           }
@@ -133,7 +133,7 @@ function streamRequest<T>(path: string, body: unknown, onEvent: (event: T) => vo
           try {
             const data = JSON.parse(buffer.slice(6))
             onEvent(data as T)
-          } catch (e) {
+          } catch (_e) {
             // Ignore incomplete final event
           }
         }

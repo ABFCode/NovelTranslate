@@ -1,3 +1,4 @@
+import type Database from 'better-sqlite3'
 import type {
   GlossaryGender,
   GlossarySuggestion,
@@ -80,7 +81,7 @@ export function getGlossaryTerm(id: string): GlossaryTerm | null {
 export function listGlossaryTerms(projectId: string | null): GlossaryTerm[] {
   const db = getDatabase()
 
-  let stmt
+  let stmt: Database.Statement
   if (projectId) {
     // Get project-specific terms and global terms
     stmt = db.prepare(`
@@ -227,7 +228,7 @@ export function incrementTermUsage(termIds: string[]): void {
 export function findTermBySource(sourceTerm: string, projectId?: string): GlossaryTerm | null {
   const db = getDatabase()
 
-  let stmt
+  let stmt: Database.Statement
   if (projectId) {
     stmt = db.prepare(`
       SELECT id, project_id, source_term, target_term, term_type, gender, pronouns,

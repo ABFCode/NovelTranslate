@@ -70,7 +70,7 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
       await window.api.apiKey.delete(keyId)
       toast.success('API key deleted')
       notifyChanged()
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete API key')
     }
   }
@@ -81,7 +81,7 @@ export function KeyManagement({ providerConfigId, onKeysChanged }: KeyManagement
       const isValid = await window.api.apiKey.validateStored(keyId)
       toast[isValid ? 'success' : 'error'](isValid ? 'API key is valid' : 'API key is invalid')
       notifyChanged()
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to validate API key')
     } finally {
       setValidatingId(null)

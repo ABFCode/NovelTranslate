@@ -1,6 +1,6 @@
+import { join } from 'node:path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { app, BrowserWindow, session, shell } from 'electron'
-import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { closeDatabase, initDatabase } from './database'
 import { registerIpcHandlers } from './ipc'
@@ -97,7 +97,7 @@ function createWindow(): void {
   // navigate elsewhere (e.g. an injected or mistyped link) is cancelled and
   // opened in the user's real browser instead.
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    const rendererUrl = process.env['ELECTRON_RENDERER_URL']
+    const rendererUrl = process.env.ELECTRON_RENDERER_URL
     const isInternal =
       url.startsWith('file://') || (is.dev && rendererUrl ? url.startsWith(rendererUrl) : false)
     if (!isInternal) {
@@ -108,8 +108,8 @@ function createWindow(): void {
 
   // HMR for renderer based on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (is.dev && process.env.ELECTRON_RENDERER_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }

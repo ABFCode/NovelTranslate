@@ -49,8 +49,6 @@ export function calculateDelay(
     case 'exponential':
       delay = config.baseDelayMs * 2 ** (attempt - 1)
       break
-
-    case 'exponential_jitter':
     default: {
       const exponential = config.baseDelayMs * 2 ** (attempt - 1)
       const jitter = exponential * config.jitterFactor * Math.random()

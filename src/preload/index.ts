@@ -525,8 +525,8 @@ if (process.contextIsolated) {
     console.error('[Preload] Failed to expose API:', error)
   }
 } else {
-  // Cast rather than a @ts-ignore: preload is compiled by both the node and web
-  // tsconfigs and the global Window augmentation is only visible to one of them.
+  // Cast rather than a suppression directive: preload is compiled by both the node
+  // and web tsconfigs and the global Window augmentation is only visible to one of them.
   const globalWindow = window as unknown as { electron: typeof electronAPI; api: Api }
   globalWindow.electron = electronAPI
   globalWindow.api = api
