@@ -36,6 +36,7 @@ import type {
   TranslationOverride,
   TranslationProgressEvent,
   TranslationVersion,
+  UsageStats,
 } from '../shared/types'
 
 // Type-safe IPC invoke wrapper
@@ -405,6 +406,13 @@ const api = {
       invoke<void>('budget:recordSpending', projectId, amountUsd),
     resetSpending: (projectId: string) => invoke<void>('budget:resetSpending', projectId),
     list: () => invoke<ProjectBudget[]>('budget:list'),
+  },
+
+  // =========================================================================
+  // Usage APIs
+  // =========================================================================
+  usage: {
+    stats: (projectId?: string) => invoke<UsageStats>('usage:stats', projectId),
   },
 
   // =========================================================================

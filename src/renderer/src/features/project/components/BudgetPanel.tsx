@@ -1,3 +1,4 @@
+import type { UsageStats } from '@shared/types'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -19,9 +20,11 @@ export function BudgetPanel({ projectId }: BudgetPanelProps): JSX.Element {
   const [isEditing, setIsEditing] = useState(false)
   const [newBudget, setNewBudget] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [usage, setUsage] = useState<UsageStats | null>(null)
 
   useEffect(() => {
     loadBudget()
+    loadUsage()
   }, [projectId])
 
   const loadBudget = async (): Promise<void> => {
@@ -30,6 +33,14 @@ export function BudgetPanel({ projectId }: BudgetPanelProps): JSX.Element {
       setBudget(b)
     } catch (error) {
       console.error('Failed to load budget:', error)
+    }
+  }
+
+  const loadUsage = async (): Promise<void> => {
+    try {
+      setUsage(await window.api.usage.stats(projectId))
+    } catch (error) {
+      console.error('Failed to load usage:', error)
     }
   }
 
@@ -116,6 +127,30 @@ export function BudgetPanel({ projectId }: BudgetPanelProps): JSX.Element {
           <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
             Set Budget
           </Button>
+        </div>
+      )}
+
+      {usage && usage.callCount > 0 && (
+        <div className="space-y-1.5 border-t pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Usage</span>
+            <span className="text-sm">${usage.totalCostUsd.toFixed(4)}</span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {usage.callCount} calls ·{' '}
+            {(usage.totalTokensIn + usage.totalTokensOut).toLocaleString()} tokens
+          </div>
+          {usage.byModel.map((m) => (
+            <div
+              key={`${m.providerConfigId}:${m.modelId}`}
+              className="flex items-center justify-between text-xs text-muted-foreground"
+            >
+              <span className="truncate">{m.modelId}</span>
+              <span className="shrink-0 pl-2">
+                ${m.costUsd.toFixed(4)} · {m.callCount}×
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>

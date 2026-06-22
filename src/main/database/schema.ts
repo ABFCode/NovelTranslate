@@ -22,10 +22,11 @@
  * - test_runs: Testing Center run metadata
  * - test_results: Individual test results
  * - batch_test_chapters: Batch testing chapter associations
+ * - usage_logs: Per-call token/cost history for analytics
  * - app_settings: Key-value store for settings
  */
 
-export const SCHEMA_VERSION = 5
+export const SCHEMA_VERSION = 6
 
 export const SCHEMA_SQL = `
 -- Enable WAL mode for better concurrent read/write performance
@@ -379,6 +380,28 @@ CREATE TABLE IF NOT EXISTS batch_test_chapters (
   FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE,
   FOREIGN KEY (result_id) REFERENCES test_results(id) ON DELETE SET NULL
 );
+
+-- ============================================================================
+-- Usage Logs (per-call token/cost history for analytics)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS usage_logs (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  chapter_id TEXT,
+  config_id TEXT,
+  provider_config_id TEXT NOT NULL,
+  model_id TEXT NOT NULL,
+  tokens_in INTEGER NOT NULL DEFAULT 0,
+  tokens_out INTEGER NOT NULL DEFAULT 0,
+  cost_usd REAL NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL,
+  FOREIGN KEY (config_id) REFERENCES translation_configs(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_usage_project ON usage_logs(project_id);
+CREATE INDEX IF NOT EXISTS idx_usage_created ON usage_logs(created_at DESC);
 
 -- ============================================================================
 -- App Settings (key-value store)

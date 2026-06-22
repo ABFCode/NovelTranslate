@@ -6,6 +6,7 @@ import type {
   KeyRotationStrategy,
   KeyValidationResult,
   ProjectBudget,
+  UsageStats,
 } from '../../shared/types'
 import { apiKeySchema, projectBudgetSchema } from '../../shared/validation'
 import { getSettings, saveSettings } from '../database'
@@ -27,6 +28,7 @@ import {
   importGlossaryTerms,
   listGlossaryTerms,
 } from '../database/repositories/glossary.repository'
+import { getUsageStats } from '../database/repositories/usage.repository'
 import { keyManager } from '../services/key-manager'
 import { logger } from '../services/logger'
 import { assertNonEmptyString, handleIpc, validateInput } from './utils'
@@ -319,6 +321,11 @@ export function registerBudgetHandlers(): void {
   // List all project budgets
   handleIpc('budget:list', (): ProjectBudget[] => {
     return listProjectBudgets()
+  })
+
+  // Usage stats (optionally scoped to a project)
+  handleIpc('usage:stats', (projectId?: string): UsageStats => {
+    return getUsageStats(projectId)
   })
 
   logger.info('[IPC] Budget handlers registered')

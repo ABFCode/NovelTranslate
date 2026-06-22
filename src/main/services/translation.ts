@@ -275,6 +275,7 @@ async function translateChapter(
       targetLanguage,
       apiKey,
       projectId: job.projectId,
+      chapterId,
       useMemory,
       useGlossary,
       createSnapshot: false,

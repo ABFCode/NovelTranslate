@@ -167,6 +167,21 @@ export interface ProjectBudget {
   updatedAt: string
 }
 
+export interface UsageStats {
+  totalCostUsd: number
+  totalTokensIn: number
+  totalTokensOut: number
+  callCount: number
+  byModel: Array<{
+    providerConfigId: string
+    modelId: string
+    costUsd: number
+    tokensIn: number
+    tokensOut: number
+    callCount: number
+  }>
+}
+
 // ============================================================================
 // Cost Estimation
 // ============================================================================
@@ -665,6 +680,8 @@ export type IpcChannel =
   | 'budget:get'
   | 'budget:set'
   | 'budget:check'
+  // Usage channels
+  | 'usage:stats'
   // Test channels
   | 'test:runSingle'
   | 'test:runComparison'

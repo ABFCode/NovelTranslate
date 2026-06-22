@@ -28,6 +28,7 @@ import {
   getOverride,
   incrementMemoryUsage,
 } from '../database/repositories/memory.repository'
+import { recordUsage } from '../database/repositories/usage.repository'
 import { getProviderByConfigId } from '../providers'
 import { providerConfigService } from '../providers/provider-config.service'
 import { getModelPricing } from './cost-estimator'
@@ -48,6 +49,8 @@ export interface ChainExecutorOptions {
   apiKey: string
   /** Project ID (for glossary, memory, budget) */
   projectId?: string
+  /** Chapter ID, when translating a chapter (for usage attribution) */
+  chapterId?: string
   /** Optional retry configuration override */
   retryConfig?: RetryConfig
   /** Whether to use translation memory */
@@ -193,9 +196,25 @@ export async function executeChain(options: ChainExecutorOptions): Promise<Chain
     }
   }
 
-  // Record spending if project ID provided
-  if (projectId && totalCostUsd > 0) {
-    recordSpending(projectId, totalCostUsd)
+  // Record spending and per-call usage if this was a live, billed translation
+  // for a project (cached/override results have no finalConfigId and 0 cost).
+  if (projectId && result.success && result.finalConfigId) {
+    if (totalCostUsd > 0) {
+      recordSpending(projectId, totalCostUsd)
+    }
+    const finalConfig = getConfig(result.finalConfigId)
+    if (finalConfig) {
+      recordUsage({
+        projectId,
+        chapterId: options.chapterId,
+        configId: result.finalConfigId,
+        providerConfigId: finalConfig.providerConfigId,
+        modelId: finalConfig.modelId,
+        tokensIn: result.tokensUsed.input,
+        tokensOut: result.tokensUsed.output,
+        costUsd: totalCostUsd,
+      })
+    }
   }
 
   return {
